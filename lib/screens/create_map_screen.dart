@@ -9,7 +9,7 @@ import '../../providers/map_providers.dart';
 import '../../services/map_repository.dart';
 import '../../theme/enola_theme.dart';
 import '../../widgets/fantasy_widgets.dart';
-import '../scan/scan_screen.dart';
+import '../../screens/scan_screen.dart';
 
 class CreateMapScreen extends ConsumerStatefulWidget {
   final int? existingMapId;
