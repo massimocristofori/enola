@@ -23,8 +23,7 @@ jobs:
 
       - name: Icons
         run: dart run flutter_launcher_icons
-
-
+      
       - name: Generate Isar code
         run: dart run build_runner build --delete-conflicting-outputs
 
