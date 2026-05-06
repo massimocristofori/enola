@@ -20,7 +20,7 @@ dependencies:
   path_provider: ^2.1.3
 
   # AI / Gemini
-  google_generative_ai: ^0.4.3
+  google_generative_ai: ^0.4.7
 
   # Camera & image
   image_picker: ^1.1.2
