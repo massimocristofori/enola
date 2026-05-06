@@ -3,7 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../theme/enola_theme.dart';
 import '../../widgets/fantasy_widgets.dart';
-import '../home/home_screen.dart';
+import '../../screens/home_screen.dart';
 
 class ResultScreen extends StatelessWidget {
   final int mapId;
