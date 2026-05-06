@@ -3,35 +3,33 @@ import 'package:flutter/material.dart';
 class EnolaTheme {
   EnolaTheme._();
 
-  // ── Palette ────────────────────────────────────────────────────────────────
-  //static const Color background  = Color(0xFF0F0F14);
-  static const Color background  = Color(0xFFFFFFFF);
-  //static const Color surface     = Color(0xFF1A1A24);
-  static const Color surface     = Color(0xFFF9F9FA);
-  static const Color surfaceHigh = Color(0xFF242433);
-  static const Color accent      = Color(0xFFE8C547); // warm gold — lantern light
-  static const Color accentSoft  = Color(0x33E8C547);
-  static const Color textPrimary = Color(0xFFF0EDE6);
-  static const Color textSecond  = Color(0xFF8A8799);
-  static const Color correct     = Color(0xFF4CAF7D);
-  static const Color wrong       = Color(0xFFE05C5C);
-  static const Color border      = Color(0xFF2E2E40);
+  // ── Palette (Light & Enjoyable) ──────────────────────────────────────────
+  static const Color background  = Color(0xFFFDFCF8); // Soft "Paper" white
+  static const Color surface     = Color(0xFFF2F0E9); // Slightly darker wash
+  static const Color surfaceHigh = Color(0xFFEBE8DF); 
+  static const Color accent      = Color(0xFFC59D1E); // Slightly deeper gold for readability
+  static const Color accentSoft  = Color(0x1AC59D1E); 
+  static const Color textPrimary = Color(0xFF2D2C29); // Deep Charcoal (easier on eyes than #000)
+  static const Color textSecond  = Color(0xFF6B6964); // Muted slate gray
+  static const Color correct     = Color(0xFF388E3C); // Adjusted for light background
+  static const Color wrong       = Color(0xFFD32F2F);
+  static const Color border      = Color(0xFFE0DDD5);
 
-  static ThemeData get theme => ThemeData(
+  static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     scaffoldBackgroundColor: background,
-    colorScheme: const ColorScheme.dark(
+    colorScheme: const ColorScheme.light(
       primary: accent,
       secondary: accent,
       surface: surface,
-      onPrimary: background,
-      onSecondary: background,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
       onSurface: textPrimary,
     ),
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontFamily: 'Serif',
+        fontFamily: 'Serif', // Keeps that "Enola" aesthetic
         fontSize: 32,
         fontWeight: FontWeight.w700,
         color: textPrimary,
@@ -52,7 +50,7 @@ class EnolaTheme {
       labelLarge: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: background,
+        color: Colors.white,
         letterSpacing: 0.5,
       ),
     ),
@@ -60,15 +58,17 @@ class EnolaTheme {
       backgroundColor: background,
       foregroundColor: textPrimary,
       elevation: 0,
+      centerTitle: false,
       titleTextStyle: TextStyle(
         fontSize: 18,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         color: textPrimary,
       ),
     ),
     cardTheme: CardThemeData(
-      color: surface,
-      elevation: 0,
+      color: Colors.white,
+      elevation: 2, // Small shadow for depth in light mode
+      shadowColor: border.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: border),
@@ -77,7 +77,8 @@ class EnolaTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: accent,
-        foregroundColor: background,
+        foregroundColor: Colors.white,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
@@ -85,7 +86,7 @@ class EnolaTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: surfaceHigh,
+      fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: border),
