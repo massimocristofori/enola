@@ -9,8 +9,8 @@ import '../../providers/map_providers.dart';
 import '../../services/map_repository.dart';
 import '../../theme/enola_theme.dart';
 import '../../widgets/fantasy_widgets.dart';
-import '../create_map/create_map_screen.dart';
-import '../play/play_screen.dart';
+import '../../screens/create_map_screen.dart';
+import '../../screens/play_screen.dart';
 
 class MapDetailScreen extends ConsumerWidget {
   final int mapId;
