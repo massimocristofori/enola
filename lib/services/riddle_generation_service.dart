@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/riddle.dart';
 import 'gemini_service.dart';
 import 'ocr_service.dart';
+import '../utils/text_cleaner.dart';
 
 class RiddleGenerationService {
   RiddleGenerationService._();
@@ -19,11 +20,16 @@ class RiddleGenerationService {
     final text =
         await OCRService.instance.extractTextFromImages(images);
 
+
+    final cleanedText = cleanOcrText(text);
+
     return generateFromText(
-      text,
+      cleanedText,
       riddleCount: riddleCount,
       mapId: mapId,
     );
+
+    
   }
 
   /// Text → riddles (pure LLM step)
