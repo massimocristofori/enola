@@ -9,7 +9,7 @@ import '../../models/riddle_map.dart';
 import '../../providers/map_providers.dart';
 import '../../theme/enola_theme.dart';
 import '../../widgets/fantasy_widgets.dart';
-import 'result_screen.dart';
+import '../../screens/result_screen.dart';
 
 class PlayScreen extends ConsumerStatefulWidget {
   final int mapId;
