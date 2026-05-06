@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/isar_service.dart';
 import 'services/gemini_service.dart';
 import 'theme/enola_theme.dart';
-import 'screens/home/home_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
