@@ -6,7 +6,8 @@ class EnolaTheme {
   // ── Palette ────────────────────────────────────────────────────────────────
   //static const Color background  = Color(0xFF0F0F14);
   static const Color background  = Color(0xFFFFFFFF);
-  static const Color surface     = Color(0xFF1A1A24);
+  //static const Color surface     = Color(0xFF1A1A24);
+  static const Color surface     = Color(0xFFF9F9FA);
   static const Color surfaceHigh = Color(0xFF242433);
   static const Color accent      = Color(0xFFE8C547); // warm gold — lantern light
   static const Color accentSoft  = Color(0x33E8C547);
