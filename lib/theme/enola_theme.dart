@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 class EnolaTheme {
   EnolaTheme._();
 
-  // ── Palette (Light & Enjoyable) ──────────────────────────────────────────
-  static const Color background  = Color(0xFFFDFCF8); // Soft "Paper" white
-  static const Color surface     = Color(0xFFF2F0E9); // Slightly darker wash
+  // ── Light & Enjoyable Palette ──────────────────────────────────────────
+  static const Color background  = Color(0xFFFDFCF8); // Warm paper white
+  static const Color surface     = Color(0xFFF2F0E9); // Soft cream
   static const Color surfaceHigh = Color(0xFFEBE8DF); 
-  static const Color accent      = Color(0xFFC59D1E); // Slightly deeper gold for readability
+  static const Color accent      = Color(0xFFC59D1E); // Deep gold for readability
   static const Color accentSoft  = Color(0x1AC59D1E); 
-  static const Color textPrimary = Color(0xFF2D2C29); // Deep Charcoal (easier on eyes than #000)
-  static const Color textSecond  = Color(0xFF6B6964); // Muted slate gray
-  static const Color correct     = Color(0xFF388E3C); // Adjusted for light background
+  static const Color textPrimary = Color(0xFF2D2C29); // Charcoal gray
+  static const Color textSecond  = Color(0xFF6B6964); // Slate gray
+  static const Color correct     = Color(0xFF388E3C);
   static const Color wrong       = Color(0xFFD32F2F);
   static const Color border      = Color(0xFFE0DDD5);
 
-  static ThemeData get lightTheme => ThemeData(
+  static ThemeData get theme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     scaffoldBackgroundColor: background,
@@ -29,7 +29,7 @@ class EnolaTheme {
     ),
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontFamily: 'Serif', // Keeps that "Enola" aesthetic
+        fontFamily: 'Serif',
         fontSize: 32,
         fontWeight: FontWeight.w700,
         color: textPrimary,
@@ -67,8 +67,8 @@ class EnolaTheme {
     ),
     cardTheme: CardThemeData(
       color: Colors.white,
-      elevation: 2, // Small shadow for depth in light mode
-      shadowColor: border.withOpacity(0.3),
+      elevation: 2,
+      shadowColor: border.withValues(alpha: 0.3), // Modern Flutter syntax
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: border),
