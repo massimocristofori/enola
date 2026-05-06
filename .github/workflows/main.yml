@@ -19,6 +19,7 @@ jobs:
           cache: true # Ottimizza i tempi di esecuzione
 
       - name: Install dependencies
+        run: flutter clean
         run: flutter pub get
 
       - name: Icons
