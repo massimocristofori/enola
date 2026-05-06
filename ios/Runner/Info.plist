@@ -38,6 +38,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
 	<!-- ✅ REQUIRED FOR APP STORE (Camera permission) -->
 	<key>NSCameraUsageDescription</key>
 	<string>This app requires camera access to take photos and scan content.</string>
