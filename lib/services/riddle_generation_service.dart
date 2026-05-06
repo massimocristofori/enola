@@ -3,22 +3,36 @@ import 'dart:io';
 
 import '../models/riddle.dart';
 import 'gemini_service.dart';
+import 'ocr_service.dart';
+import '../utils/text_cleaner.dart';
 
 class RiddleGenerationService {
   RiddleGenerationService._();
-  static final RiddleGenerationService instance = RiddleGenerationService._();
+  static final RiddleGenerationService instance =
+      RiddleGenerationService._();
 
-  /// Full pipeline: images → text → riddles
+  /// Full pipeline: images → OCR → text → Gemini
   Future<List<Riddle>> generateFromImages(
     List<File> images, {
     int riddleCount = 5,
-    int mapId = 0, // will be set after map is saved
+    int mapId = 0,
   }) async {
-    final text = await GeminiService.instance.extractTextFromImages(images);
-    return generateFromText(text, riddleCount: riddleCount, mapId: mapId);
+    final text =
+        await OCRService.instance.extractTextFromImages(images);
+
+
+    final cleanedText = cleanOcrText(text);
+
+    return generateFromText(
+      cleanedText,
+      riddleCount: riddleCount,
+      mapId: mapId,
+    );
+
+    
   }
 
-  /// Text-only pipeline (useful when user already has the text)
+  /// Text → riddles (pure LLM step)
   Future<List<Riddle>> generateFromText(
     String sourceText, {
     int riddleCount = 5,
@@ -30,11 +44,12 @@ class RiddleGenerationService {
     );
 
     final riddles = <Riddle>[];
+
     for (var i = 0; i < rawList.length; i++) {
-      final raw = rawList[i];
-      final riddle = _parseRiddle(raw, order: i, mapId: mapId);
-      if (riddle != null) riddles.add(riddle);
+      final r = _parseRiddle(rawList[i], order: i, mapId: mapId);
+      if (r != null) riddles.add(r);
     }
+
     return riddles;
   }
 
@@ -55,17 +70,17 @@ class RiddleGenerationService {
       switch (type) {
         case 'multipleChoice':
           riddle.type = RiddleType.multipleChoice;
-          riddle.mcChoicesJson =
-              jsonEncode((raw['choices'] as List).cast<String>());
-          riddle.mcCorrectIndex = raw['correctIndex'] as int;
+          riddle.mcChoicesJson = jsonEncode(raw['choices']);
+          riddle.mcCorrectIndex = raw['correctIndex'];
+          break;
 
         case 'ordering':
           riddle.type = RiddleType.ordering;
-          riddle.orderItemsJson =
-              jsonEncode((raw['items'] as List).cast<String>());
+          riddle.orderItemsJson = jsonEncode(raw['items']);
+          break;
 
         default:
-          return null; // unknown type — skip gracefully
+          return null;
       }
 
       return riddle;
