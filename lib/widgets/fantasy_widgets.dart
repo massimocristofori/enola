@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import '../theme/enola_theme.dart';
+
+import 'package:enola/theme/enola_theme.dart';
 
 // ── Parchment Card ────────────────────────────────────────────────────────────
 
@@ -37,8 +37,8 @@ class ParchmentCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: glowing
-                  ? EnolaTheme.accent.withOpacity(0.25)
-                  : Colors.black.withOpacity(0.4),
+                  ? EnolaTheme.accent.withValues(alpha: 0.25)
+                  : Colors.black.withValues(alpha: 0.4),
               blurRadius: glowing ? 20 : 8,
               offset: const Offset(0, 4),
             ),
@@ -283,7 +283,7 @@ class _QuestNodeState extends State<QuestNode>
               boxShadow: isCurrent
                   ? [
                       BoxShadow(
-                        color: EnolaTheme.accent.withOpacity(0.15 + glow * 0.35),
+                        color: EnolaTheme.accent.withValues(alpha: 0.15 + glow * 0.35),
                         blurRadius: 12 + glow * 20,
                         spreadRadius: glow * 4,
                       ),
@@ -291,7 +291,7 @@ class _QuestNodeState extends State<QuestNode>
                   : isDone
                       ? [
                           BoxShadow(
-                            color: EnolaTheme.correct.withOpacity(0.3),
+                            color: EnolaTheme.correct.withValues(alpha: 0.3),
                             blurRadius: 12,
                           ),
                         ]
@@ -351,7 +351,7 @@ class _PathPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = completed
-          ? EnolaTheme.correct.withOpacity(0.7)
+          ? EnolaTheme.correct.withValues(alpha: 0.7)
           : const Color(0xFF4A3F22)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
@@ -420,7 +420,7 @@ class FantasyBackground extends StatelessWidget {
               radius: 1.0,
               colors: [
                 Colors.transparent,
-                Colors.black.withOpacity(0.5),
+                Colors.black.withValues(alpha: 0.5),
               ],
             ),
           ),
@@ -453,7 +453,7 @@ class EnolaLogo extends StatelessWidget {
             letterSpacing: 6,
             shadows: [
               Shadow(
-                color: EnolaTheme.accent.withOpacity(0.5),
+                color: EnolaTheme.accent.withValues(alpha: 0.5),
                 blurRadius: 12,
               ),
             ],

@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../models/riddle.dart';
-import '../../models/riddle_map.dart';
-import '../../providers/map_providers.dart';
-import '../../theme/enola_theme.dart';
-import '../../widgets/fantasy_widgets.dart';
-import '../../screens/result_screen.dart';
+import 'package:enola/models/riddle.dart';
+import 'package:enola/models/riddle_map.dart';
+import 'package:enola/providers/map_providers.dart';
+import 'package:enola/theme/enola_theme.dart';
+import 'package:enola/widgets/fantasy_widgets.dart';
+import 'package:enola/screens/result_screen.dart';
 
 class PlayScreen extends ConsumerStatefulWidget {
   final int mapId;
@@ -417,11 +417,11 @@ class _ChoiceTile extends StatelessWidget {
     if (answered) {
       if (isCorrect) {
         borderColor = EnolaTheme.correct;
-        bgColor = EnolaTheme.correct.withOpacity(0.15);
+        bgColor = EnolaTheme.correct.withValues(alpha: 0.15);
         textColor = EnolaTheme.correct;
       } else if (isSelected) {
         borderColor = EnolaTheme.wrong;
-        bgColor = EnolaTheme.wrong.withOpacity(0.12);
+        bgColor = EnolaTheme.wrong.withValues(alpha: 0.12);
         textColor = EnolaTheme.wrong;
       }
     } else if (isSelected) {
@@ -554,9 +554,9 @@ class _OrderingWidget extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: isRight
-                      ? EnolaTheme.correct.withOpacity(0.12)
+                      ? EnolaTheme.correct.withValues(alpha: 0.12)
                       : isWrong
-                          ? EnolaTheme.wrong.withOpacity(0.1)
+                          ? EnolaTheme.wrong.withValues(alpha: 0.1)
                           : const Color(0xFF1E1A10),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
@@ -641,8 +641,8 @@ class _FeedbackBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: isCorrect
-            ? EnolaTheme.correct.withOpacity(0.15)
-            : EnolaTheme.wrong.withOpacity(0.12),
+            ? EnolaTheme.correct.withValues(alpha: 0.15)
+            : EnolaTheme.wrong.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color:

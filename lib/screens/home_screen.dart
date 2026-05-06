@@ -3,13 +3,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../models/riddle_map.dart';
-import '../../providers/map_providers.dart';
-import '../../services/map_repository.dart';
-import '../../theme/enola_theme.dart';
-import '../../widgets/fantasy_widgets.dart';
-import '../../screens/create_map_screen.dart';
-import '../../screens/map_detail_screen.dart';
+import 'package:enola/models/riddle_map.dart';
+import 'package:enola/providers/map_providers.dart';
+
+import 'package:enola/theme/enola_theme.dart';
+import 'package:enola/widgets/fantasy_widgets.dart';
+import 'package:enola/screens/create_map_screen.dart';
+import 'package:enola/screens/map_detail_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

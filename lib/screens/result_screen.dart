@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../theme/enola_theme.dart';
-import '../../widgets/fantasy_widgets.dart';
-import '../../screens/home_screen.dart';
+import 'package:enola/theme/enola_theme.dart';
+import 'package:enola/widgets/fantasy_widgets.dart';
+import 'package:enola/screens/home_screen.dart';
 
 class ResultScreen extends StatelessWidget {
   final int mapId;
@@ -108,7 +108,7 @@ class ResultScreen extends StatelessWidget {
             letterSpacing: 1,
             shadows: [
               Shadow(
-                color: _scoreColor.withOpacity(0.4),
+                color: _scoreColor.withValues(alpha: 0.4),
                 blurRadius: 20,
               ),
             ],
@@ -277,9 +277,9 @@ class _StatBox extends StatelessWidget {
       width: 90,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [

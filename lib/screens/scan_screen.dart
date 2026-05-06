@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../models/riddle.dart';
-import '../../services/gemini_service.dart';
-import '../../services/riddle_generation_service.dart';
-import '../../theme/enola_theme.dart';
-import '../../widgets/fantasy_widgets.dart';
+
+import 'package:enola/services/gemini_service.dart';
+import 'package:enola/services/riddle_generation_service.dart';
+import 'package:enola/theme/enola_theme.dart';
+import 'package:enola/widgets/fantasy_widgets.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -300,9 +300,9 @@ class _ScanScreenState extends State<ScanScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: EnolaTheme.wrong.withOpacity(0.1),
+        color: EnolaTheme.wrong.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: EnolaTheme.wrong.withOpacity(0.5)),
+        border: Border.all(color: EnolaTheme.wrong.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -414,7 +414,7 @@ class _PageTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -432,7 +432,7 @@ class _PageTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close_rounded,

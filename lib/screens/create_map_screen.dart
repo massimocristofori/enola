@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../models/riddle.dart';
-import '../../models/riddle_map.dart';
-import '../../providers/map_providers.dart';
-import '../../services/map_repository.dart';
-import '../../theme/enola_theme.dart';
-import '../../widgets/fantasy_widgets.dart';
-import '../../screens/scan_screen.dart';
+import 'package:enola/models/riddle.dart';
+import 'package:enola/models/riddle_map.dart';
+
+import 'package:enola/services/map_repository.dart';
+import 'package:enola/theme/enola_theme.dart';
+import 'package:enola/widgets/fantasy_widgets.dart';
+import 'package:enola/screens/scan_screen.dart';
 
 class CreateMapScreen extends ConsumerStatefulWidget {
   final int? existingMapId;
@@ -505,8 +505,8 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
   @override
   void dispose() {
     _questionCtrl.dispose();
-    for (final c in _choiceCtrls) c.dispose();
-    for (final c in _itemCtrls) c.dispose();
+    for (final c in _choiceCtrls) {c.dispose();}
+    for (final c in _itemCtrls) {c.dispose();}
     super.dispose();
   }
 
