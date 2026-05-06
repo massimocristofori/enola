@@ -54,7 +54,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/icon.jpeg
+    - assets/images/icon.png
 
 # Configuration for the icon generator
 flutter_launcher_icons:
