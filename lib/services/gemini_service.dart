@@ -16,7 +16,7 @@ class GeminiService {
 
   /// Must be set before calling any method.
   /// In production, load this from a secure config / env, never hard-code.
-  String? apiKey;
+  String? apiKey = "AIzaSyDlzEfuce4Q-MWhciMU360_MzbZQhRavSk";
 
   GenerativeModel get _model {
     assert(apiKey != null && apiKey!.isNotEmpty,
