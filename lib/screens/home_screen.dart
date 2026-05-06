@@ -8,8 +8,8 @@ import '../../providers/map_providers.dart';
 import '../../services/map_repository.dart';
 import '../../theme/enola_theme.dart';
 import '../../widgets/fantasy_widgets.dart';
-import '../create_map/create_map_screen.dart';
-import '../map_detail/map_detail_screen.dart';
+import '../../screens/create_map_screen.dart';
+import '../../screens/map_detail_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
