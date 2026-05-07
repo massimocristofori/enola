@@ -34,10 +34,7 @@ jobs:
 
       - name: Build Web
         run: |
-          flutter build web --release --base-href /${{ github.event.repository.name }}/ --no-web-resources-wasm
-
-
-
+          flutter build web --release --base-href /${{ github.event.repository.name }}/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
