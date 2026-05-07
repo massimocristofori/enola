@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 import 'package:enola/database/schema_utils.dart';
 import 'package:enola/database/database.dart';
-import 'package:enola/database/schema_utils.dart';
+
 import 'gemini_service.dart';
 import 'ocr_service.dart';
 import '../utils/text_cleaner.dart';
@@ -71,13 +71,17 @@ class RiddleGenerationService {
 
       final isMC = type == 'multipleChoice';
 
-      final riddle = Riddle(
-        mapId: mapId,
-        typeIndex: isMC ? RiddleType.multipleChoice.index : RiddleType.ordering.index,
-        question: question,
-        orderInMap: order,
-        sourceText: raw['sourceText'],
-      );
+final riddle = Riddle(
+  id: 0, // Drift classes require an ID; use 0 as a placeholder for autoincrement
+  mapId: 'temp', 
+  question: generatedQuestion,
+  typeIndex: type.index,
+  orderInMap: index,
+  // Use the actual column names from your Drift table:
+  choicesJson: jsonEncode(generatedChoices), 
+  correctIndex: generatedCorrectIndex,
+);
+
 
       if (isMC) {
         riddle.mcChoicesJson = jsonEncode(raw['choices']);
