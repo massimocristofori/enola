@@ -18,7 +18,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.24.x'
           channel: 'stable'
           cache: true
 
@@ -36,7 +36,7 @@ jobs:
         run: |
           # We use --no-wasm to avoid the 'application/wasm' MIME type error on GitHub Pages.
           # This ensures the app uses the stable JavaScript/CanvasKit renderer.
-          flutter build web --release --base-href /${{ github.event.repository.name }}/ --no-wasm
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --no-wasm --web-renderer canvakit
 
 
       - name: Deploy to GitHub Pages
