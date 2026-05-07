@@ -168,7 +168,7 @@ class _MapBody extends StatelessWidget {
                       // ✅ Corrected icon name
                       const Icon(Icons.quiz_outlined, color: EnolaTheme.accent, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         '${riddles.length} RIDDLES AWAIT',
                         style: EnolaTheme.sectionHeader,
                       ),
