@@ -24,26 +24,26 @@ class MapRepository {
         .watch(fireImmediately: true);
   }
 
-  Future<RiddleMap?> getMap(String id) async {
-    return _db.riddleMaps.get(id);
+  // ✅ FIX: Use the index for publicId instead of .get(int)
+  Future<RiddleMap?> getMap(String publicId) async {
+    return _db.riddleMaps.filter().publicIdEqualTo(publicId).findFirst();
   }
 
+  // ✅ FIX: Return the publicId (String) instead of the internal Id (int)
   Future<String> saveMap(RiddleMap map) async {
     return _db.writeTxn(() async {
       map.updatedAt = DateTime.now();
       await _db.riddleMaps.put(map);
-
-      // Source of truth is UUID on the object
-      return map.id;
+      return map.publicId; 
     });
   }
 
-  Future<void> deleteMap(String id) async {
+  Future<void> deleteMap(String publicId) async {
     await _db.writeTxn(() async {
-      // delete all riddles belonging to this map
+      // 1. Delete riddles associated with this map's publicId
       final riddleIds = await _db.riddles
           .filter()
-          .mapIdEqualTo(id)
+          .mapIdEqualTo(publicId)
           .idProperty()
           .findAll();
 
@@ -51,8 +51,8 @@ class MapRepository {
         await _db.riddles.deleteAll(riddleIds);
       }
 
-      // delete map safely
-      final map = await _db.riddleMaps.get(id);
+      // 2. ✅ FIX: Find the map by publicId to get the internal int id for deletion
+      final map = await _db.riddleMaps.filter().publicIdEqualTo(publicId).findFirst();
       if (map != null) {
         await _db.riddleMaps.delete(map.id);
       }
@@ -73,7 +73,6 @@ class MapRepository {
 
   Future<void> saveRiddles(String mapId, List<Riddle> riddles) async {
     await _db.writeTxn(() async {
-      // remove existing riddles for this map
       final oldIds = await _db.riddles
           .filter()
           .mapIdEqualTo(mapId)
@@ -84,7 +83,6 @@ class MapRepository {
         await _db.riddles.deleteAll(oldIds);
       }
 
-      // reinsert with correct ordering
       for (var i = 0; i < riddles.length; i++) {
         riddles[i].mapId = mapId;
         riddles[i].orderInMap = i;
@@ -97,8 +95,14 @@ class MapRepository {
     await _db.writeTxn(() => _db.riddles.put(riddle));
   }
 
-  Future<void> deleteRiddle(String riddleId) async {
-    await _db.writeTxn(() => _db.riddles.delete(riddleId));
+  // ✅ FIX: Query by publicId (if Riddle has one) or find first then delete
+  Future<void> deleteRiddle(String riddlePublicId) async {
+    await _db.writeTxn(() async {
+      final riddle = await _db.riddles.filter().publicIdEqualTo(riddlePublicId).findFirst();
+      if (riddle != null) {
+        await _db.riddles.delete(riddle.id);
+      }
+    });
   }
 
   Future<int> getRiddleCount(String mapId) async {
