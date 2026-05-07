@@ -28,8 +28,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Remove old generated files
+        run: rm -f lib/models/*.g.dart
+
+      - name: Run Build Runner
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Build Web
         run: flutter build web --release
+
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
