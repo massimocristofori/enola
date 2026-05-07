@@ -34,7 +34,13 @@ jobs:
 
       - name: Build Web
         run: |
-          flutter build web --release --base-href /${{ github.event.repository.name }}/ --dart-define=FLUTTER_WEB_CANVASKIT_URL=https://www.gstatic.com/flutter-canvakit/ --renderer canvakit
+          # 1. Build using the standard web-renderer flag
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --web-renderer canvakit
+
+          # 2. Force-remove any WASM files so the browser is forced to fallback to JS
+          # This prevents the 'application/wasm' MIME error on GitHub Pages.
+          rm -f build/web/main.dart.wasm
+
 
 
       - name: Deploy to GitHub Pages
