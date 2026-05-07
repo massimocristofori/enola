@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:enola/database/database.dart';
-
+// Import removed: isar_service
 import 'services/gemini_service.dart';
 import 'theme/enola_theme.dart';
 import 'screens/home_screen.dart';
@@ -22,9 +21,10 @@ void main() async {
     statusBarIconBrightness: Brightness.light,
   ));
 
-  await IsarService.instance.init();
+  // REMOVED: IsarService.instance.init(); 
+  // DriftService manages the database connection automatically upon first use.
 
-  // TODO: replace with your actual Gemini API key or load from secure config
+  // Gemini API key setup
   GeminiService.instance.apiKey = const String.fromEnvironment(
     'GEMINI_API_KEY',
     defaultValue: '',
