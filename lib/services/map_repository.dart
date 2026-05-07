@@ -9,7 +9,9 @@ class MapRepository {
 
   Isar get _db => IsarService.instance.db;
 
-  // ── Maps ──────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // MAPS
+  // ─────────────────────────────────────────────────────────────
 
   Future<List<RiddleMap>> getAllMaps() async {
     return _db.riddleMaps.where().sortByCreatedAtDesc().findAll();
@@ -29,26 +31,37 @@ class MapRepository {
   Future<String> saveMap(RiddleMap map) async {
     return _db.writeTxn(() async {
       map.updatedAt = DateTime.now();
-      return _db.riddleMaps.put(map);
+      await _db.riddleMaps.put(map);
+
+      // Source of truth is UUID on the object
+      return map.id;
     });
   }
 
   Future<void> deleteMap(String id) async {
     await _db.writeTxn(() async {
-      // delete riddles first
+      // delete all riddles belonging to this map
       final riddleIds = await _db.riddles
           .filter()
           .mapIdEqualTo(id)
           .idProperty()
           .findAll();
 
-      await _db.riddles.deleteAll(riddleIds);
+      if (riddleIds.isNotEmpty) {
+        await _db.riddles.deleteAll(riddleIds);
+      }
 
-      await _db.riddleMaps.delete(id);
+      // delete map safely
+      final map = await _db.riddleMaps.get(id);
+      if (map != null) {
+        await _db.riddleMaps.delete(map.id);
+      }
     });
   }
 
-  // ── Riddles ───────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // RIDDLES
+  // ─────────────────────────────────────────────────────────────
 
   Future<List<Riddle>> getRiddlesForMap(String mapId) async {
     return _db.riddles
@@ -60,20 +73,23 @@ class MapRepository {
 
   Future<void> saveRiddles(String mapId, List<Riddle> riddles) async {
     await _db.writeTxn(() async {
+      // remove existing riddles for this map
       final oldIds = await _db.riddles
           .filter()
           .mapIdEqualTo(mapId)
           .idProperty()
           .findAll();
 
-      await _db.riddles.deleteAll(oldIds);
+      if (oldIds.isNotEmpty) {
+        await _db.riddles.deleteAll(oldIds);
+      }
 
+      // reinsert with correct ordering
       for (var i = 0; i < riddles.length; i++) {
         riddles[i].mapId = mapId;
         riddles[i].orderInMap = i;
+        await _db.riddles.put(riddles[i]);
       }
-
-      await _db.riddles.putAll(riddles);
     });
   }
 
