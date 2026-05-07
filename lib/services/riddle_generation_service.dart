@@ -1,98 +1,74 @@
 import 'dart:convert';
-import 'dart:io';
-
-import 'package:uuid/uuid.dart';
-import 'package:enola/database/schema_utils.dart';
 import 'package:enola/database/database.dart';
-
-import 'gemini_service.dart';
-import 'ocr_service.dart';
-import '../utils/text_cleaner.dart';
+import 'package:enola/database/schema_utils.dart';
+import 'package:enola/services/gemini_service.dart';
 
 class RiddleGenerationService {
+  static final RiddleGenerationService instance = RiddleGenerationService._();
   RiddleGenerationService._();
-  static final RiddleGenerationService instance =
-      RiddleGenerationService._();
 
-  final _uuid = const Uuid();
-
-  /// Full pipeline: images → OCR → text → Gemini
-  Future<List<Riddle>> generateFromImages(
-    List<File> images, {
-    int riddleCount = 5,
-    String? mapId,
-  }) async {
-    final text =
-        await OCRService.instance.extractTextFromImages(images);
-
-    final cleanedText = cleanOcrText(text);
-
-    return generateFromText(
-      cleanedText,
-      riddleCount: riddleCount,
-      mapId: mapId ?? _uuid.v4(),
-    );
-  }
-
-  /// Text → riddles (pure LLM step)
-  Future<List<Riddle>> generateFromText(
-    String sourceText, {
-    int riddleCount = 5,
+  /// Analyzes scanned text and generates a list of Drift Riddle objects.
+  Future<List<Riddle>> generateRiddlesFromText({
+    required String text,
     required String mapId,
   }) async {
-    final rawList = await GeminiService.instance.generateRiddles(
-      sourceText,
-      count: riddleCount,
-    );
+    // 1. Prepare the prompt for Gemini
+    final prompt = '''
+      You are a fantasy quest builder. Analyze the following text and create 3 riddles.
+      Text: "$text"
+      
+      Return ONLY a JSON array of objects with this structure:
+      [
+        {
+          "question": "The riddle text",
+          "choices": ["Choice A", "Choice B", "Choice C", "Choice D"],
+          "correctIndex": 0,
+          "type": "multipleChoice"
+        }
+      ]
+    ''';
 
-    final riddles = <Riddle>[];
-
-    for (var i = 0; i < rawList.length; i++) {
-      final r = _parseRiddle(
-        rawList[i],
-        order: i,
-        mapId: mapId,
-      );
-
-      if (r != null) riddles.add(r);
-    }
-
-    return riddles;
-  }
-
-  Riddle? _parseRiddle(
-    Map<String, dynamic> raw, {
-    required int order,
-    required String mapId,
-  }) {
     try {
-      final type = raw['type'] as String;
-      final question = raw['question'] as String;
+      // 2. Call Gemini
+      final response = await GeminiService.instance.generateContent(prompt);
+      final String cleanJson = _stripMarkdown(response);
+      final List<dynamic> decoded = jsonDecode(cleanJson);
 
-      final isMC = type == 'multipleChoice';
+      // 3. Map JSON to Drift Riddle objects
+      return decoded.asMap().entries.map((entry) {
+        final index = entry.key;
+        final data = entry.value;
+        
+        // Determine the type index from the Enum
+        int typeIdx = RiddleType.multipleChoice.index;
+        if (data['type'] == 'ordering') {
+          typeIdx = RiddleType.ordering.index;
+        }
 
-final riddle = Riddle(
-  id: 0, // Drift classes require an ID; use 0 as a placeholder for autoincrement
-  mapId: 'temp', 
-  question: generatedQuestion,
-  typeIndex: type.index,
-  orderInMap: index,
-  // Use the actual column names from your Drift table:
-  choicesJson: jsonEncode(generatedChoices), 
-  correctIndex: generatedCorrectIndex,
-);
-
-
-      if (isMC) {
-        riddle.mcChoicesJson = jsonEncode(raw['choices']);
-        riddle.mcCorrectIndex = raw['correctIndex'];
-      } else {
-        riddle.orderItemsJson = jsonEncode(raw['items']);
-      }
-
-      return riddle;
-    } catch (_) {
-      return null;
+        // Drift objects must be created via constructor (Immutable)
+        return Riddle(
+          id: 0, // Placeholder, autoincremented by DB
+          mapId: mapId,
+          question: data['question'] ?? 'Unknown Trial',
+          typeIndex: typeIdx,
+          orderInMap: index,
+          choicesJson: jsonEncode(data['choices'] ?? []),
+          correctIndex: data['correctIndex'] ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      print('AI Generation Error: $e');
+      return [];
     }
+  }
+
+  /// Helper to clean Gemini's markdown code blocks if present
+  String _stripMarkdown(String text) {
+    if (text.contains('```json')) {
+      return text.split('```json')[1].split('```')[0].trim();
+    } else if (text.contains('```')) {
+      return text.split('```')[1].split('```')[0].trim();
+    }
+    return text.trim();
   }
 }
