@@ -60,13 +60,14 @@ class Riddle {
   }
 
   @ignore
-  String? get choiceA => choices.length > 0 ? choices[0] : null;
+  String? get choiceA => choices.isNotEmpty ? choices[0] : null;
   @ignore
   String? get choiceB => choices.length > 1 ? choices[1] : null;
   @ignore
   String? get choiceC => choices.length > 2 ? choices[2] : null;
   @ignore
   String? get choiceD => choices.length > 3 ? choices[3] : null;
+
 
   @ignore
   int get correctChoiceIndex => mcCorrectIndex ?? 0;
