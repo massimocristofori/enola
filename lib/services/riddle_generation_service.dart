@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:uuid/uuid.dart';
+
 import '../models/riddle.dart';
 import 'gemini_service.dart';
 import 'ocr_service.dart';
@@ -11,32 +13,31 @@ class RiddleGenerationService {
   static final RiddleGenerationService instance =
       RiddleGenerationService._();
 
+  final _uuid = const Uuid();
+
   /// Full pipeline: images → OCR → text → Gemini
   Future<List<Riddle>> generateFromImages(
     List<File> images, {
     int riddleCount = 5,
-    int mapId = 0,
+    String? mapId,
   }) async {
     final text =
         await OCRService.instance.extractTextFromImages(images);
-
 
     final cleanedText = cleanOcrText(text);
 
     return generateFromText(
       cleanedText,
       riddleCount: riddleCount,
-      mapId: mapId,
+      mapId: mapId ?? _uuid.v4(), // fallback safety
     );
-
-    
   }
 
   /// Text → riddles (pure LLM step)
   Future<List<Riddle>> generateFromText(
     String sourceText, {
     int riddleCount = 5,
-    int mapId = 0,
+    required String mapId,
   }) async {
     final rawList = await GeminiService.instance.generateRiddles(
       sourceText,
@@ -46,7 +47,11 @@ class RiddleGenerationService {
     final riddles = <Riddle>[];
 
     for (var i = 0; i < rawList.length; i++) {
-      final r = _parseRiddle(rawList[i], order: i, mapId: mapId);
+      final r = _parseRiddle(
+        rawList[i],
+        order: i,
+        mapId: mapId,
+      );
       if (r != null) riddles.add(r);
     }
 
@@ -56,26 +61,30 @@ class RiddleGenerationService {
   Riddle? _parseRiddle(
     Map<String, dynamic> raw, {
     required int order,
-    required int mapId,
+    required String mapId,
   }) {
     try {
       final type = raw['type'] as String;
       final question = raw['question'] as String;
 
-      final riddle = Riddle()
-        ..mapId = mapId
-        ..question = question
-        ..orderInMap = order;
+      final riddle = Riddle(
+        mapId: mapId,
+        typeIndex: type == 'multipleChoice' ? 0 : 1,
+        question: question,
+        orderInMap: order,
+        sourceText: raw['sourceText'],
+        mcChoicesJson: null,
+        mcCorrectIndex: null,
+        orderItemsJson: null,
+      );
 
       switch (type) {
         case 'multipleChoice':
-          riddle.type = RiddleType.multipleChoice;
           riddle.mcChoicesJson = jsonEncode(raw['choices']);
           riddle.mcCorrectIndex = raw['correctIndex'];
           break;
 
         case 'ordering':
-          riddle.type = RiddleType.ordering;
           riddle.orderItemsJson = jsonEncode(raw['items']);
           break;
 
