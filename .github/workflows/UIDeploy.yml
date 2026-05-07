@@ -34,12 +34,17 @@ jobs:
 
       - name: Build Web
         run: |
-          # 1. Build using the standard web-renderer flag
-          flutter build web --release --base-href /${{ github.event.repository.name }}/ --web-renderer canvakit
+          # 1. Build using 'dart-define' to bypass the picky CLI flags
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --dart-define=FLUTTER_WEB_RENDERER=canvakit
 
-          # 2. Force-remove any WASM files so the browser is forced to fallback to JS
-          # This prevents the 'application/wasm' MIME error on GitHub Pages.
+          # 2. The "Nuclear Option": Remove the WASM file manually
+          # If this file exists, the browser tries to load it and fails due to GH Pages MIME types.
+          # If we delete it, Flutter automatically falls back to JS safely.
           rm -f build/web/main.dart.wasm
+          
+      - name: Disable Jekyll
+        run: touch build/web/.nojekyll
+
 
 
 
