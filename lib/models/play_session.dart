@@ -1,21 +1,31 @@
 import 'package:isar/isar.dart';
+import 'package:uuid/uuid.dart';
 
 part 'play_session.g.dart';
 
 @collection
 class PlaySession {
-  Id id = Isar.autoIncrement;
+  PlaySession({
+    String? id,
+    required this.mapId,
+    required this.totalRiddles,
+  })  : id = id ?? const Uuid().v4() {
+    startedAt = DateTime.now();
+    correctAnswers = 0;
+  }
 
+  /// ✅ FIX: String ID instead of autoIncrement int
+  @Id()
+  String id;
+
+  /// 🔥 IMPORTANT: must match RiddleMap.id type (now String UUID)
   @Index()
-  late int mapId;
+  late String mapId;
 
   late DateTime startedAt;
   DateTime? completedAt;
 
-  /// Total riddles in the map at time of play
   late int totalRiddles;
-
-  /// How many the user answered correctly
   late int correctAnswers;
 
   bool get isCompleted => completedAt != null;
@@ -23,11 +33,11 @@ class PlaySession {
   double get scorePercent =>
       totalRiddles == 0 ? 0 : correctAnswers / totalRiddles;
 
-  PlaySession({
-    required this.mapId,
-    required this.totalRiddles,
-  }) {
-    startedAt = DateTime.now();
-    correctAnswers = 0;
+  void markCompleted() {
+    completedAt = DateTime.now();
+  }
+
+  void incrementCorrect() {
+    correctAnswers++;
   }
 }
