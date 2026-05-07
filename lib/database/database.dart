@@ -94,10 +94,10 @@ extension RiddleUtils on Riddle {
       : [];
 
   // Helper getters so you don't have to rewrite the PlayScreen UI
-  String? get choiceA => choices.length > 0 ? choices[0] : null;
-  String? get choiceB => choices.length > 1 ? choices[1] : null;
-  String? get choiceC => choices.length > 2 ? choices[2] : null;
-  String? get choiceD => choices.length > 3 ? choices[3] : null;
+  String? get choiceA => choices.isNotEmpty ? choices[0] : null;
+  String? get choiceB => choices.isNotEmpty ? choices[1] : null;
+  String? get choiceC => choices.isNotEmpty ? choices[2] : null;
+  String? get choiceD => choices.isNotEmpty ? choices[3] : null;
 
   int? get correctChoiceIndex => correctIndex;
   String? get orderItemsJson => choicesJson; 
