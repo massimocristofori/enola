@@ -28,7 +28,10 @@ class RuneDivider extends StatelessWidget {
         const Expanded(child: Divider(color: EnolaTheme.border)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Icon(Icons.auto_awesome_sharp, size: 12, color: EnolaTheme.accent.withValues(alpha: 0.5)),
+          child: Icon(Icons.auto_awesome_sharp, 
+            size: 12, 
+            color: EnolaTheme.accent.withValues(alpha: 0.5)
+          ),
         ),
         const Expanded(child: Divider(color: EnolaTheme.border)),
       ],
@@ -46,7 +49,7 @@ class EnolaLogo extends StatelessWidget {
     return Text(
       'ENOLA',
       style: TextStyle(
-        fontFamily: 'Serif', // Use your serif font here
+        fontFamily: 'Serif', 
         fontSize: fontSize,
         fontWeight: FontWeight.w900,
         letterSpacing: 4,
@@ -67,6 +70,85 @@ class TorchFlame extends StatelessWidget {
       Icons.local_fire_department_rounded,
       size: size,
       color: EnolaTheme.accent,
+    );
+  }
+}
+
+/// ✅ ADDED: The card used for Map tiles and Riddle items
+class ParchmentCard extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final bool glowing;
+
+  const ParchmentCard({
+    super.key, 
+    required this.child, 
+    this.onTap, 
+    this.glowing = false
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: glowing ? 4 : 0,
+      shadowColor: glowing ? EnolaTheme.accent.withValues(alpha: 0.3) : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: glowing ? EnolaTheme.accent : EnolaTheme.border,
+          width: glowing ? 2 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// ✅ ADDED: The custom text field used in forms
+class FantasyTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final int maxLines;
+  final String? Function(String?)? validator;
+
+  const FantasyTextField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.hint,
+    this.maxLines = 1,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: EnolaTheme.sectionHeader,
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          validator: validator,
+          style: const TextStyle(color: EnolaTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: EnolaTheme.textSecond, fontSize: 14),
+          ),
+        ),
+      ],
     );
   }
 }
