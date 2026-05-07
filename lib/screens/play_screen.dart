@@ -267,7 +267,7 @@ class _PlayBody extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: InkWell(
-            onTap: () => onMultipleChoiceAnswer(i, riddle.correctChoiceIndex ?? 0),
+            onTap: () => onMultipleChoiceAnswer(i, riddle.correctChoiceIndex),
             borderRadius: BorderRadius.circular(12),
             child: AnimatedContainer(
               duration: 300.ms,
