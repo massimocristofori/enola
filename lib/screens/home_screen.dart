@@ -145,73 +145,75 @@ class _MapTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ map.id is now String (UUID-safe)
-    final countAsync = ref.watch(riddleCountProvider(map.id));
+    // ✅ FIX: Use publicId (String) for the provider and navigation
+    final countAsync = ref.watch(riddleCountProvider(map.publicId));
     final count = countAsync.valueOrNull ?? 0;
 
-    return ParchmentCard(
+    return GestureDetector( // Using GestureDetector around ParchmentCard if it doesn't have onTap
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => MapDetailScreen(
-            mapId: map.id, // ✅ String UUID
+            mapId: map.publicId, // ✅ FIX: Use publicId (String UUID)
           ),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: EnolaTheme.accentSoft,
-              borderRadius: BorderRadius.circular(12),
+      child: ParchmentCard(
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: EnolaTheme.accentSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.auto_stories_rounded,
+                color: EnolaTheme.accent,
+                size: 24,
+              ),
             ),
-            child: const Icon(
-              Icons.auto_stories_rounded,
-              color: EnolaTheme.accent,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  map.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    if (map.subject != null) ...[
-                      _Tag(map.subject!),
-                      const SizedBox(width: 8),
-                    ],
-                    _Tag('$count riddles'),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  DateFormat('MMM d, y').format(map.createdAt),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: EnolaTheme.textSecond,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    map.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (map.subject != null) ...[
+                        _Tag(map.subject!),
+                        const SizedBox(width: 8),
+                      ],
+                      _Tag('$count riddles'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('MMM d, y').format(map.createdAt),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: EnolaTheme.textSecond,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: EnolaTheme.accent,
-            size: 22,
-          ),
-        ],
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: EnolaTheme.accent,
+              size: 22,
+            ),
+          ],
+        ),
       ),
     );
   }
