@@ -3,7 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:enola/models/riddle_map.dart';
+// ✅ IMPORT: The Drift-generated database classes
+import 'package:enola/database/database.dart';
 import 'package:enola/providers/map_providers.dart';
 
 import 'package:enola/theme/enola_theme.dart';
@@ -16,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🛡️ Watches the provider that fetches List<RiddleMap> from DriftService
     final mapsAsync = ref.watch(allMapsProvider);
 
     return Scaffold(
@@ -69,7 +71,7 @@ class HomeScreen extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Header
+// Header (Animated)
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
@@ -106,6 +108,7 @@ class _MapList extends ConsumerWidget {
   final VoidCallback onCreate;
 
   const _MapList({
+    super.key,
     required this.maps,
     required this.onCreate,
   });
@@ -139,22 +142,23 @@ class _MapTile extends ConsumerWidget {
   final int index;
 
   const _MapTile({
+    super.key,
     required this.map,
     required this.index,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ FIX: Use publicId (String) for the provider and navigation
-    final countAsync = ref.watch(riddleCountProvider(map.publicId));
+    // ✅ DRIFT CHANGE: We defined 'id' as the primary key string in database.dart
+    final countAsync = ref.watch(riddleCountProvider(map.id));
     final count = countAsync.valueOrNull ?? 0;
 
-    return GestureDetector( // Using GestureDetector around ParchmentCard if it doesn't have onTap
+    return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => MapDetailScreen(
-            mapId: map.publicId, // ✅ FIX: Use publicId (String UUID)
+            mapId: map.id, 
           ),
         ),
       ),
@@ -220,12 +224,11 @@ class _MapTile extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tag
+// Tag Widget
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _Tag extends StatelessWidget {
   final String label;
-
   const _Tag(this.label);
 
   @override
@@ -254,7 +257,6 @@ class _Tag extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onCreate;
-
   const _EmptyState({required this.onCreate});
 
   @override
@@ -306,7 +308,6 @@ class _EmptyState extends StatelessWidget {
 
 class _CreateFab extends StatelessWidget {
   final VoidCallback onTap;
-
   const _CreateFab({required this.onTap});
 
   @override
