@@ -6,19 +6,21 @@ part 'play_session.g.dart';
 @collection
 class PlaySession {
   PlaySession({
-    String? id,
     required this.mapId,
     required this.totalRiddles,
-  })  : id = id ?? const Uuid().v4() {
+  }) : publicId = const Uuid().v4() {
     startedAt = DateTime.now();
     correctAnswers = 0;
   }
 
-  /// ✅ FIX: String ID instead of autoIncrement int
-  @Id()
-  String id;
+  /// ✅ INTERNAL Isar primary key (REQUIRED)
+  Id id = Isar.autoIncrement;
 
-  /// 🔥 IMPORTANT: must match RiddleMap.id type (now String UUID)
+  /// ✅ PUBLIC SAFE ID (for web, UI, navigation)
+  @Index(unique: true)
+  late String publicId;
+
+  /// 🔥 IMPORTANT: still String UUID (not int)
   @Index()
   late String mapId;
 
