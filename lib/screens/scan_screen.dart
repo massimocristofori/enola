@@ -300,9 +300,9 @@ class _ScanScreenState extends State<ScanScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: EnolaTheme.wrong.withOpacity(0.1),
+        color: EnolaTheme.wrong.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: EnolaTheme.wrong.withOpacity(0.5)),
+        border: Border.all(color: EnolaTheme.wrong.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
@@ -415,7 +415,7 @@ class _PageTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -433,7 +433,7 @@ class _PageTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close_rounded,
