@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import 'package:enola/models/riddle.dart';
 import 'package:enola/models/riddle_map.dart';
@@ -27,10 +26,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   final _descCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  final _uuid = const Uuid();
-
   RiddleMap? _existingMap;
   List<Riddle> _riddles = [];
+
   bool _loading = false;
   bool _saving = false;
 
@@ -43,11 +41,10 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   Future<void> _loadExisting() async {
     setState(() => _loading = true);
 
-    _existingMap =
-        await MapRepository.instance.getMap(widget.existingMapId!);
+    final id = widget.existingMapId!;
 
-    _riddles =
-        await MapRepository.instance.getRiddlesForMap(widget.existingMapId!);
+    _existingMap = await MapRepository.instance.getMap(id);
+    _riddles = await MapRepository.instance.getRiddlesForMap(id);
 
     if (_existingMap != null) {
       _titleCtrl.text = _existingMap!.title;
@@ -74,7 +71,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     try {
       final map = _existingMap ??
           RiddleMap(
-            id: _uuid.v4(),
             title: _titleCtrl.text.trim(),
           );
 
@@ -86,9 +82,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
           ? null
           : _descCtrl.text.trim();
 
-      final id = await MapRepository.instance.saveMap(map);
+      final mapId = await MapRepository.instance.saveMap(map);
 
-      await MapRepository.instance.saveRiddles(id, _riddles);
+      await MapRepository.instance.saveRiddles(mapId, _riddles);
 
       if (mounted) Navigator.pop(context);
     } finally {
@@ -174,8 +170,10 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                 ),
               )
             : const Icon(Icons.save_rounded),
-        label: const Text('Save Map',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        label: const Text(
+          'Save Map',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
