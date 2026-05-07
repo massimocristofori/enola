@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import 'package:drift/drift.dart' as drift;
 
 import 'package:enola/database/database.dart';
-
-import 'package:enola/services/map_repository.dart';
+import 'package:enola/database/schema_utils.dart'; // Ensure your RiddleType enum is here
+import 'package:enola/services/drift_service.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/scan_screen.dart';
@@ -40,8 +41,13 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   Future<void> _loadExisting() async {
     setState(() => _loading = true);
     final id = widget.existingMapId!;
-    _existingMap = await MapRepository.instance.getMap(id);
-    _riddles = await MapRepository.instance.getRiddlesForMap(id);
+    final db = DriftService.instance.db;
+
+    // Fetch map
+    _existingMap = await (db.select(db.riddleMaps)..where((t) => t.id.equals(id))).getSingleOrNull();
+    
+    // Fetch riddles
+    _riddles = await (db.select(db.riddles)..where((t) => t.mapId.equals(id))).get();
 
     if (_existingMap != null) {
       _titleCtrl.text = _existingMap!.title;
@@ -59,7 +65,77 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     super.dispose();
   }
 
-  // ── APP BAR ────────────────────────────────────────────────────────────────
+  // ── LOGIC ──────────────────────────────────────────────────────────────────
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+
+    try {
+      final db = DriftService.instance.db;
+      // Use existing ID or generate a new one
+      final mapId = _existingMap?.id ?? const Uuid().v4();
+
+      // 1. Save the Map (Upsert)
+      await DriftService.instance.saveMap(
+        mapId,
+        _titleCtrl.text.trim(),
+        _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
+      );
+
+      // 2. Save the Riddles
+      // We delete old ones first if editing, or just overwrite
+      await (db.delete(db.riddles)..where((t) => t.mapId.equals(mapId))).go();
+      
+      await db.batch((batch) {
+        batch.insertAll(db.riddles, [
+          for (int i = 0; i < _riddles.length; i++)
+            RiddlesCompanion.insert(
+              mapId: mapId,
+              question: _riddles[i].question,
+              typeIndex: _riddles[i].typeIndex,
+              orderInMap: i,
+              choicesJson: drift.Value(_riddles[i].choicesJson),
+              correctIndex: drift.Value(_riddles[i].correctIndex),
+            ),
+        ]);
+      });
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      debugPrint("Save failed: $e");
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _addRiddleManually() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddRiddleSheet(
+        onAdd: (riddle) => setState(() => _riddles.add(riddle)),
+      ),
+    );
+  }
+
+  Future<void> _openScan() async {
+    final generated = await Navigator.push<List<Riddle>>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (generated != null && generated.isNotEmpty) {
+      setState(() => _riddles.addAll(generated));
+    }
+  }
+
+  void _removeRiddle(int index) {
+    setState(() => _riddles.removeAt(index));
+  }
+
+  // ── UI COMPONENTS ──────────────────────────────────────────────────────────
 
   Widget _buildAppBar() {
     return Container(
@@ -83,8 +159,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       ),
     );
   }
-
-  // ── MAP INFO ───────────────────────────────────────────────────────────────
 
   Widget _buildMapInfoSection() {
     return Column(
@@ -114,8 +188,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       ],
     );
   }
-
-  // ── RIDDLES SECTION ────────────────────────────────────────────────────────
 
   Widget _buildRiddlesSection() {
     return Column(
@@ -149,7 +221,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
               child: Text(
                 'No riddles added yet.\nUse the wand or the plus to start.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: EnolaTheme.textSecond.withValues(alpha: 0.5)),
+                style: TextStyle(color: EnolaTheme.textSecond.withAlpha(128)),
               ),
             ),
           )
@@ -172,7 +244,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     subtitle: Text(
-                      riddle.type == RiddleType.multipleChoice ? 'Multiple Choice' : 'Ordering',
+                      RiddleType.values[riddle.typeIndex] == RiddleType.multipleChoice 
+                          ? 'Multiple Choice' 
+                          : 'Ordering',
                       style: const TextStyle(color: EnolaTheme.accent, fontSize: 11),
                     ),
                     trailing: IconButton(
@@ -186,52 +260,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
           ),
       ],
     );
-  }
-
-  // ── LOGIC ──────────────────────────────────────────────────────────────────
-
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
-
-    try {
-      final map = _existingMap ?? RiddleMap(title: _titleCtrl.text.trim());
-      map.title = _titleCtrl.text.trim();
-      map.subject = _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim();
-      map.description = _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
-
-      final mapId = await MapRepository.instance.saveMap(map);
-      await MapRepository.instance.saveRiddles(mapId, _riddles);
-
-      if (mounted) Navigator.pop(context);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  void _addRiddleManually() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AddRiddleSheet(
-        onAdd: (riddle) => setState(() => _riddles.add(riddle)),
-      ),
-    );
-  }
-
-  Future<void> _openScan() async {
-    final generated = await Navigator.push<List<Riddle>>(
-      context,
-      MaterialPageRoute(builder: (_) => const ScanScreen()),
-    );
-    if (generated != null && generated.isNotEmpty) {
-      setState(() => _riddles.addAll(generated));
-    }
-  }
-
-  void _removeRiddle(int index) {
-    setState(() => _riddles.removeAt(index));
   }
 
   @override
@@ -309,7 +337,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
           const SizedBox(height: 20),
           FantasyTextField(controller: _qCtrl, label: 'The Question'),
           const SizedBox(height: 20),
-          // Simple Multiple Choice UI for manual adding
           Row(
             children: [
               Expanded(child: FantasyTextField(controller: _choiceCtrl, label: 'Add Choice')),
@@ -327,19 +354,26 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
             ],
           ),
           Wrap(
-            children: _choices.map((c) => Chip(label: Text(c), onDeleted: () => setState(() => _choices.remove(c)))).toList(),
+            spacing: 8,
+            children: _choices.map((c) => Chip(
+              label: Text(c), 
+              onDeleted: () => setState(() => _choices.remove(c))
+            )).toList(),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
               if (_qCtrl.text.isEmpty) return;
+              
+              // Create a Drift Riddle object (mocking ID and mapId as they are set on save)
               final riddle = Riddle(
-                mapId: 'temp', // Reassigned on save
+                id: 0, 
+                mapId: 'temp', 
                 typeIndex: RiddleType.multipleChoice.index,
                 question: _qCtrl.text,
                 orderInMap: 0,
-                mcChoicesJson: jsonEncode(_choices),
-                mcCorrectIndex: 0,
+                choicesJson: jsonEncode(_choices),
+                correctIndex: 0,
               );
               widget.onAdd(riddle);
               Navigator.pop(context);
