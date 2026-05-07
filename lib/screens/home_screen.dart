@@ -28,11 +28,15 @@ class HomeScreen extends ConsumerWidget {
               Expanded(
                 child: mapsAsync.when(
                   loading: () => const Center(
-                    child: CircularProgressIndicator(color: EnolaTheme.accent),
+                    child: CircularProgressIndicator(
+                      color: EnolaTheme.accent,
+                    ),
                   ),
                   error: (e, _) => Center(
-                    child: Text('Error: $e',
-                        style: const TextStyle(color: EnolaTheme.wrong)),
+                    child: Text(
+                      'Error: $e',
+                      style: const TextStyle(color: EnolaTheme.wrong),
+                    ),
                   ),
                   data: (maps) => maps.isEmpty
                       ? _EmptyState(
@@ -48,19 +52,25 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: _CreateFab(onTap: () => _openCreate(context)),
+      floatingActionButton: _CreateFab(
+        onTap: () => _openCreate(context),
+      ),
     );
   }
 
   void _openCreate(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const CreateMapScreen()),
+      MaterialPageRoute(
+        builder: (_) => const CreateMapScreen(),
+      ),
     );
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   @override
@@ -87,13 +97,18 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Map list ──────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Map List
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _MapList extends ConsumerWidget {
   final List<RiddleMap> maps;
   final VoidCallback onCreate;
 
-  const _MapList({required this.maps, required this.onCreate});
+  const _MapList({
+    required this.maps,
+    required this.onCreate,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -101,9 +116,11 @@ class _MapList extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
       itemCount: maps.length,
       itemBuilder: (context, i) {
+        final map = maps[i];
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: _MapTile(map: maps[i], index: i),
+          child: _MapTile(map: map, index: i),
         )
             .animate(delay: (i * 80).ms)
             .fadeIn(duration: 400.ms)
@@ -113,25 +130,36 @@ class _MapList extends ConsumerWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Map Tile
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _MapTile extends ConsumerWidget {
   final RiddleMap map;
   final int index;
 
-  const _MapTile({required this.map, required this.index});
+  const _MapTile({
+    required this.map,
+    required this.index,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ✅ map.id is now String (UUID-safe)
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final count = countAsync.valueOrNull ?? 0;
 
     return ParchmentCard(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
+        MaterialPageRoute(
+          builder: (_) => MapDetailScreen(
+            mapId: map.id, // ✅ String UUID
+          ),
+        ),
       ),
       child: Row(
         children: [
-          // Scroll icon
           Container(
             width: 48,
             height: 48,
@@ -139,8 +167,11 @@ class _MapTile extends ConsumerWidget {
               color: EnolaTheme.accentSoft,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.auto_stories_rounded,
-                color: EnolaTheme.accent, size: 24),
+            child: const Icon(
+              Icons.auto_stories_rounded,
+              color: EnolaTheme.accent,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -175,16 +206,24 @@ class _MapTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.chevron_right_rounded,
-              color: EnolaTheme.accent, size: 22),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: EnolaTheme.accent,
+            size: 22,
+          ),
         ],
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tag
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _Tag extends StatelessWidget {
   final String label;
+
   const _Tag(this.label);
 
   @override
@@ -207,10 +246,13 @@ class _Tag extends StatelessWidget {
   }
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty State
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onCreate;
+
   const _EmptyState({required this.onCreate});
 
   @override
@@ -249,15 +291,20 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
-      ).animate().fadeIn(duration: 700.ms).scale(begin: const Offset(0.9, 0.9)),
+      ).animate().fadeIn(duration: 700.ms).scale(
+            begin: const Offset(0.9, 0.9),
+          ),
     );
   }
 }
 
-// ── FAB ───────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// FAB
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _CreateFab extends StatelessWidget {
   final VoidCallback onTap;
+
   const _CreateFab({required this.onTap});
 
   @override
