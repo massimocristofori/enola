@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:enola/database/database.dart';
-import 'package:enola/database/connection.dart' as impl;
+import 'package:enola/connection/connection.dart' as impl;
 import 'package:uuid/uuid.dart';
 
 class DriftService {
