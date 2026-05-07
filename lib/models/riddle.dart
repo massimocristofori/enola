@@ -1,9 +1,9 @@
+import 'dart:convert';
 import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
 part 'riddle.g.dart';
 
-// ✅ Add this Enum to fix "Undefined name 'RiddleType'"
 enum RiddleType {
   multipleChoice,
   ordering,
@@ -35,7 +35,6 @@ class Riddle {
 
   late int typeIndex;
 
-  // ✅ Add this helper getter to fix the UI errors
   @ignore
   RiddleType get type => RiddleType.values[typeIndex];
 
@@ -47,4 +46,28 @@ class Riddle {
   String? mcChoicesJson;
   int? mcCorrectIndex;
   String? orderItemsJson;
+
+  // ── UI BRIDGE GETTERS ──────────────────────────────────────────────────────
+
+  @ignore
+  List<String> get choices {
+    if (mcChoicesJson == null) return [];
+    try {
+      return (jsonDecode(mcChoicesJson!) as List).cast<String>();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @ignore
+  String? get choiceA => choices.length > 0 ? choices[0] : null;
+  @ignore
+  String? get choiceB => choices.length > 1 ? choices[1] : null;
+  @ignore
+  String? get choiceC => choices.length > 2 ? choices[2] : null;
+  @ignore
+  String? get choiceD => choices.length > 3 ? choices[3] : null;
+
+  @ignore
+  int get correctChoiceIndex => mcCorrectIndex ?? 0;
 }
