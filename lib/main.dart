@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'services/isar_service.dart';
+import 'package:enola/database/database.dart';
+
 import 'services/gemini_service.dart';
 import 'theme/enola_theme.dart';
 import 'screens/home_screen.dart';
