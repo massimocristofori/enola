@@ -34,8 +34,8 @@ jobs:
 
       - name: Build Web
         run: |
-          # Use --web-compiler dart2js to ensure maximum compatibility on GH Pages
-          flutter build web --release --base-href /${{ github.event.repository.name }}/ --web-compiler dart2js
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --no-web-resources-wasm
+
 
 
 
