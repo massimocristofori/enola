@@ -1,62 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:enola/theme/enola_theme.dart';
 
-class FantasyTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String? hint;
-  final int maxLines;
-  final String? Function(String?)? validator;
-
-  const FantasyTextField({
-    super.key,
-    required this.controller,
-    required this.label,
-    this.hint,
-    this.maxLines = 1,
-    this.validator,
-  });
+/// The standard background for all screens in the app
+class FantasyBackground extends StatelessWidget {
+  final Widget child;
+  const FantasyBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: EnolaTheme.background,
+      child: child,
+    );
+  }
+}
+
+/// A decorative divider with a "rune" or ancient feel
+class RuneDivider extends StatelessWidget {
+  const RuneDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: EnolaTheme.textPrimary)),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          validator: validator,
-          decoration: InputDecoration(hintText: hint),
+        const Expanded(child: Divider(color: EnolaTheme.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Icon(Icons.auto_awesome_sharp, size: 12, color: EnolaTheme.accent.withValues(alpha: 0.5)),
         ),
+        const Expanded(child: Divider(color: EnolaTheme.border)),
       ],
     );
   }
 }
 
-class ParchmentCard extends StatelessWidget {
-  final Widget child;
-  final bool glowing;
-  const ParchmentCard({super.key, required this.child, this.glowing = false});
+/// The Enola logo text style
+class EnolaLogo extends StatelessWidget {
+  final double fontSize;
+  const EnolaLogo({super.key, this.fontSize = 24});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: glowing ? EnolaTheme.accent : EnolaTheme.border),
-        boxShadow: [
-          BoxShadow(
-            color: EnolaTheme.accent.withValues(alpha: glowing ? 0.1 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
+    return Text(
+      'ENOLA',
+      style: TextStyle(
+        fontFamily: 'Serif', // Use your serif font here
+        fontSize: fontSize,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 4,
+        color: EnolaTheme.textPrimary,
       ),
-      padding: const EdgeInsets.all(16),
-      child: child,
+    );
+  }
+}
+
+/// A simple animated-ready flame/torch icon for empty states
+class TorchFlame extends StatelessWidget {
+  final double size;
+  const TorchFlame({super.key, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.local_fire_department_rounded,
+      size: size,
+      color: EnolaTheme.accent,
     );
   }
 }
