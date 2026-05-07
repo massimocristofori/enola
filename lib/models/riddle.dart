@@ -3,6 +3,13 @@ import 'package:uuid/uuid.dart';
 
 part 'riddle.g.dart';
 
+// ✅ Add this Enum to fix "Undefined name 'RiddleType'"
+enum RiddleType {
+  multipleChoice,
+  ordering,
+  text,
+}
+
 @collection
 class Riddle {
   Riddle({
@@ -18,31 +25,26 @@ class Riddle {
     createdAt = DateTime.now();
   }
 
-  /// ✅ INTERNAL Isar ID (required)
   Id id = Isar.autoIncrement;
 
-  /// ✅ PUBLIC SAFE ID (use everywhere outside DB)
   @Index(unique: true)
   late String publicId;
 
-  /// 🔥 UUID of parent map (NOT int)
   @Index()
   late String mapId;
 
   late int typeIndex;
 
+  // ✅ Add this helper getter to fix the UI errors
+  @ignore
+  RiddleType get type => RiddleType.values[typeIndex];
+
   late String question;
-
   String? sourceText;
-
   late int orderInMap;
-
   late DateTime createdAt;
 
-  // ── Multiple choice ─────────────────────────────
   String? mcChoicesJson;
   int? mcCorrectIndex;
-
-  // ── Ordering ────────────────────────────────────
   String? orderItemsJson;
 }
