@@ -293,7 +293,7 @@ class _AddRiddleSheet extends StatefulWidget {
 class _AddRiddleSheetState extends State<_AddRiddleSheet> {
   final _qCtrl = TextEditingController();
   final _choiceCtrl = TextEditingController();
-  List<String> _choices = [];
+  final List<String> _choices = [];
 
   @override
   Widget build(BuildContext context) {
