@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
 
 import 'package:enola/providers/map_providers.dart';
-import 'package:enola/services/map_repository.dart';
+import 'package:enola/services/drift_service.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/create_map_screen.dart';
