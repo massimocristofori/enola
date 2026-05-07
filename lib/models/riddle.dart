@@ -1,46 +1,55 @@
 import 'package:isar/isar.dart';
+import 'package:uuid/uuid.dart';
 
 part 'riddle.g.dart';
 
-/// Enum stored in Isar — add new types here as the app grows.
 @collection
 class Riddle {
-  Id id = Isar.autoIncrement;
+  Riddle({
+    String? id,
+    required this.mapId,
+    required this.typeIndex,
+    required this.question,
+    this.sourceText,
+    required this.orderInMap,
+    this.mcChoicesJson,
+    this.mcCorrectIndex,
+    this.orderItemsJson,
+  }) : id = id ?? const Uuid().v4() {
+    createdAt = DateTime.now();
+  }
 
-  /// Foreign key back to the parent RiddleMap
+  /// ✅ FIX: String ID (web-safe)
+  @Id()
+  String id;
+
+  /// 🔥 IMPORTANT: was int → now String to match RiddleMap.id
   @Index()
-  late int mapId;
+  late String mapId;
 
   /// Discriminator: 0 = multipleChoice, 1 = ordering
   late int typeIndex;
 
   late String question;
 
-  /// The original source text chunk this riddle was generated from (nullable)
   String? sourceText;
 
   late int orderInMap;
 
   late DateTime createdAt;
 
-  // ── Multiple choice fields ──────────────────────────────────────────────────
-  /// JSON-encoded list of choice strings, e.g. '["Rome","Paris","Berlin"]'
+  // ── Multiple choice fields ────────────────────────────────────────────────
   String? mcChoicesJson;
   int? mcCorrectIndex;
 
-  // ── Ordering fields ─────────────────────────────────────────────────────────
-  /// JSON-encoded list of item strings in the CORRECT order
+  // ── Ordering fields ───────────────────────────────────────────────────────
   String? orderItemsJson;
-
-  Riddle() {
-    createdAt = DateTime.now();
-  }
 }
 
-/// Convenience enum — kept in sync with typeIndex
+/// Enum stored in Isar — add new types here as the app grows.
 enum RiddleType {
-  multipleChoice, // 0
-  ordering,       // 1
+  multipleChoice,
+  ordering,
 }
 
 extension RiddleTypeX on Riddle {
