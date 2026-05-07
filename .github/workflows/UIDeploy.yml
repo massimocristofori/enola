@@ -34,9 +34,9 @@ jobs:
 
       - name: Build Web
         run: |
-          # We use --no-wasm to avoid the 'application/wasm' MIME type error on GitHub Pages.
-          # This ensures the app uses the stable JavaScript/CanvasKit renderer.
-          flutter build web --release --base-href /${{ github.event.repository.name }}/ --web-renderer canvakit
+          # Use --web-compiler dart2js to ensure maximum compatibility on GH Pages
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --web-compiler dart2js
+
 
 
       - name: Deploy to GitHub Pages
