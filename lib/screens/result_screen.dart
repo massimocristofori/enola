@@ -6,7 +6,7 @@ import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/home_screen.dart';
 
 class ResultScreen extends StatelessWidget {
-  final int mapId;
+  final String mapId; // ✅ Changed from int to String
   final int correct;
   final int total;
 
@@ -89,9 +89,9 @@ class ResultScreen extends StatelessWidget {
               curve: Curves.elasticOut,
             ),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Quest Complete',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             color: EnolaTheme.textSecond,
             letterSpacing: 3,
@@ -108,7 +108,7 @@ class ResultScreen extends StatelessWidget {
             letterSpacing: 1,
             shadows: [
               Shadow(
-                color: _scoreColor.withValues(alpha: 0.4),
+                color: _scoreColor.withValues(alpha: 0.2),
                 blurRadius: 20,
               ),
             ],
@@ -139,7 +139,7 @@ class ResultScreen extends StatelessWidget {
           child: CircularProgressIndicator(
             value: _score,
             strokeWidth: 10,
-            backgroundColor: const Color(0xFF2A2416),
+            backgroundColor: EnolaTheme.surfaceHigh, // Updated for Light Theme
             valueColor: AlwaysStoppedAnimation<Color>(_scoreColor),
             strokeCap: StrokeCap.round,
           ),
@@ -155,7 +155,7 @@ class ResultScreen extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: _score * value,
                   strokeWidth: 10,
-                  backgroundColor: const Color(0xFF2A2416),
+                  backgroundColor: EnolaTheme.surfaceHigh,
                   valueColor: AlwaysStoppedAnimation<Color>(_scoreColor),
                   strokeCap: StrokeCap.round,
                 ),
@@ -220,16 +220,11 @@ class ResultScreen extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
-              // Restart — pop back to map detail
-              Navigator.of(context).popUntil(
-                (route) => route.isFirst || route.settings.name == '/map_detail',
-              );
+              // Pop back to the PlayScreen/Detail
+              Navigator.of(context).pop();
             },
             icon: const Icon(Icons.replay_rounded),
             label: const Text('Play Again'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
           ),
         ),
         const SizedBox(height: 12),
