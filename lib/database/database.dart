@@ -56,7 +56,7 @@ class PlaySessions extends Table {
 
 @DriftDatabase(tables: [RiddleMaps, Riddles, PlaySessions])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(QueryExecutor e) : super(e);
+  AppDatabase(super.e);
 
   @override
   int get schemaVersion => 1;
