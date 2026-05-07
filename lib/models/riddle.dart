@@ -6,7 +6,6 @@ part 'riddle.g.dart';
 @collection
 class Riddle {
   Riddle({
-    String? id,
     required this.mapId,
     required this.typeIndex,
     required this.question,
@@ -15,19 +14,21 @@ class Riddle {
     this.mcChoicesJson,
     this.mcCorrectIndex,
     this.orderItemsJson,
-  }) : id = id ?? const Uuid().v4() {
+  }) : publicId = const Uuid().v4() {
     createdAt = DateTime.now();
   }
 
-  /// ✅ FIX: String ID (web-safe)
-  @Id()
-  String id;
+  /// ✅ INTERNAL Isar ID (required)
+  Id id = Isar.autoIncrement;
 
-  /// 🔥 IMPORTANT: was int → now String to match RiddleMap.id
+  /// ✅ PUBLIC SAFE ID (use everywhere outside DB)
+  @Index(unique: true)
+  late String publicId;
+
+  /// 🔥 UUID of parent map (NOT int)
   @Index()
   late String mapId;
 
-  /// Discriminator: 0 = multipleChoice, 1 = ordering
   late int typeIndex;
 
   late String question;
@@ -38,21 +39,10 @@ class Riddle {
 
   late DateTime createdAt;
 
-  // ── Multiple choice fields ────────────────────────────────────────────────
+  // ── Multiple choice ─────────────────────────────
   String? mcChoicesJson;
   int? mcCorrectIndex;
 
-  // ── Ordering fields ───────────────────────────────────────────────────────
+  // ── Ordering ────────────────────────────────────
   String? orderItemsJson;
-}
-
-/// Enum stored in Isar — add new types here as the app grows.
-enum RiddleType {
-  multipleChoice,
-  ordering,
-}
-
-extension RiddleTypeX on Riddle {
-  RiddleType get type => RiddleType.values[typeIndex];
-  set type(RiddleType t) => typeIndex = t.index;
 }
