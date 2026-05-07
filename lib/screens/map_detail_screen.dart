@@ -165,7 +165,10 @@ class _MapBody extends StatelessWidget {
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      const Icon(Icons.Quiz_outlined, color: EnolaTheme.accent, size: 20),
+                      //const Icon(Icons.Quiz_outlined, color: EnolaTheme.accent, size: 20),
+                      // Change Icons.Quiz_outlined to Icons.quiz_outlined
+                      Icon(Icons.quiz_outlined, color: EnolaTheme.accent, size: 20), 
+
                       const SizedBox(width: 8),
                       Text(
                         '${riddles.length} RIDDLES AWAIT',
