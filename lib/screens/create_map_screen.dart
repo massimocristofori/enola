@@ -150,7 +150,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
               child: Text(
                 'No riddles added yet.\nUse the wand or the plus to start.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: EnolaTheme.textSecond.withOpacity(0.5)),
+                style: TextStyle(color: EnolaTheme.textSecond.withValues(alpha: 0.5)),
               ),
             ),
           )
