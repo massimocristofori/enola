@@ -37,7 +37,7 @@ jobs:
       - name: Build Web
         run: |
           # 5. Build using the canvaskit renderer for better stability with Isar
-          flutter build web --release --web-renderer canvaskit
+          flutter build web --release
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
