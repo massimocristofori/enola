@@ -57,7 +57,7 @@ dev_dependencies:
   # ADDED: This was missing and caused your error
   flutter_launcher_icons: ^0.14.4
   drift_dev: ^2.20.0
-  build_runner: ^2.4.11
+  
 
 flutter:
   uses-material-design: true
