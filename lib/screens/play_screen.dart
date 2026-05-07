@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:enola/models/riddle.dart';
-import 'package:enola/models/riddle_map.dart';
+import 'package:enola/database/database.dart';
+
 import 'package:enola/providers/map_providers.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
