@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 
-
 import 'package:enola/services/gemini_service.dart';
 import 'package:enola/services/riddle_generation_service.dart';
 import 'package:enola/theme/enola_theme.dart';
@@ -63,12 +62,15 @@ class _ScanScreenState extends State<ScanScreen> {
 
     try {
       setState(() => _status = 'Extracting text from ${_pages.length} page(s)…');
+      
+      // ✅ Refactored to use named parameters and String paths for Drift compatibility
       final riddles = await RiddleGenerationService.instance.generateFromImages(
-        _pages,
-        riddleCount: _riddleCount,
+        imagePaths: _pages.map((file) => file.path).toList(),
+        mapId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       if (mounted) {
+        // Return the list of generated Riddle objects to the previous screen
         Navigator.pop(context, riddles);
       }
     } catch (e) {
@@ -223,7 +225,7 @@ class _ScanScreenState extends State<ScanScreen> {
             mainAxisSpacing: 10,
             childAspectRatio: 0.75,
           ),
-          itemCount: _pages.length + 2, // +2 for camera + gallery buttons
+          itemCount: _pages.length + 2, 
           itemBuilder: (context, i) {
             if (i == _pages.length) return _AddPageTile(onTap: _addPage, icon: Icons.camera_alt_rounded, label: 'Camera');
             if (i == _pages.length + 1) return _AddPageTile(onTap: _addFromGallery, icon: Icons.photo_library_rounded, label: 'Gallery');
@@ -300,9 +302,9 @@ class _ScanScreenState extends State<ScanScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: EnolaTheme.wrong.withValues(alpha: 0.1),
+        color: EnolaTheme.wrong.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: EnolaTheme.wrong.withValues(alpha: 0.5)),
+        border: Border.all(color: EnolaTheme.wrong.withOpacity(0.5)),
       ),
       child: Row(
         children: [
@@ -385,15 +387,16 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 }
 
-// ── Page tile ─────────────────────────────────────────────────────────────────
-
 class _PageTile extends StatelessWidget {
   final File file;
   final int index;
   final VoidCallback onRemove;
 
-  const _PageTile(
-      {required this.file, required this.index, required this.onRemove});
+  const _PageTile({
+    required this.file, 
+    required this.index, 
+    required this.onRemove
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +417,7 @@ class _PageTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withOpacity(0.6),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -432,7 +435,7 @@ class _PageTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.7),
+                color: Colors.black.withOpacity(0.7),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close_rounded,
@@ -450,8 +453,11 @@ class _AddPageTile extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _AddPageTile(
-      {required this.onTap, required this.icon, required this.label});
+  const _AddPageTile({
+    required this.onTap, 
+    required this.icon, 
+    required this.label
+  });
 
   @override
   Widget build(BuildContext context) {
