@@ -17,27 +17,25 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.x'
+          channel: 'stable'
           cache: true
 
       - name: Install dependencies
-        run: |
-          flutter pub get
-          # 1. Force the generator to the latest web-safe version
-          flutter pub upgrade isar_generator 
+        run: flutter pub get
 
       - name: Clean and Generate Code
         run: |
-          # 2. Delete any existing .g.dart files that might be in the repo
-          rm -f lib/models/*.g.dart
-          # 3. Wipe the build cache
+          # 1. Clean build artifacts
           flutter clean
-          # 4. Generate fresh, web-compatible code on the runner
+          # 2. Generate Drift database and Riverpod code
           dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Web
         run: |
-          # 5. Build using the canvaskit renderer for better stability with Isar
-          flutter build web --release
+          # 3. Build for Web. 
+          # We use --base-href to ensure assets load correctly on GitHub Pages
+          # replace 'enola' with your repository name if it's not the main username.github.io site
+          flutter build web --release --base-href /${{ github.event.repository.name }}/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
