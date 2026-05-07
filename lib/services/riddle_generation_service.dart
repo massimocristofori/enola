@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:uuid/uuid.dart';
 
-import '../models/riddle.dart';
+import 'package:enola/database/database.dart';
+import 'package:enola/database/schema_utils.dart';
 import 'gemini_service.dart';
 import 'ocr_service.dart';
 import '../utils/text_cleaner.dart';
