@@ -37,7 +37,7 @@ jobs:
           # 3. Build for Web. 
           # We use --base-href to ensure assets load correctly on GitHub Pages
           # replace 'enola' with your repository name if it's not the main username.github.io site
-          flutter build web --release --base-href /${{ github.event.repository.name }}/
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --web-renderer canvakit
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
