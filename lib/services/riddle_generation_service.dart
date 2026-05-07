@@ -29,7 +29,7 @@ class RiddleGenerationService {
     return generateFromText(
       cleanedText,
       riddleCount: riddleCount,
-      mapId: mapId ?? _uuid.v4(), // fallback safety
+      mapId: mapId ?? _uuid.v4(),
     );
   }
 
@@ -52,6 +52,7 @@ class RiddleGenerationService {
         order: i,
         mapId: mapId,
       );
+
       if (r != null) riddles.add(r);
     }
 
@@ -67,29 +68,21 @@ class RiddleGenerationService {
       final type = raw['type'] as String;
       final question = raw['question'] as String;
 
+      final isMC = type == 'multipleChoice';
+
       final riddle = Riddle(
         mapId: mapId,
-        typeIndex: type == 'multipleChoice' ? 0 : 1,
+        typeIndex: isMC ? RiddleType.multipleChoice.index : RiddleType.ordering.index,
         question: question,
         orderInMap: order,
         sourceText: raw['sourceText'],
-        mcChoicesJson: null,
-        mcCorrectIndex: null,
-        orderItemsJson: null,
       );
 
-      switch (type) {
-        case 'multipleChoice':
-          riddle.mcChoicesJson = jsonEncode(raw['choices']);
-          riddle.mcCorrectIndex = raw['correctIndex'];
-          break;
-
-        case 'ordering':
-          riddle.orderItemsJson = jsonEncode(raw['items']);
-          break;
-
-        default:
-          return null;
+      if (isMC) {
+        riddle.mcChoicesJson = jsonEncode(raw['choices']);
+        riddle.mcCorrectIndex = raw['correctIndex'];
+      } else {
+        riddle.orderItemsJson = jsonEncode(raw['items']);
       }
 
       return riddle;
