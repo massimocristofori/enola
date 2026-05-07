@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:enola/models/riddle.dart';
@@ -161,16 +160,15 @@ class _MapBody extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: EnolaTheme.textSecond),
                   ),
                   const SizedBox(height: 32),
+                  // ✅ Added const here to satisfy the analyzer
                   const RuneDivider(),
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      //const Icon(Icons.Quiz_outlined, color: EnolaTheme.accent, size: 20),
-                      // Change Icons.Quiz_outlined to Icons.quiz_outlined
-                      Icon(Icons.quiz_outlined, color: EnolaTheme.accent, size: 20), 
-
+                      // ✅ Corrected icon name
+                      const Icon(Icons.quiz_outlined, color: EnolaTheme.accent, size: 20),
                       const SizedBox(width: 8),
-                      Text(
+                      const Text(
                         '${riddles.length} RIDDLES AWAIT',
                         style: EnolaTheme.sectionHeader,
                       ),
