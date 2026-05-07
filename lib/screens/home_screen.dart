@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-// ✅ IMPORT: The Drift-generated database classes
 import 'package:enola/database/database.dart';
 import 'package:enola/providers/map_providers.dart';
 
@@ -17,7 +16,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 🛡️ Watches the provider that fetches List<RiddleMap> from DriftService
     final mapsAsync = ref.watch(allMapsProvider);
 
     return Scaffold(
@@ -70,10 +68,6 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Header (Animated)
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -99,16 +93,12 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Map List
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _MapList extends ConsumerWidget {
   final List<RiddleMap> maps;
   final VoidCallback onCreate;
 
+  // ✅ FIXED: Removed super.key to satisfy linter
   const _MapList({
-    super.key,
     required this.maps,
     required this.onCreate,
   });
@@ -133,23 +123,18 @@ class _MapList extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Map Tile
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _MapTile extends ConsumerWidget {
   final RiddleMap map;
   final int index;
 
+  // ✅ FIXED: Removed super.key to satisfy linter
   const _MapTile({
-    super.key,
     required this.map,
     required this.index,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ DRIFT CHANGE: We defined 'id' as the primary key string in database.dart
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final count = countAsync.valueOrNull ?? 0;
 
@@ -223,10 +208,6 @@ class _MapTile extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tag Widget
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _Tag extends StatelessWidget {
   final String label;
   const _Tag(this.label);
@@ -250,10 +231,6 @@ class _Tag extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty State
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onCreate;
@@ -301,10 +278,6 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FAB
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _CreateFab extends StatelessWidget {
   final VoidCallback onTap;
