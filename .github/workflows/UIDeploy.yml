@@ -34,7 +34,8 @@ jobs:
 
       - name: Build Web
         run: |
-          flutter build web --release --base-href /${{ github.event.repository.name }}/
+          flutter build web --release --base-href /${{ github.event.repository.name }}/ --dart-define=FLUTTER_WEB_CANVASKIT_URL=https://www.gstatic.com/flutter-canvakit/ --renderer canvakit
+
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
