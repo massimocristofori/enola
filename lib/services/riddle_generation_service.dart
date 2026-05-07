@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:uuid/uuid.dart';
-
+import 'package:enola/database/schema_utils.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/database/schema_utils.dart';
 import 'gemini_service.dart';
