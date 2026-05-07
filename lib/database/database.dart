@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
+import 'package:enola/database/schema_utils.dart';
 
 // Note: We removed the platform-specific imports (dart:io, wasm, etc.) 
 // from this file because they are now handled in your connection.dart 
@@ -79,3 +81,25 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> updateSession(PlaySession session) => update(playSessions).replace(session);
 }
+
+
+
+extension RiddleUtils on Riddle {
+  // Maps the integer index from Drift back to your RiddleType Enum
+  RiddleType get type => RiddleType.values[typeIndex];
+
+  // Decodes the JSON string into a list for the UI
+  List<String> get choices => choicesJson != null 
+      ? (jsonDecode(choicesJson!) as List).cast<String>() 
+      : [];
+
+  // Helper getters so you don't have to rewrite the PlayScreen UI
+  String? get choiceA => choices.length > 0 ? choices[0] : null;
+  String? get choiceB => choices.length > 1 ? choices[1] : null;
+  String? get choiceC => choices.length > 2 ? choices[2] : null;
+  String? get choiceD => choices.length > 3 ? choices[3] : null;
+
+  int? get correctChoiceIndex => correctIndex;
+  String? get orderItemsJson => choicesJson; 
+}
+
