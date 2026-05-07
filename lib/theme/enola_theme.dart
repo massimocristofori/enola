@@ -102,4 +102,14 @@ class EnolaTheme {
       labelStyle: const TextStyle(color: textSecond),
     ),
   );
+
+  
+
+  static const TextStyle sectionHeader = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w800,
+    color: accent,
+    letterSpacing: 1.2,
+  );
+
 }
