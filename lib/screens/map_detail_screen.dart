@@ -96,7 +96,9 @@ class MapDetailScreen extends ConsumerWidget {
     );
 
     if (ok == true && context.mounted) {
-      await MapRepository.instance.deleteMap(mapId);
+      final db = DriftService.instance.db;
+      await (db.delete(db.riddleMaps)..where((t) => t.id.equals(mapId))).go();
+
       if (context.mounted) Navigator.pop(context);
     }
   }
