@@ -7,18 +7,20 @@ part 'riddle_map.g.dart';
 @collection
 class RiddleMap {
   RiddleMap({
-    String? id,
     required this.title,
     this.subject,
     this.description,
-  }) : id = id ?? const Uuid().v4() {
+  }) : publicId = const Uuid().v4() {
     createdAt = DateTime.now();
     updatedAt = DateTime.now();
   }
 
-  // ✅ FIX: String ID instead of int (web-safe)
-  @Id()
-  String id;
+  /// ✅ INTERNAL Isar ID (required, must stay int)
+  Id id = Isar.autoIncrement;
+
+  /// ✅ PUBLIC ID (web-safe, use everywhere outside DB)
+  @Index(unique: true)
+  late String publicId;
 
   late String title;
   String? subject;
@@ -29,7 +31,7 @@ class RiddleMap {
 
   late DateTime updatedAt;
 
-  // Backlink to riddles
+  /// Relation (works with internal Isar id OR link system)
   final riddles = IsarLinks<Riddle>();
 
   void touch() {
