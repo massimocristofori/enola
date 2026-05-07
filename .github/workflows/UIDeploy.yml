@@ -35,7 +35,8 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Web
-        run: flutter build web --release
+        run: flutter build web --release --dart-define=JS_IS_POISON=false --extra-front-end-options=--ignore-unrecognized-flags
+
 
 
       - name: Deploy to GitHub Pages
