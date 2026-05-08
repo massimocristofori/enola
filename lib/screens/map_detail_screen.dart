@@ -178,17 +178,10 @@ class _MapBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   if (riddles.isEmpty)
-                    const Text('This map is empty. Add some riddles to begin.')
-                  else
-                    ...riddles.map((r) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: ParchmentCard(
-                            child: Text(
-                              r.question,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        )),
+  const Text('This map is empty. Add some riddles to begin.')
+else
+  TreasureMapPath(riddles: riddles), // Use the new widget here!
+
                 ],
               ),
             ),
