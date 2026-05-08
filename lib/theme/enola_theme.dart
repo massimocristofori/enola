@@ -4,20 +4,19 @@ class EnolaTheme {
   EnolaTheme._();
 
   // ── Energetic & Scholarly Palette ──────────────────────────────────────
-  static const Color background  = Color(0xFFFCFBF7); // Brighter, cleaner paper
-  static const Color surface     = Color(0xFFF7F5F0); // Subtle warmth
+  static const Color background  = Color(0xFFFCFBF7); 
+  static const Color surface     = Color(0xFFF7F5F0); 
   static const Color surfaceHigh = Color(0xFFEFEDE6); 
   
-  // Higher energy colors
-  static const Color accent      = Color(0xFFF59E0B); // Vibrant Amber/Gold (More "Magic")
-  static const Color secondary   = Color(0xFF0EA5E9); // Sky Blue (For discovery/info)
-  static const Color accentSoft  = Color(0x26F59E0B); // 15% Opacity Amber
+  static const Color accent      = Color(0xFFF59E0B); 
+  static const Color secondary   = Color(0xFF0EA5E9); 
+  static const Color accentSoft  = Color(0x26F59E0B); 
   
-  static const Color textPrimary = Color(0xFF1E1B16); // High contrast near-black
-  static const Color textSecond  = Color(0xFF5D5950); // Cleaner slate
+  static const Color textPrimary = Color(0xFF1E1B16); 
+  static const Color textSecond  = Color(0xFF5D5950); 
   
-  static const Color correct     = Color(0xFF10B981); // Emerald green (Energetic)
-  static const Color wrong       = Color(0xFFEF4444); // Sharp ruby red
+  static const Color correct     = Color(0xFF10B981); 
+  static const Color wrong       = Color(0xFFEF4444); 
   static const Color border      = Color(0xFFE5E2D9);
 
   static ThemeData get theme => ThemeData(
@@ -34,9 +33,9 @@ class EnolaTheme {
     ),
     textTheme: const TextTheme(
       displayLarge: TextStyle(
-        fontFamily: 'Serif', // Ensure you have a serif font or use GoogleFonts
+        fontFamily: 'Serif',
         fontSize: 32,
-        fontWeight: FontWeight.w800, // Thicker for more energy
+        fontWeight: FontWeight.w800,
         color: textPrimary,
         letterSpacing: -0.5,
       ),
@@ -72,17 +71,17 @@ class EnolaTheme {
     ),
     cardTheme: CardThemeData(
       color: Colors.white,
-      elevation: 0, // Flat with border looks more modern/scholarly
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20), // Rounder for friendlier feel
-        side: const BorderSide(color: border, width: 1),
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: border, width: 1), // ✅ Corrected parameter name
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: accent,
         foregroundColor: Colors.white,
-        elevation: 4, // Add shadow for "pressable" energy
+        elevation: 4,
         shadowColor: accent.withOpacity(0.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
