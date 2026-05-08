@@ -14,16 +14,15 @@ class DriftService {
 
   // ── MAPS & RIDDLES ────────────────────────────────────────────────────────
 
-  /// Saves or updates a map. Using insertOrReplace handles updates smoothly.
+  /// Saves or updates a map using insertOnConflictUpdate (safe, no cascade delete).
   Future<void> saveMap(String id, String title, String? description, String? subject) async {
-    await db.into(db.riddleMaps).insert(
+    await db.into(db.riddleMaps).insertOnConflictUpdate(
       RiddleMapsCompanion.insert(
         id: id,
         title: title,
         description: Value(description),
         subject: Value(subject),
       ),
-      mode: InsertMode.insertOrReplace,
     );
   }
 
@@ -41,7 +40,7 @@ class DriftService {
   Future<int> startSession(String mapId, int totalRiddles) async {
     return await db.into(db.playSessions).insert(
       PlaySessionsCompanion.insert(
-        publicId: Value(const Uuid().v4()), // Generates a safe web-friendly ID
+        publicId: Value(const Uuid().v4()),
         mapId: mapId,
         totalRiddles: Value(totalRiddles),
         correctAnswers: const Value(0),
