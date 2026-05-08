@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 class EnolaTheme {
   EnolaTheme._();
 
-  // ── Energetic & Scholarly Palette ──────────────────────────────────────
-  static const Color background  = Color(0xFFFCFBF7); 
-  static const Color surface     = Color(0xFFF7F5F0); 
-  static const Color surfaceHigh = Color(0xFFEFEDE6); 
+  // ── High-Energy Game Palette ───────────────────────────────────────────
+  static const Color background  = Color(0xFFFFFFFF); // Pure White
+  static const Color surface     = Color(0xFFF8F7FF); // Very light violet tint
+  static const Color surfaceHigh = Color(0xFFF0EEFF); 
   
-  static const Color accent      = Color(0xFFF59E0B); 
-  static const Color secondary   = Color(0xFF0EA5E9); 
-  static const Color accentSoft  = Color(0x26F59E0B); 
+  static const Color accent      = Color(0xFF7C3AED); // Vivid Violet
+  static const Color secondary   = Color(0xFFEC4899); // Electric Pink
+  static const Color accentSoft  = Color(0x267C3AED); 
   
-  static const Color textPrimary = Color(0xFF1E1B16); 
-  static const Color textSecond  = Color(0xFF5D5950); 
+  static const Color textPrimary = Color(0xFF1F2937); // Deep Charcoal
+  static const Color textSecond  = Color(0xFF6B7280); // Cool Grey
   
-  static const Color correct     = Color(0xFF10B981); 
-  static const Color wrong       = Color(0xFFEF4444); 
-  static const Color border      = Color(0xFFE5E2D9);
+  static const Color correct     = Color(0xFF10B981); // Bright Emerald
+  static const Color wrong       = Color(0xFFFF4B4B); // Candy Red
+  static const Color border      = Color(0xFFE5E7EB);
 
   static ThemeData get theme => ThemeData(
     useMaterial3: true,
