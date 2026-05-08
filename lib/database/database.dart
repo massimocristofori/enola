@@ -56,14 +56,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateSession(PlaySession session) => update(playSessions).replace(session);
 }
 
-extension RiddleUtils on Riddle {
-  RiddleType get type => RiddleType.values[typeIndex];
-  List<String> get choices => choicesJson != null 
-      ? (jsonDecode(choicesJson!) as List).cast<String>() 
-      : [];
-}
-// ... [Existing code above] ...
-
+// ✅ Consolidated single Extension block
 extension RiddleUtils on Riddle {
   // Maps the integer index from Drift back to your RiddleType Enum
   RiddleType get type => RiddleType.values[typeIndex];
