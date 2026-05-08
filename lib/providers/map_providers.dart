@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift; // ✅ Use a prefix to avoid any shadowing
+import 'package:drift/drift.dart' as drift;
 import '../database/database.dart';
 import '../services/drift_service.dart';
 
@@ -38,7 +38,7 @@ final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, 
   final db = DriftService.instance.db;
   final sessions = await (db.select(db.playSessions)
         ..where((t) => t.mapId.equals(mapId))
-        ..orderBy([(t) => drift.OrderingTerm(expression: t.startedAt, mode: drift.OrderMode.desc)]) // ✅ Explicitly use drift prefix
+        ..orderBy([(t) => drift.OrderingTerm(expression: t.startedAt, mode: drift.OrderingMode.desc)])
         ..limit(1))
       .get();
   return sessions.isNotEmpty ? sessions.first : null;
@@ -48,7 +48,7 @@ final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, 
 final recentSessionsProvider = FutureProvider<List<PlaySession>>((ref) async {
   final db = DriftService.instance.db;
   return (db.select(db.playSessions)
-    ..orderBy([(t) => drift.OrderingTerm(expression: t.startedAt, mode: drift.OrderMode.desc)]) // ✅ Explicitly use drift prefix
+    ..orderBy([(t) => drift.OrderingTerm(expression: t.startedAt, mode: drift.OrderingMode.desc)])
     ..limit(5))
     .get();
 });
