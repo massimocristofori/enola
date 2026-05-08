@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart'; // ✅ Added for OrderMode
+import 'package:drift/drift.dart'; 
 import '../database/database.dart';
 import '../services/drift_service.dart';
 
-final mapsProvider = FutureProvider<List<RiddleMap>>((ref) async {
+// ✅ Renamed from mapsProvider to match HomeScreen
+final allMapsProvider = FutureProvider<List<RiddleMap>>((ref) async {
   final db = DriftService.instance.db;
   return db.getAllMaps();
 });
@@ -21,6 +22,24 @@ final mapProvider = FutureProvider.family<RiddleMap?, String>((ref, id) async {
 final riddlesForMapProvider = FutureProvider.family<List<Riddle>, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   return db.getRiddlesForMap(mapId);
+});
+
+// ✅ Added for HomeScreen Map Tiles
+final riddleCountProvider = FutureProvider.family<int, String>((ref, mapId) async {
+  final db = DriftService.instance.db;
+  final list = await db.getRiddlesForMap(mapId);
+  return list.length;
+});
+
+// ✅ Added for TreasureMapPath
+final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, mapId) async {
+  final db = DriftService.instance.db;
+  final sessions = await (db.select(db.playSessions)
+        ..where((t) => t.mapId.equals(mapId))
+        ..orderBy([(t) => OrderingTerm(expression: t.startedAt, mode: OrderMode.desc)])
+        ..limit(1))
+      .get();
+  return sessions.isNotEmpty ? sessions.first : null;
 });
 
 final recentSessionsProvider = FutureProvider<List<PlaySession>>((ref) async {
