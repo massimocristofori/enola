@@ -31,7 +31,6 @@ class PlaySessions extends Table {
   TextColumn get publicId => text().clientDefault(() => const Uuid().v4())();
   TextColumn get mapId => text().references(RiddleMaps, #id, onDelete: KeyAction.cascade)();
   
-  // Track progress: -1 means none completed, 0 means first riddle done, etc.
   IntColumn get lastCompletedIndex => integer().withDefault(const Constant(-1))(); 
 
   DateTimeColumn get startedAt => dateTime().withDefault(currentDateAndTime)();
@@ -56,17 +55,13 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateSession(PlaySession session) => update(playSessions).replace(session);
 }
 
-// ✅ Consolidated single Extension block
 extension RiddleUtils on Riddle {
-  // Maps the integer index from Drift back to your RiddleType Enum
   RiddleType get type => RiddleType.values[typeIndex];
 
-  // Decodes the JSON string into a list for the UI
   List<String> get choices => choicesJson != null 
       ? (jsonDecode(choicesJson!) as List).cast<String>() 
       : [];
 
-  // These getters are required by your PlayScreen
   String? get choiceA => choices.isNotEmpty ? choices[0] : null;
   String? get choiceB => choices.length > 1 ? choices[1] : null;
   String? get choiceC => choices.length > 2 ? choices[2] : null;
