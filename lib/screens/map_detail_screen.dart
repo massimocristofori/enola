@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:enola/database/database.dart';
-
 import 'package:enola/providers/map_providers.dart';
 import 'package:enola/services/drift_service.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
+
+// ✅ Make sure this path matches your file structure
+import 'package:enola/widgets/treasure_map_path.dart';
 
 class MapDetailScreen extends ConsumerWidget {
   final String mapId;
@@ -162,12 +164,10 @@ class _MapBody extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: EnolaTheme.textSecond),
                   ),
                   const SizedBox(height: 32),
-                  // ✅ Added const here to satisfy the analyzer
                   const RuneDivider(),
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      // ✅ Corrected icon name
                       const Icon(Icons.quiz_outlined, color: EnolaTheme.accent, size: 20),
                       const SizedBox(width: 8),
                       Text(
@@ -176,12 +176,26 @@ class _MapBody extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 32),
+                  
+                  // 🗺️ THE TREASURE HUNT MAP SECTION
                   if (riddles.isEmpty)
-  const Text('This map is empty. Add some riddles to begin.')
-else
-  TreasureMapPath(riddles: riddles), // Use the new widget here!
-
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Text(
+                          'This map is empty. Add some riddles to begin.',
+                          style: TextStyle(color: EnolaTheme.textSecond),
+                        ),
+                      ),
+                    )
+                  else
+                    TreasureMapPath(
+                      riddles: riddles,
+                      mapId: map.id,
+                    ),
+                  
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -218,7 +232,7 @@ else
         color: EnolaTheme.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
