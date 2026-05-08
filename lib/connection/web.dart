@@ -2,5 +2,5 @@ import 'package:drift/drift.dart';
 import 'package:drift/web.dart';
 
 QueryExecutor connect() {
-  return WebDatabase('enola_db');
+  return WebDatabase.withStorage(DriftWebStorage.volatile());
 }
