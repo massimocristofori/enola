@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Ensure this is present!
+
 
 class TreasureMapPath extends StatelessWidget {
   final List<Riddle> riddles;
