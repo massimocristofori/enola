@@ -75,7 +75,7 @@ class EnolaTheme {
       elevation: 0, // Flat with border looks more modern/scholarly
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20), // Rounder for friendlier feel
-        borderSide: const BorderSide(color: border, width: 1),
+        side: const BorderSide(color: border, width: 1),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
