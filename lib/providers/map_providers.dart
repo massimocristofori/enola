@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart'; 
+import 'package:drift/drift.dart'; // ✅ This MUST be here to fix OrderMode errors
 import '../database/database.dart';
 import '../services/drift_service.dart';
 
-// ✅ Renamed from mapsProvider to match HomeScreen
+// Renamed from mapsProvider to match HomeScreen
 final allMapsProvider = FutureProvider<List<RiddleMap>>((ref) async {
   final db = DriftService.instance.db;
   return db.getAllMaps();
@@ -24,14 +24,14 @@ final riddlesForMapProvider = FutureProvider.family<List<Riddle>, String>((ref, 
   return db.getRiddlesForMap(mapId);
 });
 
-// ✅ Added for HomeScreen Map Tiles
+// Added for HomeScreen Map Tiles
 final riddleCountProvider = FutureProvider.family<int, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   final list = await db.getRiddlesForMap(mapId);
   return list.length;
 });
 
-// ✅ Added for TreasureMapPath
+// Added for TreasureMapPath progress tracking
 final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   final sessions = await (db.select(db.playSessions)
@@ -42,6 +42,7 @@ final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, 
   return sessions.isNotEmpty ? sessions.first : null;
 });
 
+// Added for displaying recent activity
 final recentSessionsProvider = FutureProvider<List<PlaySession>>((ref) async {
   final db = DriftService.instance.db;
   return (db.select(db.playSessions)
