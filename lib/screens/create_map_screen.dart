@@ -5,8 +5,9 @@ import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
 
 import 'package:enola/database/database.dart';
-import 'package:enola/database/schema_utils.dart'; // Ensure your RiddleType enum is here
+import 'package:enola/database/schema_utils.dart';
 import 'package:enola/services/drift_service.dart';
+import 'package:enola/providers/map_providers.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/scan_screen.dart';
@@ -43,10 +44,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     final id = widget.existingMapId!;
     final db = DriftService.instance.db;
 
-    // Fetch map
     _existingMap = await (db.select(db.riddleMaps)..where((t) => t.id.equals(id))).getSingleOrNull();
-    
-    // Fetch riddles
     _riddles = await (db.select(db.riddles)..where((t) => t.mapId.equals(id))).get();
 
     if (_existingMap != null) {
@@ -73,10 +71,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
 
     try {
       final db = DriftService.instance.db;
-      // Use existing ID or generate a new one
       final mapId = _existingMap?.id ?? const Uuid().v4();
 
-      // 1. Save the Map (Upsert)
+      // 1. Save the Map (safe upsert, no cascade delete)
       await DriftService.instance.saveMap(
         mapId,
         _titleCtrl.text.trim(),
@@ -84,10 +81,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
       );
 
-      // 2. Save the Riddles
-      // We delete old ones first if editing, or just overwrite
+      // 2. Delete old riddles then re-insert
       await (db.delete(db.riddles)..where((t) => t.mapId.equals(mapId))).go();
-      
+
       await db.batch((batch) {
         batch.insertAll(db.riddles, [
           for (int i = 0; i < _riddles.length; i++)
@@ -102,9 +98,17 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         ]);
       });
 
+      // 3. Invalidate providers so the list screen re-fetches
+      ref.invalidate(allMapsProvider);
+
       if (mounted) Navigator.pop(context);
-    } catch (e) {
-      debugPrint("Save failed: $e");
+    } catch (e, st) {
+      debugPrint("Save failed: $e\n$st");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: $e'), backgroundColor: EnolaTheme.wrong),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -244,8 +248,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     subtitle: Text(
-                      RiddleType.values[riddle.typeIndex] == RiddleType.multipleChoice 
-                          ? 'Multiple Choice' 
+                      RiddleType.values[riddle.typeIndex] == RiddleType.multipleChoice
+                          ? 'Multiple Choice'
                           : 'Ordering',
                       style: const TextStyle(color: EnolaTheme.accent, fontSize: 11),
                     ),
@@ -356,19 +360,18 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
           Wrap(
             spacing: 8,
             children: _choices.map((c) => Chip(
-              label: Text(c), 
-              onDeleted: () => setState(() => _choices.remove(c))
+              label: Text(c),
+              onDeleted: () => setState(() => _choices.remove(c)),
             )).toList(),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
               if (_qCtrl.text.isEmpty) return;
-              
-              // Create a Drift Riddle object (mocking ID and mapId as they are set on save)
+
               final riddle = Riddle(
-                id: 0, 
-                mapId: 'temp', 
+                id: 0,
+                mapId: 'temp',
                 typeIndex: RiddleType.multipleChoice.index,
                 question: _qCtrl.text,
                 orderInMap: 0,
