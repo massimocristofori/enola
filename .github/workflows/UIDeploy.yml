@@ -1,9 +1,7 @@
 name: Flutter Web Build & Deploy
 
 on:
-  workflow_dispatch:   # manual trigger
-  push:
-    branches: [main]
+  workflow_dispatch:   # This allows you to run it manually
 
 jobs:
   build:
@@ -27,9 +25,7 @@ jobs:
 
       - name: Clean and Generate Code
         run: |
-          # 1. Clean build artifacts
           flutter clean
-          # 2. Generate Drift database and Riverpod code
           dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Web
@@ -38,20 +34,12 @@ jobs:
           flutter build web --release --base-href /${{ github.event.repository.name }}/
 
           # 2. THE FIX: Force the bootstrap script to ignore WASM
-          # This finds the configuration logic and injects useWasm: false
           sed -i 's/engineConfiguration: {/engineConfiguration: { useWasm: false,/g' build/web/flutter_bootstrap.js
 
-          # 3. Cleanup to be safe
+          # 3. Cleanup and Jekyll fix
           rm -f build/web/main.dart.wasm
           touch build/web/.nojekyll
-
           
-      - name: Disable Jekyll
-        run: touch build/web/.nojekyll
-
-
-
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
