@@ -73,7 +73,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       final db = DriftService.instance.db;
       final mapId = _existingMap?.id ?? const Uuid().v4();
 
-      // 1. Save the Map (safe upsert, no cascade delete)
       await DriftService.instance.saveMap(
         mapId,
         _titleCtrl.text.trim(),
@@ -81,26 +80,16 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
       );
 
-      // 2. Delete old riddles then re-insert
       await (db.delete(db.riddles)..where((t) => t.mapId.equals(mapId))).go();
 
       await db.batch((batch) {
         batch.insertAll(db.riddles, [
           for (int i = 0; i < _riddles.length; i++)
-            RiddlesCompanion.insert(
-              mapId: mapId,
-              question: _riddles[i].question,
-              typeIndex: _riddles[i].typeIndex,
-              orderInMap: i,
-              choicesJson: drift.Value(_riddles[i].choicesJson),
-              correctIndex: drift.Value(_riddles[i].correctIndex),
-            ),
+            _riddleToCompanion(_riddles[i], mapId, i),
         ]);
       });
 
-      // 3. Invalidate providers so the list screen re-fetches
       ref.invalidate(allMapsProvider);
-
       if (mounted) Navigator.pop(context);
     } catch (e, st) {
       debugPrint("Save failed: $e\n$st");
@@ -111,6 +100,44 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Converts a Riddle to a RiddlesCompanion for DB insert,
+  /// writing both payloadJson (new) and legacy columns.
+  RiddlesCompanion _riddleToCompanion(Riddle riddle, String mapId, int order) {
+    final type = RiddleType.values[riddle.typeIndex];
+
+    switch (type) {
+      case RiddleType.multipleChoice:
+      case RiddleType.trueFalse:
+        final mc = riddle.asMultipleChoice;
+        final choices = mc?.choices ?? riddle.choices;
+        final correct = mc?.correctIndex ?? riddle.correctIndex ?? 0;
+        final payload = MultipleChoicePayload(choices: choices, correctIndex: correct);
+        return RiddlesCompanion.insert(
+          mapId: mapId,
+          question: riddle.question,
+          typeIndex: riddle.typeIndex,
+          orderInMap: order,
+          payloadJson: drift.Value(jsonEncode(payload.toJson())),
+          choicesJson: drift.Value(jsonEncode(choices)),
+          correctIndex: drift.Value(correct),
+        );
+
+      case RiddleType.ordering:
+        final ord = riddle.asOrdering;
+        final items = ord?.items ?? riddle.choices;
+        final payload = OrderingPayload(items: items);
+        return RiddlesCompanion.insert(
+          mapId: mapId,
+          question: riddle.question,
+          typeIndex: riddle.typeIndex,
+          orderInMap: order,
+          payloadJson: drift.Value(jsonEncode(payload.toJson())),
+          choicesJson: drift.Value(jsonEncode(items)),
+          correctIndex: const drift.Value(null),
+        );
     }
   }
 
@@ -139,7 +166,25 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     setState(() => _riddles.removeAt(index));
   }
 
-  // ── UI COMPONENTS ──────────────────────────────────────────────────────────
+  // ── UI HELPERS ─────────────────────────────────────────────────────────────
+
+  String _riddleTypeLabel(RiddleType type) {
+    switch (type) {
+      case RiddleType.multipleChoice: return 'Multiple Choice';
+      case RiddleType.trueFalse:      return 'True / False';
+      case RiddleType.ordering:       return 'Ordering';
+    }
+  }
+
+  IconData _riddleTypeIcon(RiddleType type) {
+    switch (type) {
+      case RiddleType.multipleChoice: return Icons.list_alt_rounded;
+      case RiddleType.trueFalse:      return Icons.thumbs_up_down_rounded;
+      case RiddleType.ordering:       return Icons.sort_rounded;
+    }
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
 
   Widget _buildAppBar() {
     return Container(
@@ -236,11 +281,13 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
             itemCount: _riddles.length,
             itemBuilder: (context, index) {
               final riddle = _riddles[index];
+              final type = RiddleType.values[riddle.typeIndex];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: ParchmentCard(
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
+                    leading: Icon(_riddleTypeIcon(type), color: EnolaTheme.accent, size: 20),
                     title: Text(
                       riddle.question,
                       maxLines: 2,
@@ -248,9 +295,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     subtitle: Text(
-                      RiddleType.values[riddle.typeIndex] == RiddleType.multipleChoice
-                          ? 'Multiple Choice'
-                          : 'Ordering',
+                      _riddleTypeLabel(type),
                       style: const TextStyle(color: EnolaTheme.accent, fontSize: 11),
                     ),
                     trailing: IconButton(
@@ -303,7 +348,11 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         backgroundColor: EnolaTheme.accent,
         foregroundColor: EnolaTheme.background,
         icon: _saving
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: EnolaTheme.background))
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: EnolaTheme.background),
+              )
             : const Icon(Icons.save_rounded),
         label: const Text('Save Map', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
@@ -311,7 +360,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   }
 }
 
-// ── ADD RIDDLE SHEET ─────────────────────────────────────────────────────────
+// ── ADD RIDDLE SHEET ──────────────────────────────────────────────────────────
 
 class _AddRiddleSheet extends StatefulWidget {
   final Function(Riddle) onAdd;
@@ -323,8 +372,71 @@ class _AddRiddleSheet extends StatefulWidget {
 
 class _AddRiddleSheetState extends State<_AddRiddleSheet> {
   final _qCtrl = TextEditingController();
-  final _choiceCtrl = TextEditingController();
+  final _itemCtrl = TextEditingController();
+
+  RiddleType _selectedType = RiddleType.multipleChoice;
+
+  // Multiple choice state
   final List<String> _choices = [];
+  int _correctIndex = 0;
+
+  // True/False state
+  int _tfCorrectIndex = 0; // 0 = True, 1 = False
+
+  // Ordering state
+  final List<String> _orderItems = [];
+
+  @override
+  void dispose() {
+    _qCtrl.dispose();
+    _itemCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_qCtrl.text.trim().isEmpty) return;
+
+    final String? payloadJson;
+    final String? legacyChoicesJson;
+    final int? legacyCorrectIndex;
+
+    switch (_selectedType) {
+      case RiddleType.multipleChoice:
+        if (_choices.length < 2) return;
+        final payload = MultipleChoicePayload(choices: _choices, correctIndex: _correctIndex);
+        payloadJson = jsonEncode(payload.toJson());
+        legacyChoicesJson = jsonEncode(_choices);
+        legacyCorrectIndex = _correctIndex;
+
+      case RiddleType.trueFalse:
+        final choices = ['True', 'False'];
+        final payload = MultipleChoicePayload(choices: choices, correctIndex: _tfCorrectIndex);
+        payloadJson = jsonEncode(payload.toJson());
+        legacyChoicesJson = jsonEncode(choices);
+        legacyCorrectIndex = _tfCorrectIndex;
+
+      case RiddleType.ordering:
+        if (_orderItems.length < 2) return;
+        final payload = OrderingPayload(items: _orderItems);
+        payloadJson = jsonEncode(payload.toJson());
+        legacyChoicesJson = jsonEncode(_orderItems);
+        legacyCorrectIndex = null;
+    }
+
+    final riddle = Riddle(
+      id: 0,
+      mapId: 'temp',
+      typeIndex: _selectedType.index,
+      question: _qCtrl.text.trim(),
+      orderInMap: 0,
+      payloadJson: payloadJson,
+      choicesJson: legacyChoicesJson,
+      correctIndex: legacyCorrectIndex,
+    );
+
+    widget.onAdd(riddle);
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -334,57 +446,315 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text("New Riddle", style: EnolaTheme.sectionHeader),
-          const SizedBox(height: 20),
-          FantasyTextField(controller: _qCtrl, label: 'The Question'),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: FantasyTextField(controller: _choiceCtrl, label: 'Add Choice')),
-              IconButton(
-                icon: const Icon(Icons.add, color: EnolaTheme.accent),
-                onPressed: () {
-                  if (_choiceCtrl.text.isNotEmpty) {
-                    setState(() {
-                      _choices.add(_choiceCtrl.text);
-                      _choiceCtrl.clear();
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-          Wrap(
-            spacing: 8,
-            children: _choices.map((c) => Chip(
-              label: Text(c),
-              onDeleted: () => setState(() => _choices.remove(c)),
-            )).toList(),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              if (_qCtrl.text.isEmpty) return;
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(child: Text("New Riddle", style: EnolaTheme.sectionHeader)),
+            const SizedBox(height: 20),
 
-              final riddle = Riddle(
-                id: 0,
-                mapId: 'temp',
-                typeIndex: RiddleType.multipleChoice.index,
-                question: _qCtrl.text,
-                orderInMap: 0,
-                choicesJson: jsonEncode(_choices),
-                correctIndex: 0,
-              );
-              widget.onAdd(riddle);
-              Navigator.pop(context);
-            },
-            child: const Text('Add to Map'),
-          ),
-        ],
+            // ── Type selector ──
+            const Text("TYPE", style: EnolaTheme.sectionHeader),
+            const SizedBox(height: 10),
+            Row(
+              children: RiddleType.values.map((type) {
+                final selected = _selectedType == type;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _selectedType = type;
+                        _choices.clear();
+                        _orderItems.clear();
+                        _correctIndex = 0;
+                        _tfCorrectIndex = 0;
+                        _itemCtrl.clear();
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: selected ? EnolaTheme.accent : EnolaTheme.accent.withAlpha(30),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selected ? EnolaTheme.accent : Colors.transparent,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              _typeIcon(type),
+                              color: selected ? EnolaTheme.background : EnolaTheme.accent,
+                              size: 20,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _typeShortLabel(type),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: selected ? EnolaTheme.background : EnolaTheme.accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Question ──
+            FantasyTextField(controller: _qCtrl, label: 'The Question'),
+            const SizedBox(height: 20),
+
+            // ── Type-specific form ──
+            if (_selectedType == RiddleType.multipleChoice) ...[
+              _buildMultipleChoiceForm(),
+            ] else if (_selectedType == RiddleType.trueFalse) ...[
+              _buildTrueFalseForm(),
+            ] else if (_selectedType == RiddleType.ordering) ...[
+              _buildOrderingForm(),
+            ],
+
+            const SizedBox(height: 24),
+
+            // ── Submit ──
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: EnolaTheme.accent,
+                  foregroundColor: EnolaTheme.background,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Add to Map', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  // ── Multiple choice form ───────────────────────────────────────────────────
+
+  Widget _buildMultipleChoiceForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("CHOICES", style: EnolaTheme.sectionHeader),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: FantasyTextField(controller: _itemCtrl, label: 'Add a choice')),
+            IconButton(
+              icon: const Icon(Icons.add, color: EnolaTheme.accent),
+              onPressed: () {
+                final text = _itemCtrl.text.trim();
+                if (text.isNotEmpty) {
+                  setState(() {
+                    _choices.add(text);
+                    _itemCtrl.clear();
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_choices.isNotEmpty) ...[
+          const Text("TAP A CHOICE TO MARK IT CORRECT", style: EnolaTheme.sectionHeader),
+          const SizedBox(height: 8),
+          ...List.generate(_choices.length, (i) {
+            final isCorrect = i == _correctIndex;
+            return GestureDetector(
+              onTap: () => setState(() => _correctIndex = i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isCorrect ? EnolaTheme.accent.withAlpha(40) : EnolaTheme.accent.withAlpha(15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isCorrect ? EnolaTheme.accent : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isCorrect ? Icons.check_circle_rounded : Icons.circle_outlined,
+                      color: EnolaTheme.accent,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_choices[i], style: const TextStyle(fontSize: 14))),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _choices.removeAt(i);
+                        if (_correctIndex >= _choices.length) _correctIndex = 0;
+                      }),
+                      child: const Icon(Icons.close_rounded, color: EnolaTheme.wrong, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  // ── True/False form ───────────────────────────────────────────────────────
+
+  Widget _buildTrueFalseForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("CORRECT ANSWER", style: EnolaTheme.sectionHeader),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: _tfOption(0, 'True', Icons.check_rounded)),
+            const SizedBox(width: 12),
+            Expanded(child: _tfOption(1, 'False', Icons.close_rounded)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _tfOption(int index, String label, IconData icon) {
+    final selected = _tfCorrectIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _tfCorrectIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: selected ? EnolaTheme.accent.withAlpha(40) : EnolaTheme.accent.withAlpha(15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? EnolaTheme.accent : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: EnolaTheme.accent, size: 24),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: selected ? EnolaTheme.accent : EnolaTheme.textSecond,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Ordering form ─────────────────────────────────────────────────────────
+
+  Widget _buildOrderingForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("ITEMS IN CORRECT ORDER", style: EnolaTheme.sectionHeader),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: FantasyTextField(controller: _itemCtrl, label: 'Add an item')),
+            IconButton(
+              icon: const Icon(Icons.add, color: EnolaTheme.accent),
+              onPressed: () {
+                final text = _itemCtrl.text.trim();
+                if (text.isNotEmpty) {
+                  setState(() {
+                    _orderItems.add(text);
+                    _itemCtrl.clear();
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_orderItems.isNotEmpty)
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) newIndex--;
+                _orderItems.insert(newIndex, _orderItems.removeAt(oldIndex));
+              });
+            },
+            children: List.generate(_orderItems.length, (i) {
+              return Container(
+                key: ValueKey(_orderItems[i] + i.toString()),
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: EnolaTheme.accent.withAlpha(15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: EnolaTheme.accent.withAlpha(60)),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '${i + 1}.',
+                      style: const TextStyle(
+                        color: EnolaTheme.accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_orderItems[i], style: const TextStyle(fontSize: 14))),
+                    GestureDetector(
+                      onTap: () => setState(() => _orderItems.removeAt(i)),
+                      child: const Icon(Icons.close_rounded, color: EnolaTheme.wrong, size: 18),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.drag_handle_rounded, color: EnolaTheme.textSecond, size: 18),
+                  ],
+                ),
+              );
+            }),
+          ),
+      ],
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _typeShortLabel(RiddleType type) {
+    switch (type) {
+      case RiddleType.multipleChoice: return 'Multiple\nChoice';
+      case RiddleType.trueFalse:      return 'True /\nFalse';
+      case RiddleType.ordering:       return 'Order';
+    }
+  }
+
+  IconData _typeIcon(RiddleType type) {
+    switch (type) {
+      case RiddleType.multipleChoice: return Icons.list_alt_rounded;
+      case RiddleType.trueFalse:      return Icons.thumbs_up_down_rounded;
+      case RiddleType.ordering:       return Icons.sort_rounded;
+    }
   }
 }
