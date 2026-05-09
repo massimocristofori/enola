@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/connection/connection.dart' as impl;
 import 'package:uuid/uuid.dart';
+import 'package:enola/database/schema_utils.dart';
+
 
 class DriftService {
   // Singleton pattern
