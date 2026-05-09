@@ -156,11 +156,7 @@ class _MapCard extends ConsumerWidget {
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final count = countAsync.valueOrNull ?? 0;
     final grad = _gradient();
-    final initial = (map.subject?.isNotEmpty == true ? map.subject! : map.title)
-        .substring(0, 1)
-        .toUpperCase();
 
-    // Resolve image: custom bytes → app icon → gradient fallback
     final Uint8List? imageBytes =
         map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
@@ -181,108 +177,99 @@ class _MapCard extends ConsumerWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Cover area ──
-            Expanded(
-              flex: 5,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: imageBytes != null
-                    // ── User image ──
-                    ? Image.memory(
-                        imageBytes,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    // ── Default: app icon centred on gradient ──
-                    : Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: grad,
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Center(
-                          child: Image.asset(
-                            'assets/images/icon.png',
-                            width: 64,
-                            height: 64,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-              ),
-            ),
-
-            // ── Info area ──
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      map.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: EnolaTheme.textPrimary,
-                        height: 1.3,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.auto_stories_rounded,
-                            size: 13, color: EnolaTheme.accent),
-                        const SizedBox(width: 3),
-                        Text(
-                          '$count',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: EnolaTheme.accent,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (map.subject != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: EnolaTheme.accentSoft,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              map.subject!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: EnolaTheme.accent,
-                              ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Stack(
+            children: [
+              // ── Full card image / gradient ──
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: imageBytes != null
+                      ? Image.memory(
+                          imageBytes,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: grad,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
                           ),
-                      ],
-                    ),
-                  ],
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/icon.png',
+                              width: 64,
+                              height: 64,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
                 ),
               ),
-            ),
-          ],
+
+              // ── Bottom info bar ──
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(10)),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.72),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          map.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            color: EnolaTheme.textPrimary,
+                            height: 1.3,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.auto_stories_rounded,
+                                size: 14, color: Color(0xFF555555)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$count',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF555555),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
 
 // ── Empty State ───────────────────────────────────────────────────────────────
 
