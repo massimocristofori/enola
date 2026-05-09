@@ -8,7 +8,7 @@ class EnolaTheme {
   static const Color surface     = Color(0xFFF8F7FF); // Very light violet tint
   static const Color surfaceHigh = Color(0xFFF0EEFF); 
   
-  static const Color accent      = Color(0xFF7C3AED); // Vivid Violet
+  static const Color accent      = Color(0xFF39d2c0); // Vivid Violet
   static const Color secondary   = Color(0xFFEC4899); // Electric Pink
   static const Color accentSoft  = Color(0x267C3AED); 
   
