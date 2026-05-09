@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import 'package:enola/database/database.dart';
 import 'package:enola/providers/map_providers.dart';
-
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/create_map_screen.dart';
@@ -19,187 +18,259 @@ class HomeScreen extends ConsumerWidget {
     final mapsAsync = ref.watch(allMapsProvider);
 
     return Scaffold(
-      body: FantasyBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _Header(),
-              const SizedBox(height: 8),
-              Expanded(
-                child: mapsAsync.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      color: EnolaTheme.accent,
-                    ),
-                  ),
-                  error: (e, _) => Center(
-                    child: Text(
-                      'Error: $e',
-                      style: const TextStyle(color: EnolaTheme.wrong),
-                    ),
-                  ),
-                  data: (maps) => maps.isEmpty
-                      ? _EmptyState(
-                          onCreate: () => _openCreate(context),
-                        )
-                      : _MapList(
-                          maps: maps,
-                          onCreate: () => _openCreate(context),
-                        ),
+      backgroundColor: const Color(0xFFF0F0F5), // light grey page bg
+      body: SafeArea(
+        child: Column(
+          children: [
+            _Header(),
+            Expanded(
+              child: mapsAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: EnolaTheme.accent),
                 ),
+                error: (e, _) => Center(
+                  child: Text('Error: $e',
+                      style: const TextStyle(color: EnolaTheme.wrong)),
+                ),
+                data: (maps) => maps.isEmpty
+                    ? _EmptyState(onCreate: () => _openCreate(context))
+                    : _MapGrid(
+                        maps: maps,
+                        onCreate: () => _openCreate(context),
+                      ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: _CreateFab(
-        onTap: () => _openCreate(context),
-      ),
+      floatingActionButton: _CreateFab(onTap: () => _openCreate(context)),
     );
   }
 
   void _openCreate(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const CreateMapScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const CreateMapScreen()),
     );
   }
 }
+
+// ── Header ────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          const EnolaLogo(fontSize: 28),
-          const SizedBox(height: 6),
-          Text(
-            'Your Quest Maps',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: EnolaTheme.textSecond,
-                  letterSpacing: 1.5,
-                  fontSize: 12,
-                ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'My Quest Maps',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: EnolaTheme.textPrimary,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Tap a map to explore or play',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: EnolaTheme.textSecond,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          const RuneDivider(),
         ],
       ),
-    ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.2, end: 0);
+    ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.15, end: 0);
   }
 }
 
-class _MapList extends ConsumerWidget {
+// ── Responsive Grid ───────────────────────────────────────────────────────────
+
+class _MapGrid extends ConsumerWidget {
   final List<RiddleMap> maps;
   final VoidCallback onCreate;
 
-  // ✅ FIXED: Removed super.key to satisfy linter
-  const _MapList({
-    required this.maps,
-    required this.onCreate,
-  });
+  const _MapGrid({required this.maps, required this.onCreate});
+
+  /// 2 columns on phones, 3 on tablets, 4 on desktop.
+  int _crossAxisCount(double width) {
+    if (width >= 1200) return 4;
+    if (width >= 700) return 3;
+    return 2;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+    final width = MediaQuery.of(context).size.width;
+    final cols = _crossAxisCount(width);
+
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        // Card ratio: image (square-ish) + title + stats row.
+        childAspectRatio: 0.78,
+      ),
       itemCount: maps.length,
       itemBuilder: (context, i) {
-        final map = maps[i];
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _MapTile(map: map, index: i),
-        )
-            .animate(delay: (i * 80).ms)
-            .fadeIn(duration: 400.ms)
-            .slideX(begin: 0.15, end: 0);
+        return _MapCard(map: maps[i])
+            .animate(delay: (i * 60).ms)
+            .fadeIn(duration: 350.ms)
+            .scale(begin: const Offset(0.95, 0.95));
       },
     );
   }
 }
 
-class _MapTile extends ConsumerWidget {
-  final RiddleMap map;
-  final int index;
+// ── Card ──────────────────────────────────────────────────────────────────────
 
-  // ✅ FIXED: Removed super.key to satisfy linter
-  const _MapTile({
-    required this.map,
-    required this.index,
-  });
+class _MapCard extends ConsumerWidget {
+  final RiddleMap map;
+  const _MapCard({required this.map});
+
+  /// Pick a deterministic gradient per map based on its id.
+  static const List<List<Color>> _gradients = [
+    [Color(0xFFa78bfa), Color(0xFF7C3AED)], // violet
+    [Color(0xFFf472b6), Color(0xFFEC4899)], // pink
+    [Color(0xFF34d399), Color(0xFF059669)], // emerald
+    [Color(0xFFfbbf24), Color(0xFFd97706)], // amber
+    [Color(0xFF60a5fa), Color(0xFF2563EB)], // blue
+    [Color(0xFFf87171), Color(0xFFDC2626)], // red
+  ];
+
+  List<Color> _gradient() {
+    final idx = map.id.codeUnits.fold(0, (a, b) => a + b) % _gradients.length;
+    return _gradients[idx];
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final count = countAsync.valueOrNull ?? 0;
+    final grad = _gradient();
+    // First letter of title, or subject if available
+    final initial = (map.subject?.isNotEmpty == true ? map.subject! : map.title)
+        .substring(0, 1)
+        .toUpperCase();
 
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => MapDetailScreen(
-            mapId: map.id, 
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
       ),
-      child: ParchmentCard(
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: EnolaTheme.accentSoft,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.auto_stories_rounded,
-                color: EnolaTheme.accent,
-                size: 24,
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            const SizedBox(width: 14),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Cover area ──
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    map.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              flex: 5,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: grad,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (map.subject != null) ...[
-                        _Tag(map.subject!),
-                        const SizedBox(width: 8),
-                      ],
-                      _Tag('$count riddles'),
-                    ],
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('MMM d, y').format(map.createdAt),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: EnolaTheme.textSecond,
+                ),
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      fontSize: 52,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white.withAlpha(200),
+                      height: 1,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: EnolaTheme.accent,
-              size: 22,
+
+            // ── Info area ──
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Title
+                    Text(
+                      map.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: EnolaTheme.textPrimary,
+                        height: 1.3,
+                      ),
+                    ),
+
+                    // Stats row
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_stories_rounded,
+                            size: 13, color: EnolaTheme.accent),
+                        const SizedBox(width: 3),
+                        Text(
+                          '$count',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: EnolaTheme.accent,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (map.subject != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: EnolaTheme.accentSoft,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              map.subject!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: EnolaTheme.accent,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -208,29 +279,7 @@ class _MapTile extends ConsumerWidget {
   }
 }
 
-class _Tag extends StatelessWidget {
-  final String label;
-  const _Tag(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: EnolaTheme.accentSoft,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          color: EnolaTheme.accent,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
+// ── Empty State ───────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onCreate;
@@ -278,6 +327,8 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
+// ── FAB ───────────────────────────────────────────────────────────────────────
 
 class _CreateFab extends StatelessWidget {
   final VoidCallback onTap;
