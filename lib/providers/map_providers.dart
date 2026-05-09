@@ -119,7 +119,7 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
           ..where((t) => t.id.equals(state!.sessionId)))
         .getSingle();
     await db.update(db.playSessions).replace(
-      session.copyWith(completedAt: drift.value(DateTime.now()),),
+      session.copyWith(completedAt: drift.Value(DateTime.now()),),
     );
     state = null;
   }
