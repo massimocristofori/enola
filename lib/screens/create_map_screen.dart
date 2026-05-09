@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:image_picker/image_picker.dart';
 
 import 'package:enola/database/database.dart';
 import 'package:enola/database/schema_utils.dart';
@@ -24,14 +27,15 @@ class CreateMapScreen extends ConsumerStatefulWidget {
 class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   final _titleCtrl = TextEditingController();
   final _subjectCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   RiddleMap? _existingMap;
   List<Riddle> _riddles = [];
+  Uint8List? _imageBytes;
 
   bool _loading = false;
   bool _saving = false;
+  bool _pickingImage = false;
 
   @override
   void initState() {
@@ -50,7 +54,10 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     if (_existingMap != null) {
       _titleCtrl.text = _existingMap!.title;
       _subjectCtrl.text = _existingMap!.subject ?? '';
-      _descCtrl.text = _existingMap!.description ?? '';
+      // Load existing image if present
+      if (_existingMap!.imageBytes != null) {
+        _imageBytes = Uint8List.fromList(_existingMap!.imageBytes!);
+      }
     }
     setState(() => _loading = false);
   }
@@ -59,8 +66,54 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   void dispose() {
     _titleCtrl.dispose();
     _subjectCtrl.dispose();
-    _descCtrl.dispose();
     super.dispose();
+  }
+
+  // ── IMAGE ──────────────────────────────────────────────────────────────────
+
+  Future<void> _pickImage() async {
+    setState(() => _pickingImage = true);
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+
+      final rawBytes = await picked.readAsBytes();
+      final resized = await _resizeTo200(rawBytes);
+      setState(() => _imageBytes = resized);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load image: $e'), backgroundColor: EnolaTheme.wrong),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _pickingImage = false);
+    }
+  }
+
+  /// Decodes raw image bytes, draws them into a 200×200 canvas, returns PNG bytes.
+  Future<Uint8List> _resizeTo200(Uint8List bytes) async {
+    final codec = await ui.instantiateImageCodec(
+      bytes,
+      targetWidth: 200,
+      targetHeight: 200,
+    );
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      const Rect.fromLTWH(0, 0, 200, 200),
+      Paint(),
+    );
+    final picture = recorder.endRecording();
+    final resizedImage = await picture.toImage(200, 200);
+    final byteData = await resizedImage.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
   }
 
   // ── LOGIC ──────────────────────────────────────────────────────────────────
@@ -76,8 +129,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       await DriftService.instance.saveMap(
         mapId,
         _titleCtrl.text.trim(),
-        _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        null, // description removed from UI but kept in DB for compatibility
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
+        imageBytes: _imageBytes,
       );
 
       await (db.delete(db.riddles)..where((t) => t.mapId.equals(mapId))).go();
@@ -103,8 +157,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     }
   }
 
-  /// Converts a Riddle to a RiddlesCompanion for DB insert,
-  /// writing both payloadJson (new) and legacy columns.
   RiddlesCompanion _riddleToCompanion(Riddle riddle, String mapId, int order) {
     final type = RiddleType.values[riddle.typeIndex];
 
@@ -215,6 +267,79 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       children: [
         const Text("MAP DETAILS", style: EnolaTheme.sectionHeader),
         const SizedBox(height: 16),
+        // ── Image picker ──
+        Center(
+          child: GestureDetector(
+            onTap: _pickingImage ? null : _pickImage,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: EnolaTheme.accent.withAlpha(20),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: EnolaTheme.accent.withAlpha(80),
+                  width: 1.5,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: _pickingImage
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: EnolaTheme.accent,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : _imageBytes != null
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.memory(_imageBytes!, fit: BoxFit.cover),
+                              Positioned(
+                                bottom: 4,
+                                right: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: EnolaTheme.background.withAlpha(180),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.edit_rounded,
+                                    color: EnolaTheme.accent,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/images/icon.png',
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.contain,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap to add image',
+                                style: TextStyle(
+                                  color: EnolaTheme.accent.withAlpha(180),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
         FantasyTextField(
           controller: _titleCtrl,
           label: 'Map Title',
@@ -226,13 +351,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
           controller: _subjectCtrl,
           label: 'Subject',
           hint: 'e.g., History, Math, Lore',
-        ),
-        const SizedBox(height: 16),
-        FantasyTextField(
-          controller: _descCtrl,
-          label: 'Description',
-          hint: 'The story of this journey...',
-          maxLines: 3,
         ),
       ],
     );
@@ -376,14 +494,11 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
 
   RiddleType _selectedType = RiddleType.multipleChoice;
 
-  // Multiple choice state
   final List<String> _choices = [];
   int _correctIndex = 0;
 
-  // True/False state
-  int _tfCorrectIndex = 0; // 0 = True, 1 = False
+  int _tfCorrectIndex = 0;
 
-  // Ordering state
   final List<String> _orderItems = [];
 
   @override
@@ -454,7 +569,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
             const Center(child: Text("New Riddle", style: EnolaTheme.sectionHeader)),
             const SizedBox(height: 20),
 
-            // ── Type selector ──
             const Text("TYPE", style: EnolaTheme.sectionHeader),
             const SizedBox(height: 10),
             Row(
@@ -510,11 +624,9 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
 
             const SizedBox(height: 20),
 
-            // ── Question ──
             FantasyTextField(controller: _qCtrl, label: 'The Question'),
             const SizedBox(height: 20),
 
-            // ── Type-specific form ──
             if (_selectedType == RiddleType.multipleChoice) ...[
               _buildMultipleChoiceForm(),
             ] else if (_selectedType == RiddleType.trueFalse) ...[
@@ -525,7 +637,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
 
             const SizedBox(height: 24),
 
-            // ── Submit ──
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -544,8 +655,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
       ),
     );
   }
-
-  // ── Multiple choice form ───────────────────────────────────────────────────
 
   Widget _buildMultipleChoiceForm() {
     return Column(
@@ -616,8 +725,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
     );
   }
 
-  // ── True/False form ───────────────────────────────────────────────────────
-
   Widget _buildTrueFalseForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,8 +773,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
       ),
     );
   }
-
-  // ── Ordering form ─────────────────────────────────────────────────────────
 
   Widget _buildOrderingForm() {
     return Column(
@@ -739,8 +844,6 @@ class _AddRiddleSheetState extends State<_AddRiddleSheet> {
       ],
     );
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   String _typeShortLabel(RiddleType type) {
     switch (type) {
