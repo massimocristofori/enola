@@ -23,12 +23,11 @@ class Riddles extends Table {
   IntColumn get typeIndex => integer()();
   IntColumn get orderInMap => integer()();
 
-  // Single payload column replaces choicesJson + correctIndex.
-  // Shape is type-specific — see RiddlePayload below.
-  TextColumn get payloadJson => text().withDefault(const Constant('{}'))();
+  // Nullable so the generated Riddle constructor doesn't require it,
+  // keeping existing code that constructs Riddle(...) directly compilable.
+  TextColumn get payloadJson => text().nullable()();
 
-  // ── Kept for backwards compatibility with existing screens/services ──
-  // These are now derived from payloadJson. Do not write to them directly.
+  // Legacy columns — kept for backwards compatibility.
   TextColumn get choicesJson => text().nullable()();
   IntColumn get correctIndex => integer().nullable()();
 }
@@ -45,17 +44,8 @@ class PlaySessions extends Table {
 }
 
 // ---------------------------------------------------------------------------
-// Riddle type enum — add new values here as you expand
-// ---------------------------------------------------------------------------
-
-enum RiddleType {
-  multipleChoice,  // index 0
-  ordering,        // index 1
-}
-
-// ---------------------------------------------------------------------------
 // Typed payload wrappers — one class per riddle type.
-// Services and screens should use these instead of raw JSON.
+// RiddleType enum lives in schema_utils.dart — do not redeclare it here.
 // ---------------------------------------------------------------------------
 
 sealed class RiddlePayload {
@@ -127,8 +117,6 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) {
-        // Add payloadJson to existing installs.
-        // choicesJson and correctIndex are kept as-is; payloadJson starts empty.
         await m.addColumn(riddles, riddles.payloadJson);
       }
     },
@@ -154,7 +142,6 @@ class AppDatabase extends _$AppDatabase {
 
 // ---------------------------------------------------------------------------
 // Extension on Riddle
-// Backwards-compatible helpers are preserved; new code should use .payload
 // ---------------------------------------------------------------------------
 
 extension RiddleUtils on Riddle {
@@ -162,14 +149,14 @@ extension RiddleUtils on Riddle {
 
   // ── New API ──
 
-  Map<String, dynamic> get _payloadMap =>
-      payloadJson.isNotEmpty && payloadJson != '{}'
-          ? jsonDecode(payloadJson) as Map<String, dynamic>
-          : {};
+  Map<String, dynamic> get _payloadMap {
+    final raw = payloadJson;
+    if (raw == null || raw.isEmpty || raw == '{}') return {};
+    return jsonDecode(raw) as Map<String, dynamic>;
+  }
 
   RiddlePayload get payload => RiddlePayload.fromJson(type, _payloadMap);
 
-  // Convenience typed accessors
   MultipleChoicePayload? get asMultipleChoice =>
       type == RiddleType.multipleChoice ? payload as MultipleChoicePayload : null;
 
@@ -177,14 +164,12 @@ extension RiddleUtils on Riddle {
       type == RiddleType.ordering ? payload as OrderingPayload : null;
 
   // ── Legacy API (kept for existing screens/services) ──
-  // Reads from payloadJson first; falls back to the old choicesJson column.
 
   List<String> get choices {
     final mc = asMultipleChoice;
     if (mc != null) return mc.choices;
     final ord = asOrdering;
     if (ord != null) return ord.items;
-    // fallback to old column
     if (choicesJson != null) {
       return (jsonDecode(choicesJson!) as List).cast<String>();
     }
@@ -199,12 +184,12 @@ extension RiddleUtils on Riddle {
   int? get correctChoiceIndex {
     final mc = asMultipleChoice;
     if (mc != null) return mc.correctIndex;
-    return correctIndex; // legacy column fallback
+    return correctIndex;
   }
 
   String? get orderItemsJson {
     final ord = asOrdering;
     if (ord != null) return jsonEncode(ord.items);
-    return choicesJson; // legacy fallback
+    return choicesJson;
   }
 }
