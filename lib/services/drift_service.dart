@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:drift/drift.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/connection/connection.dart' as impl;
@@ -7,7 +8,6 @@ import 'package:enola/database/schema_utils.dart';
 
 
 class DriftService {
-  // Singleton pattern
   static final DriftService instance = DriftService._internal();
   late AppDatabase db;
 
@@ -17,24 +17,28 @@ class DriftService {
 
   // ── MAPS ──────────────────────────────────────────────────────────────────
 
-  /// Saves or updates a map using insertOnConflictUpdate (safe, no cascade delete).
-  Future<void> saveMap(String id, String title, String? description, String? subject) async {
+  Future<void> saveMap(
+    String id,
+    String title,
+    String? description,
+    String? subject, {
+    Uint8List? imageBytes,
+  }) async {
     await db.into(db.riddleMaps).insertOnConflictUpdate(
       RiddleMapsCompanion.insert(
         id: id,
         title: title,
         description: Value(description),
         subject: Value(subject),
+        imageBytes: Value(imageBytes),
       ),
     );
   }
 
-  /// Streams all maps for the UI (e.g., a map list screen)
   Stream<List<RiddleMap>> watchAllMaps() => db.select(db.riddleMaps).watch();
 
   // ── RIDDLES ───────────────────────────────────────────────────────────────
 
-  /// Streams all riddles for a specific map, ordered by position.
   Stream<List<Riddle>> watchRiddles(String mapId) {
     return (db.select(db.riddles)
           ..where((t) => t.mapId.equals(mapId))
@@ -42,7 +46,6 @@ class DriftService {
         .watch();
   }
 
-  /// Saves a multiple-choice riddle (new API — writes payloadJson).
   Future<void> saveMultipleChoiceRiddle({
     required String mapId,
     required String question,
@@ -62,14 +65,12 @@ class DriftService {
       typeIndex: Value(RiddleType.multipleChoice.index),
       orderInMap: Value(orderInMap),
       payloadJson: Value(jsonEncode(payload.toJson())),
-      // Legacy columns kept in sync so old screens don't break.
       choicesJson: Value(jsonEncode(choices)),
       correctIndex: Value(correctIndex),
     );
     await db.into(db.riddles).insertOnConflictUpdate(companion);
   }
 
-  /// Saves an ordering riddle (new API — writes payloadJson).
   Future<void> saveOrderingRiddle({
     required String mapId,
     required String question,
@@ -85,16 +86,12 @@ class DriftService {
       typeIndex: Value(RiddleType.ordering.index),
       orderInMap: Value(orderInMap),
       payloadJson: Value(jsonEncode(payload.toJson())),
-      // Legacy columns: ordering has no correctIndex; choicesJson holds items
-      // so old screens that read choicesJson still get something sensible.
       choicesJson: Value(jsonEncode(items)),
       correctIndex: const Value(null),
     );
     await db.into(db.riddles).insertOnConflictUpdate(companion);
   }
 
-  /// Generic save that dispatches to the correct typed method.
-  /// Use this when you already have a RiddlePayload object.
   Future<void> saveRiddle({
     required String mapId,
     required String question,
@@ -123,17 +120,14 @@ class DriftService {
     }
   }
 
-  /// Deletes a single riddle by id.
   Future<void> deleteRiddle(int riddleId) async {
     await (db.delete(db.riddles)..where((t) => t.id.equals(riddleId))).go();
   }
 
-  /// Deletes all riddles for a map (e.g. before a full re-import).
   Future<void> deleteRiddlesForMap(String mapId) async {
     await (db.delete(db.riddles)..where((t) => t.mapId.equals(mapId))).go();
   }
 
-  /// Reorders riddles after drag-and-drop. Pass the full ordered list.
   Future<void> reorderRiddles(List<Riddle> ordered) async {
     await db.transaction(() async {
       for (var i = 0; i < ordered.length; i++) {
@@ -145,7 +139,6 @@ class DriftService {
 
   // ── PLAY SESSIONS ─────────────────────────────────────────────────────────
 
-  /// Starts a new session and returns the internal ID.
   Future<int> startSession(String mapId, int totalRiddles) async {
     return await db.into(db.playSessions).insert(
       PlaySessionsCompanion.insert(
@@ -158,7 +151,6 @@ class DriftService {
     );
   }
 
-  /// Updates the score for an active session.
   Future<void> incrementScore(int sessionId) async {
     final current = await (db.select(db.playSessions)
           ..where((t) => t.id.equals(sessionId)))
@@ -168,25 +160,21 @@ class DriftService {
     );
   }
 
-  /// Advances lastCompletedIndex so the session can resume mid-map.
   Future<void> advanceProgress(int sessionId, int completedIndex) async {
     await (db.update(db.playSessions)..where((t) => t.id.equals(sessionId)))
         .write(PlaySessionsCompanion(lastCompletedIndex: Value(completedIndex)));
   }
 
-  /// Marks a session as finished.
   Future<void> completeSession(int sessionId) async {
     await (db.update(db.playSessions)..where((t) => t.id.equals(sessionId)))
         .write(PlaySessionsCompanion(completedAt: Value(DateTime.now())));
   }
 
-  /// Streams the current session state (useful for score overlays).
   Stream<PlaySession> watchSession(int sessionId) {
     return (db.select(db.playSessions)..where((t) => t.id.equals(sessionId)))
         .watchSingle();
   }
 
-  /// Returns past sessions for a given map, newest first.
   Future<List<PlaySession>> getSessionsForMap(String mapId) {
     return (db.select(db.playSessions)
           ..where((t) => t.mapId.equals(mapId))
@@ -194,9 +182,6 @@ class DriftService {
         .get();
   }
 
-  // ── UTILITIES ─────────────────────────────────────────────────────────────
-
-  /// Clears everything (useful for testing or "Reset App" settings).
   Future<void> clearDatabase() async {
     await db.transaction(() async {
       await db.delete(db.playSessions).go();
