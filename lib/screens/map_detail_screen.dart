@@ -8,17 +8,12 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
-
-// ✅ Make sure this path matches your file structure
 import 'package:enola/widgets/treasure_map_path.dart';
 
 class MapDetailScreen extends ConsumerWidget {
   final String mapId;
 
-  const MapDetailScreen({
-    super.key,
-    required this.mapId,
-  });
+  const MapDetailScreen({super.key, required this.mapId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,27 +23,27 @@ class MapDetailScreen extends ConsumerWidget {
     return Scaffold(
       body: FantasyBackground(
         child: mapAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: EnolaTheme.accent),
-          ),
+          loading: () =>
+              const Center(child: CircularProgressIndicator(color: EnolaTheme.accent)),
           error: (e, _) => Center(child: Text('$e')),
           data: (map) {
             if (map == null) return const SizedBox();
-
             return riddlesAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: EnolaTheme.accent),
-              ),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator(color: EnolaTheme.accent)),
               error: (e, _) => Center(child: Text('$e')),
               data: (riddles) => _MapBody(
                 map: map,
                 riddles: riddles,
+                mapId: mapId,
                 onPlay: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => PlayScreen(mapId: mapId),
-                  ),
-                ),
+                  MaterialPageRoute(builder: (_) => PlayScreen(mapId: mapId)),
+                ).then((_) {
+                  ref.invalidate(latestSessionProvider(mapId));
+                  ref.invalidate(mapProvider(mapId));
+                  ref.invalidate(riddlesForMapProvider(mapId));
+                }),
                 onEdit: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -76,10 +71,9 @@ class MapDetailScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: EnolaTheme.border),
         ),
-        title: const Text(
-          'Delete quest?',
-          style: TextStyle(color: EnolaTheme.textPrimary, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Delete quest?',
+            style: TextStyle(
+                color: EnolaTheme.textPrimary, fontWeight: FontWeight.bold)),
         content: const Text(
           'This map and all its riddles will be lost forever.',
           style: TextStyle(color: EnolaTheme.textSecond),
@@ -87,11 +81,14 @@ class MapDetailScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: EnolaTheme.textSecond)),
+            child: const Text('Cancel',
+                style: TextStyle(color: EnolaTheme.textSecond)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: EnolaTheme.wrong, fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: EnolaTheme.wrong, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -100,17 +97,17 @@ class MapDetailScreen extends ConsumerWidget {
     if (ok == true && context.mounted) {
       final db = DriftService.instance.db;
       await (db.delete(db.riddleMaps)..where((t) => t.id.equals(mapId))).go();
-
       if (context.mounted) Navigator.pop(context);
     }
   }
 }
 
-// ── Private Body Widget ──────────────────────────────────────────────────────
+// ── Body ──────────────────────────────────────────────────────────────────────
 
 class _MapBody extends StatelessWidget {
   final RiddleMap map;
   final List<Riddle> riddles;
+  final String mapId;
   final VoidCallback onPlay;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -118,6 +115,7 @@ class _MapBody extends StatelessWidget {
   const _MapBody({
     required this.map,
     required this.riddles,
+    required this.mapId,
     required this.onPlay,
     required this.onEdit,
     required this.onDelete,
@@ -137,12 +135,16 @@ class _MapBody extends StatelessWidget {
                 children: [
                   Text(
                     map.title,
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 28),
+                    style: Theme.of(context)
+                        .textTheme
+                        .displayLarge
+                        ?.copyWith(fontSize: 28),
                   ),
                   if (map.subject != null) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: EnolaTheme.accentSoft,
                         borderRadius: BorderRadius.circular(20),
@@ -160,25 +162,26 @@ class _MapBody extends StatelessWidget {
                   ],
                   const SizedBox(height: 20),
                   Text(
-                    map.description ?? 'No description provided for this quest.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: EnolaTheme.textSecond),
+                    map.description ??
+                        'No description provided for this quest.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(color: EnolaTheme.textSecond),
                   ),
                   const SizedBox(height: 32),
                   const RuneDivider(),
                   const SizedBox(height: 32),
                   Row(
                     children: [
-                      const Icon(Icons.quiz_outlined, color: EnolaTheme.accent, size: 20),
+                      const Icon(Icons.quiz_outlined,
+                          color: EnolaTheme.accent, size: 20),
                       const SizedBox(width: 8),
-                      Text(
-                        '${riddles.length} RIDDLES AWAIT',
-                        style: EnolaTheme.sectionHeader,
-                      ),
+                      Text('${riddles.length} RIDDLES AWAIT',
+                          style: EnolaTheme.sectionHeader),
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
-                  // 🗺️ THE TREASURE HUNT MAP SECTION
                   if (riddles.isEmpty)
                     const Center(
                       child: Padding(
@@ -190,11 +193,11 @@ class _MapBody extends StatelessWidget {
                       ),
                     )
                   else
+                    // Preview mode — no tap callback
                     TreasureMapPath(
                       riddles: riddles,
-                      mapId: map.id,
+                      mapId: mapId,
                     ),
-                  
                   const SizedBox(height: 40),
                 ],
               ),
@@ -217,7 +220,8 @@ class _MapBody extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, color: EnolaTheme.wrong),
+            icon: const Icon(Icons.delete_outline_rounded,
+                color: EnolaTheme.wrong),
             onPressed: onDelete,
           ),
         ],
@@ -232,7 +236,7 @@ class _MapBody extends StatelessWidget {
         color: EnolaTheme.background,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -245,10 +249,12 @@ class _MapBody extends StatelessWidget {
               onPressed: onEdit,
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: EnolaTheme.accent),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              child: const Text('Edit Map', style: TextStyle(color: EnolaTheme.accent)),
+              child: const Text('Edit Map',
+                  style: TextStyle(color: EnolaTheme.accent)),
             ),
           ),
           const SizedBox(width: 16),
