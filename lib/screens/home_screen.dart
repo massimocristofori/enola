@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
     final mapsAsync = ref.watch(allMapsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F0F5), // light grey page bg
+      backgroundColor: const Color(0xFFF0F0F5),
       body: SafeArea(
         child: Column(
           children: [
@@ -99,7 +101,6 @@ class _MapGrid extends ConsumerWidget {
 
   const _MapGrid({required this.maps, required this.onCreate});
 
-  /// 2 columns on phones, 3 on tablets, 4 on desktop.
   int _crossAxisCount(double width) {
     if (width >= 1200) return 4;
     if (width >= 700) return 3;
@@ -117,7 +118,6 @@ class _MapGrid extends ConsumerWidget {
         crossAxisCount: cols,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        // Card ratio: image (square-ish) + title + stats row.
         childAspectRatio: 0.78,
       ),
       itemCount: maps.length,
@@ -137,14 +137,13 @@ class _MapCard extends ConsumerWidget {
   final RiddleMap map;
   const _MapCard({required this.map});
 
-  /// Pick a deterministic gradient per map based on its id.
   static const List<List<Color>> _gradients = [
-    [Color(0xFFa78bfa), Color(0xFF7C3AED)], // violet
-    [Color(0xFFf472b6), Color(0xFFEC4899)], // pink
-    [Color(0xFF34d399), Color(0xFF059669)], // emerald
-    [Color(0xFFfbbf24), Color(0xFFd97706)], // amber
-    [Color(0xFF60a5fa), Color(0xFF2563EB)], // blue
-    [Color(0xFFf87171), Color(0xFFDC2626)], // red
+    [Color(0xFFa78bfa), Color(0xFF7C3AED)],
+    [Color(0xFFf472b6), Color(0xFFEC4899)],
+    [Color(0xFF34d399), Color(0xFF059669)],
+    [Color(0xFFfbbf24), Color(0xFFd97706)],
+    [Color(0xFF60a5fa), Color(0xFF2563EB)],
+    [Color(0xFFf87171), Color(0xFFDC2626)],
   ];
 
   List<Color> _gradient() {
@@ -157,10 +156,13 @@ class _MapCard extends ConsumerWidget {
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final count = countAsync.valueOrNull ?? 0;
     final grad = _gradient();
-    // First letter of title, or subject if available
     final initial = (map.subject?.isNotEmpty == true ? map.subject! : map.title)
         .substring(0, 1)
         .toUpperCase();
+
+    // Resolve image: custom bytes → app icon → gradient fallback
+    final Uint8List? imageBytes =
+        map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -185,28 +187,34 @@ class _MapCard extends ConsumerWidget {
             // ── Cover area ──
             Expanded(
               flex: 5,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: grad,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    initial,
-                    style: TextStyle(
-                      fontSize: 52,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white.withAlpha(200),
-                      height: 1,
-                    ),
-                  ),
-                ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: imageBytes != null
+                    // ── User image ──
+                    ? Image.memory(
+                        imageBytes,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    // ── Default: app icon centred on gradient ──
+                    : Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: grad,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/icon.png',
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
               ),
             ),
 
@@ -219,7 +227,6 @@ class _MapCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Title
                     Text(
                       map.title,
                       maxLines: 2,
@@ -231,8 +238,6 @@ class _MapCard extends ConsumerWidget {
                         height: 1.3,
                       ),
                     ),
-
-                    // Stats row
                     Row(
                       children: [
                         const Icon(Icons.auto_stories_rounded,
