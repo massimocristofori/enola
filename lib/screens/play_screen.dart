@@ -92,9 +92,13 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                       style: TextStyle(color: EnolaTheme.textSecond)),
                 );
               }
-              
-              if (_orderedItems.isEmpty && riddles[_currentIndex].type == RiddleType.ordering) {
-                final items = (jsonDecode(riddles[_currentIndex].orderItemsJson ?? '[]') as List).cast<String>();
+
+              // Only ordering riddles need the shuffled list initialised.
+              if (_orderedItems.isEmpty &&
+                  riddles[_currentIndex].type == RiddleType.ordering) {
+                final items = (jsonDecode(
+                          riddles[_currentIndex].orderItemsJson ?? '[]') as List)
+                    .cast<String>();
                 _orderedItems = List.from(items)..shuffle(math.Random());
               }
 
@@ -183,7 +187,10 @@ class _PlayBody extends StatelessWidget {
                     ),
                   ).animate().fadeIn().scale(delay: 100.ms),
                   const SizedBox(height: 32),
-                  if (riddle.type == RiddleType.multipleChoice)
+                  // trueFalse shares the same widget as multipleChoice —
+                  // both use MultipleChoicePayload under the hood.
+                  if (riddle.type == RiddleType.multipleChoice ||
+                      riddle.type == RiddleType.trueFalse)
                     _buildMultipleChoice(riddle)
                   else
                     _buildOrdering(riddle),
@@ -198,9 +205,11 @@ class _PlayBody extends StatelessWidget {
                 onPressed: onNext,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 56),
-                  backgroundColor: isCorrect == true ? EnolaTheme.correct : EnolaTheme.accent,
+                  backgroundColor:
+                      isCorrect == true ? EnolaTheme.correct : EnolaTheme.accent,
                 ),
-                child: Text(currentIndex == riddles.length - 1 ? 'See Results' : 'Next Riddle'),
+                child: Text(
+                    currentIndex == riddles.length - 1 ? 'See Results' : 'Next Riddle'),
               ).animate().slideY(begin: 0.5, end: 0).fadeIn(),
             ),
         ],
@@ -231,7 +240,8 @@ class _PlayBody extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             '${currentIndex + 1}/${riddles.length}',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: EnolaTheme.textSecond),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: EnolaTheme.textSecond),
           ),
         ],
       ),
@@ -248,7 +258,7 @@ class _PlayBody extends StatelessWidget {
       children: List.generate(choices.length, (i) {
         final isSelected = selectedAnswer == i;
         final isCorrectChoice = i == riddle.correctChoiceIndex;
-        
+
         Color borderColor = EnolaTheme.border;
         Color bgColor = Colors.white;
 
@@ -275,13 +285,16 @@ class _PlayBody extends StatelessWidget {
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderColor, width: isSelected || (answered && isCorrectChoice) ? 2 : 1),
+                border: Border.all(
+                    color: borderColor,
+                    width: isSelected || (answered && isCorrectChoice) ? 2 : 1),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 14,
-                    backgroundColor: isSelected ? EnolaTheme.accent : EnolaTheme.surfaceHigh,
+                    backgroundColor:
+                        isSelected ? EnolaTheme.accent : EnolaTheme.surfaceHigh,
                     child: Text(
                       String.fromCharCode(65 + i),
                       style: TextStyle(
@@ -312,7 +325,8 @@ class _PlayBody extends StatelessWidget {
   }
 
   Widget _buildOrdering(Riddle riddle) {
-    final correctOrder = (jsonDecode(riddle.orderItemsJson ?? '[]') as List).cast<String>();
+    final correctOrder =
+        (jsonDecode(riddle.orderItemsJson ?? '[]') as List).cast<String>();
 
     return Column(
       children: [
@@ -343,8 +357,10 @@ class _PlayBody extends StatelessWidget {
                   border: Border.all(color: EnolaTheme.border),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.drag_indicator, color: EnolaTheme.border),
-                  title: Text(orderedItems[i], style: const TextStyle(fontWeight: FontWeight.w500)),
+                  leading:
+                      const Icon(Icons.drag_indicator, color: EnolaTheme.border),
+                  title: Text(orderedItems[i],
+                      style: const TextStyle(fontWeight: FontWeight.w500)),
                 ),
               ),
           ],
