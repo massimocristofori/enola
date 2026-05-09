@@ -54,14 +54,12 @@ sealed class RiddlePayload {
   Map<String, dynamic> toJson();
 
   static RiddlePayload fromJson(RiddleType type, Map<String, dynamic> json) {
-  return switch (type) {
-    RiddleType.multipleChoice => MultipleChoicePayload.fromJson(json),
-    RiddleType.trueFalse      => MultipleChoicePayload.fromJson(json),
-    RiddleType.ordering       => OrderingPayload.fromJson(json),
-  };
-}
-
-
+    return switch (type) {
+      RiddleType.multipleChoice => MultipleChoicePayload.fromJson(json),
+      RiddleType.trueFalse      => MultipleChoicePayload.fromJson(json),
+      RiddleType.ordering       => OrderingPayload.fromJson(json),
+    };
+  }
 }
 
 class MultipleChoicePayload extends RiddlePayload {
@@ -161,7 +159,9 @@ extension RiddleUtils on Riddle {
   RiddlePayload get payload => RiddlePayload.fromJson(type, _payloadMap);
 
   MultipleChoicePayload? get asMultipleChoice =>
-      type == RiddleType.multipleChoice ? payload as MultipleChoicePayload : null;
+      (type == RiddleType.multipleChoice || type == RiddleType.trueFalse)
+          ? payload as MultipleChoicePayload
+          : null;
 
   OrderingPayload? get asOrdering =>
       type == RiddleType.ordering ? payload as OrderingPayload : null;
