@@ -11,6 +11,9 @@ import 'package:enola/screens/riddle_screen.dart';
 import 'package:enola/screens/result_screen.dart';
 import 'package:enola/services/drift_service.dart';
 
+// ignore: unused_import — needed for orderBy inside initState
+import 'package:drift/drift.dart' as drift;
+
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
   const PlayScreen({super.key, required this.mapId});
@@ -229,5 +232,4 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 }
 
-// ignore: unused_import — needed for orderBy inside initState
-import 'package:drift/drift.dart' as drift;
+
