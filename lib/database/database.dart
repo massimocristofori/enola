@@ -54,11 +54,14 @@ sealed class RiddlePayload {
   Map<String, dynamic> toJson();
 
   static RiddlePayload fromJson(RiddleType type, Map<String, dynamic> json) {
-    return switch (type) {
-      RiddleType.multipleChoice => MultipleChoicePayload.fromJson(json),
-      RiddleType.ordering       => OrderingPayload.fromJson(json),
-    };
-  }
+  return switch (type) {
+    RiddleType.multipleChoice => MultipleChoicePayload.fromJson(json),
+    RiddleType.trueFalse      => MultipleChoicePayload.fromJson(json),
+    RiddleType.ordering       => OrderingPayload.fromJson(json),
+  };
+}
+
+
 }
 
 class MultipleChoicePayload extends RiddlePayload {
