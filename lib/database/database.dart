@@ -10,6 +10,7 @@ class RiddleMaps extends Table {
   TextColumn get title => text().withLength(min: 1, max: 100)();
   TextColumn get description => text().nullable()();
   TextColumn get subject => text().nullable()();
+  BlobColumn get imageBytes => blob().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
@@ -22,12 +23,7 @@ class Riddles extends Table {
   TextColumn get question => text()();
   IntColumn get typeIndex => integer()();
   IntColumn get orderInMap => integer()();
-
-  // Nullable so the generated Riddle constructor doesn't require it,
-  // keeping existing code that constructs Riddle(...) directly compilable.
   TextColumn get payloadJson => text().nullable()();
-
-  // Legacy columns — kept for backwards compatibility.
   TextColumn get choicesJson => text().nullable()();
   IntColumn get correctIndex => integer().nullable()();
 }
@@ -42,11 +38,6 @@ class PlaySessions extends Table {
   IntColumn get totalRiddles => integer().withDefault(const Constant(0))();
   IntColumn get correctAnswers => integer().withDefault(const Constant(0))();
 }
-
-// ---------------------------------------------------------------------------
-// Typed payload wrappers — one class per riddle type.
-// RiddleType enum lives in schema_utils.dart — do not redeclare it here.
-// ---------------------------------------------------------------------------
 
 sealed class RiddlePayload {
   const RiddlePayload();
@@ -103,16 +94,12 @@ class OrderingPayload extends RiddlePayload {
   Map<String, dynamic> toJson() => {'items': items};
 }
 
-// ---------------------------------------------------------------------------
-// Database
-// ---------------------------------------------------------------------------
-
 @DriftDatabase(tables: [RiddleMaps, Riddles, PlaySessions])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -120,19 +107,19 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) {
         await m.addColumn(riddles, riddles.payloadJson);
       }
+      if (from < 3) {
+        await m.addColumn(riddleMaps, riddleMaps.imageBytes);
+      }
     },
   );
 
-  // ── Maps ──
   Future<List<RiddleMap>> getAllMaps() => select(riddleMaps).get();
   Future<void> insertMap(RiddleMapsCompanion entity) =>
       into(riddleMaps).insertOnConflictUpdate(entity);
 
-  // ── Riddles ──
   Future<List<Riddle>> getRiddlesForMap(String mapId) =>
       (select(riddles)..where((t) => t.mapId.equals(mapId))).get();
 
-  // ── Sessions ──
   Future<int> createSession(PlaySessionsCompanion entity) =>
       into(playSessions).insert(entity);
   Stream<PlaySession> watchSession(int id) =>
@@ -141,14 +128,8 @@ class AppDatabase extends _$AppDatabase {
       update(playSessions).replace(session);
 }
 
-// ---------------------------------------------------------------------------
-// Extension on Riddle
-// ---------------------------------------------------------------------------
-
 extension RiddleUtils on Riddle {
   RiddleType get type => RiddleType.values[typeIndex];
-
-  // ── New API ──
 
   Map<String, dynamic> get _payloadMap {
     final raw = payloadJson;
@@ -165,8 +146,6 @@ extension RiddleUtils on Riddle {
 
   OrderingPayload? get asOrdering =>
       type == RiddleType.ordering ? payload as OrderingPayload : null;
-
-  // ── Legacy API (kept for existing screens/services) ──
 
   List<String> get choices {
     final mc = asMultipleChoice;
