@@ -82,7 +82,7 @@ class EnolaTheme {
         backgroundColor: accent,
         foregroundColor: Colors.white,
         elevation: 4,
-        shadowColor: accent.withOpacity(0.4),
+        shadowColor: accent.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
         textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
