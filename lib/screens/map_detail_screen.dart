@@ -230,7 +230,7 @@ class _MapDetailBody extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.45),
+                                  color: Colors.black.withValues(alpha: 0.45),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
