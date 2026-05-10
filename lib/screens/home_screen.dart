@@ -222,7 +222,7 @@ class _MapCard extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.72),
+                      color: Colors.white.withValues(alpha: 0.72),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
