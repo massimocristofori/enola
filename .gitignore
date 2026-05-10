@@ -41,8 +41,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Isar generated files
-**/*.g.dart
 
 # Environment / secrets
 .env
