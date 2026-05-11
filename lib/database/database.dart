@@ -37,6 +37,7 @@ class PlaySessions extends Table {
   DateTimeColumn get completedAt => dateTime().nullable()();
   IntColumn get totalRiddles => integer().withDefault(const Constant(0))();
   IntColumn get correctAnswers => integer().withDefault(const Constant(0))();
+  TextColumn get riddleStarsJson => text().nullable()(); // ← NEW
 }
 
 sealed class RiddlePayload {
@@ -99,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4; // ← bumped
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -109,6 +110,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(riddleMaps, riddleMaps.imageBytes);
+      }
+      if (from < 4) {
+        await m.addColumn(playSessions, playSessions.riddleStarsJson); // ← NEW
       }
     },
   );
