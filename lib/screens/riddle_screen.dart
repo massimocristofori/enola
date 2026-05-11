@@ -311,7 +311,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
             child: const Text('Submit Order'),
           ),
         if (_showingFeedback && !_solvedCorrectly)
-          Padding(
+          const Padding(
             padding: const EdgeInsets.only(top: 8),
             child: const Text(
               'Not quite — try reordering again!',
