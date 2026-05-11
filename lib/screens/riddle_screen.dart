@@ -312,8 +312,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
           ),
         if (_showingFeedback && !_solvedCorrectly)
           const Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: const Text(
+            padding:  EdgeInsets.only(top: 8),
+            child:  Text(
               'Not quite — try reordering again!',
               style: TextStyle(
                 color: EnolaTheme.wrong,
