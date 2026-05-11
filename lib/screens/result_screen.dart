@@ -109,7 +109,7 @@ class ResultScreen extends StatelessWidget {
             fontWeight: FontWeight.w900,
             color: _scoreColor,
             letterSpacing: 1,
-            shadows: [
+            shadows: const [
               Shadow(
                 color: _scoreColor.withValues(alpha: 0.2),
                 blurRadius: 20,
