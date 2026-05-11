@@ -15,9 +15,10 @@ class RiddleGenerationService {
     required String mapId,
   }) async {
     final files = imagePaths.map((path) => File(path)).toList();
-    final extractedText = await GeminiService.instance.extractTextFromImages(files);
+    final extractedText = await OCRService.instance.extractTextFromImages(files); // ← ML Kit
     return generateRiddlesFromText(text: extractedText, mapId: mapId);
   }
+
 
   /// Calls GeminiService.generateRiddles and maps raw JSON → typed Riddle objects.
   Future<List<Riddle>> generateRiddlesFromText({
