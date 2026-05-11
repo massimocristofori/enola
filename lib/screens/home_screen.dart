@@ -204,7 +204,7 @@ class _MapCard extends ConsumerWidget {
                               'assets/images/0.jpeg',
                               width: double.infinity,
                               height: double.infinity,
-                              fit: BoxFit.contain,
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
