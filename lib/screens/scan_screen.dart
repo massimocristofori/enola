@@ -223,7 +223,7 @@ class _ScanScreenState extends State<ScanScreen> {
             mainAxisSpacing: 10,
             childAspectRatio: 0.75,
           ),
-          itemCount: _pages.length + 2, 
+          itemCount: _pages.length + 2,
           itemBuilder: (context, i) {
             if (i == _pages.length) return _AddPageTile(onTap: _addPage, icon: Icons.camera_alt_rounded, label: 'Camera');
             if (i == _pages.length + 1) return _AddPageTile(onTap: _addFromGallery, icon: Icons.photo_library_rounded, label: 'Gallery');
@@ -266,12 +266,12 @@ class _ScanScreenState extends State<ScanScreen> {
                     decoration: BoxDecoration(
                       color: _riddleCount == count
                           ? EnolaTheme.accentSoft
-                          : const Color(0xFFf5f5f5),
+                          : EnolaTheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _riddleCount == count
                             ? EnolaTheme.accent
-                            : const Color(0xFF4A3F22),
+                            : EnolaTheme.border,
                         width: _riddleCount == count ? 1.5 : 1,
                       ),
                     ),
@@ -333,7 +333,7 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          disabledBackgroundColor: const Color(0xFF2A2416),
+          disabledBackgroundColor: EnolaTheme.surfaceHigh,
           disabledForegroundColor: EnolaTheme.textSecond,
         ),
       ),
@@ -374,9 +374,8 @@ class _ScanScreenState extends State<ScanScreen> {
             ),
             const SizedBox(height: 32),
             const LinearProgressIndicator(
-              backgroundColor: Color(0xFF2A2416),
-              valueColor:
-                  AlwaysStoppedAnimation<Color>(EnolaTheme.accent),
+              backgroundColor: EnolaTheme.surfaceHigh,
+              valueColor: AlwaysStoppedAnimation<Color>(EnolaTheme.accent),
             ),
           ],
         ),
@@ -391,8 +390,8 @@ class _PageTile extends StatelessWidget {
   final VoidCallback onRemove;
 
   const _PageTile({
-    required this.file, 
-    required this.index, 
+    required this.file,
+    required this.index,
     required this.onRemove,
   });
 
@@ -452,8 +451,8 @@ class _AddPageTile extends StatelessWidget {
   final String label;
 
   const _AddPageTile({
-    required this.onTap, 
-    required this.icon, 
+    required this.onTap,
+    required this.icon,
     required this.label,
   });
 
@@ -463,10 +462,9 @@ class _AddPageTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFf5f5f5),
+          color: EnolaTheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: const Color(0xFF4A3F22), style: BorderStyle.solid),
+          border: Border.all(color: EnolaTheme.border),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
