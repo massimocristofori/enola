@@ -23,7 +23,7 @@ class GeminiService {
     assert(apiKey != null && apiKey!.isNotEmpty,
         'GeminiService: apiKey not set');
     return GenerativeModel(
-      model: 'gemini-flash-lite-latest',
+      model: 'gemini-3.1-flash-lite',
       apiKey: apiKey!,
     );
   }
