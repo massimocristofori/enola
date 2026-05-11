@@ -62,21 +62,30 @@ class _ScanScreenState extends State<ScanScreen> {
 
     try {
       setState(() => _status = 'Extracting text from ${_pages.length} page(s)…');
-      
+
       final riddles = await RiddleGenerationService.instance.generateFromImages(
         imagePaths: _pages.map((file) => file.path).toList(),
         mapId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       if (mounted) {
-        Navigator.pop(context, riddles);
+        if (riddles.isEmpty) {
+          setState(() {
+            _generating = false;
+            _error = 'Got 0 riddles. Check OCR output or Gemini response.';
+          });
+        } else {
+          Navigator.pop(context, riddles);
+        }
       }
     } catch (e) {
-      setState(() {
-        _error = 'Generation failed: $e';
-        _generating = false;
-        _status = '';
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Generation failed: $e';
+          _generating = false;
+          _status = '';
+        });
+      }
     }
   }
 
