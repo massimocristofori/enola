@@ -51492,7 +51492,7 @@ acj(){var s,r,q=this,p=null,o=q.ay?p:q.gans(),n=A.aw(20,B.m.B()>>>16&255,B.m.B()
 if(q.ay)s=B.Fa
 else{s=q.as
 r=t.p
-s=s!=null?A.jf(B.bT,A.b([A.aJr(s,B.hf,p,p),A.n5(4,A.cJ(p,B.Jb,B.x,p,p,new A.bP(A.aw(180,B.j.B()>>>16&255,B.j.B()>>>8&255,B.j.B()&255),p,p,A.bX(8),p,p,B.P),p,p,p,p,B.kw,p,p,p),p,p,p,4,p,p)],r),B.V,B.U2,p):A.bQ(A.b([A.aJq("assets/images/icon.png",B.jO,56,56),B.c2,A.b6("Tap to add image",p,p,p,A.ed(p,p,A.aw(180,B.m.B()>>>16&255,B.m.B()>>>8&255,B.m.B()&255),p,p,p,p,p,p,p,p,11,p,p,B.e4,p,p,!0,p,p,p,p,p,p,p,p),p,p)],r),B.y,B.fE,B.w)}return A.bQ(A.b([B.ZN,B.dq,A.eD(A.hf(p,A.vs(A.qR(k,s),p,new A.bP(n,p,l,m,p,p,B.P),B.R,p,120,p,p,120),B.a4,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,o,p,p,p,p,p,p),p,p),B.ew,A.PY(q.w,"e.g., The Lost Kingdom","Map Title",new A.aw3()),B.dq,A.PY(q.x,"e.g., History, Math, Lore","Subject",p)],t.p),B.ab,B.o,B.w)},
+s=s!=null?A.jf(B.bT,A.b([A.aJr(s,B.hf,p,p),A.n5(4,A.cJ(p,B.Jb,B.x,p,p,new A.bP(A.aw(180,B.j.B()>>>16&255,B.j.B()>>>8&255,B.j.B()&255),p,p,A.bX(8),p,p,B.P),p,p,p,p,B.kw,p,p,p),p,p,p,4,p,p)],r),B.V,B.U2,p):A.bQ(A.b([A.aJq("assets/images/0.jpeg",B.jO,1/0,1/0),B.c2,A.b6("Tap to add image",p,p,p,A.ed(p,p,A.aw(180,B.m.B()>>>16&255,B.m.B()>>>8&255,B.m.B()&255),p,p,p,p,p,p,p,p,11,p,p,B.e4,p,p,!0,p,p,p,p,p,p,p,p),p,p)],r),B.y,B.fE,B.w)}return A.bQ(A.b([B.ZN,B.dq,A.eD(A.hf(p,A.vs(A.qR(k,s),p,new A.bP(n,p,l,m,p,p,B.P),B.R,p,120,p,p,120),B.a4,!1,p,p,p,p,p,p,p,p,p,p,p,p,p,p,o,p,p,p,p,p,p),p,p),B.ew,A.PY(q.w,"e.g., The Lost Kingdom","Map Title",new A.aw3()),B.dq,A.PY(q.x,"e.g., History, Math, Lore","Subject",p)],t.p),B.ab,B.o,B.w)},
 acw(){var s,r=this,q=null,p=t.p
 p=A.b([A.cF(A.b([B.a_9,A.cF(A.b([A.jT(q,q,B.pT,q,q,r.gamG(),q,q,"Scan text with AI"),A.jT(q,q,B.J2,q,q,r.gabF(),q,q,"Add manual riddle")],p),B.y,B.o,B.w,0)],p),B.y,B.ik,B.w,0),B.cO],p)
 if(J.jG(r.Q))p.push(A.eD(new A.bw(B.Hp,A.b6("No riddles added yet.\nUse the wand or the plus to start.",q,q,q,A.ed(q,q,A.aw(128,B.ar.B()>>>16&255,B.ar.B()>>>8&255,B.ar.B()&255),q,q,q,q,q,q,q,q,q,q,q,q,q,q,!0,q,q,q,q,q,q,q,q),B.c4,q),q),q,q))
@@ -51781,7 +51781,7 @@ q=r!=null?new Uint8Array(A.fb(r)):l
 r=A.bX(16)
 p=A.b([new A.dm(0,B.bF,A.aw(15,B.l.B()>>>16&255,B.l.B()>>>8&255,B.l.B()&255),B.eg,12)],t.sq)
 o=A.bX(10)
-o=A.aPC(0,A.qR(o,q!=null?A.aJr(q,B.hf,1/0,1/0):A.cJ(l,A.eD(A.aJq("assets/images/icon.png",B.jO,64,64),l,l),B.x,l,l,new A.bP(l,l,l,l,l,new A.rN(B.cX,B.nq,B.cQ,s,l,l),B.P),l,l,l,l,l,l,l,l)))
+o=A.aPC(0,A.qR(o,q!=null?A.aJr(q,B.hf,1/0,1/0):A.cJ(l,A.eD(A.aJq("assets/images/0.jpeg",B.jO,1/0,1/0),l,l),B.x,l,l,new A.bP(l,l,l,l,l,new A.rN(B.cX,B.nq,B.cQ,s,l,l),B.P),l,l,l,l,l,l,l,l)))
 n=B.j.hV(0.72)
 m=t.p
 return A.hf(l,A.cJ(l,new A.bw(B.fc,A.jf(B.bT,A.b([o,A.n5(0,A.qR(B.Dg,A.cJ(l,A.bQ(A.b([A.b6(k.b,2,B.bO,l,B.YB,l,l),B.fY,A.cF(A.b([B.Jh,B.j4,A.b6(A.m(j),l,l,l,B.Xj,l,l)],m),B.y,B.o,B.w,0)],m),B.ab,B.o,B.bk),B.x,l,l,new A.bP(n,l,l,l,l,l,B.P),l,l,l,l,B.Hs,l,l,l)),l,l,0,0,l,l)],m),B.V,B.bN,l),l),B.x,l,l,new A.bP(B.j,l,l,r,p,l,B.P),l,l,l,l,l,l,l,l),B.a4,!1,l,l,l,l,l,l,l,l,l,l,l,l,l,l,new A.aAo(this,a),l,l,l,l,l,l)}}
