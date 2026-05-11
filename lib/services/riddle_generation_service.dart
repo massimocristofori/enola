@@ -16,10 +16,9 @@ class RiddleGenerationService {
     required String mapId,
   }) async {
     final files = imagePaths.map((path) => File(path)).toList();
-    final extractedText = await OCRService.instance.extractTextFromImages(files); // ← ML Kit
+    final extractedText = await OCRService.instance.extractTextFromImages(files);
     return generateRiddlesFromText(text: extractedText, mapId: mapId);
   }
-
 
   /// Calls GeminiService.generateRiddles and maps raw JSON → typed Riddle objects.
   Future<List<Riddle>> generateRiddlesFromText({
@@ -35,7 +34,6 @@ class RiddleGenerationService {
         final data = entry.value;
         final isOrdering = data['type'] == 'ordering';
 
-        // Build the typed payload so payloadJson is always populated.
         final RiddlePayload payload;
         final String legacyChoicesJson;
         final int? legacyCorrectIndex;
@@ -62,13 +60,13 @@ class RiddleGenerationService {
               : RiddleType.multipleChoice.index,
           orderInMap: index,
           payloadJson: jsonEncode(payload.toJson()),
-          choicesJson: legacyChoicesJson,   // legacy fallback
-          correctIndex: legacyCorrectIndex, // legacy fallback
+          choicesJson: legacyChoicesJson,
+          correctIndex: legacyCorrectIndex,
         );
       }).toList();
     } catch (e) {
       debugPrint('Generation failed: $e');
-      return [];
+      rethrow;
     }
   }
 }
