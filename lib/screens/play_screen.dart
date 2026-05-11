@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +36,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final db = DriftService.instance.db;
     final riddles = await db.getRiddlesForMap(widget.mapId);
 
-    // Find or create the single session for this map.
     final existing = await (db.select(db.playSessions)
           ..where((t) => t.mapId.equals(widget.mapId))
           ..orderBy([(t) => drift.OrderingTerm(
@@ -48,12 +48,17 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final int sessionId;
     final int lastCompleted;
     final int correctAnswers;
+    final List<int> riddleStars;
 
     if (existing.isNotEmpty && existing.first.completedAt == null) {
-      // Resume
+      // Resume existing session
       sessionId = existing.first.id;
       lastCompleted = existing.first.lastCompletedIndex;
       correctAnswers = existing.first.correctAnswers;
+      final raw = existing.first.riddleStarsJson;
+      riddleStars = raw != null
+          ? (jsonDecode(raw) as List).cast<int>()
+          : [];
     } else {
       // New session
       sessionId = await DriftService.instance.startSession(
@@ -62,9 +67,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       );
       lastCompleted = -1;
       correctAnswers = 0;
+      riddleStars = [];
     }
 
-    ref.read(playStateProvider.notifier).init(sessionId, lastCompleted, correctAnswers);
+    ref.read(playStateProvider.notifier).init(
+          sessionId, lastCompleted, correctAnswers, riddleStars);
     if (mounted) setState(() => _initialising = false);
   }
 
@@ -73,34 +80,39 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     if (playState == null) return;
 
     final riddle = riddles[riddleIndex];
-    final wasCorrect = await Navigator.push<bool>(
+    final errorCount = await Navigator.push<int>(
       context,
       MaterialPageRoute(
-        builder: (_) => RiddleScreen(riddle: riddle, riddleIndex: riddleIndex),
+        builder: (_) =>
+            RiddleScreen(riddle: riddle, riddleIndex: riddleIndex),
       ),
     );
 
-    if (wasCorrect == null || !mounted) return;
+    // null means the user backed out without solving — do nothing
+    if (errorCount == null || !mounted) return;
 
     await ref
         .read(playStateProvider.notifier)
-        .completeRiddle(riddleIndex, wasCorrect);
+        .completeRiddle(riddleIndex, errorCount);
 
-    // Invalidate so detail screen reflects new progress on back.
+    // Invalidate so detail screen reflects new progress on back
     ref.invalidate(latestSessionProvider(widget.mapId));
 
-    // If this was the last riddle, finish and go to results.
+    // If this was the last riddle, capture stars then finish
     if (riddleIndex == riddles.length - 1) {
+      final totalStars = ref.read(playStateProvider)?.totalStars ?? 0;
+      final maxStars = riddles.length * 3;
       await ref.read(playStateProvider.notifier).finish();
       if (mounted) {
-        final state = ref.read(playStateProvider);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => ResultScreen(
               mapId: widget.mapId,
-              correct: (state?.correctAnswers ?? 0) + (wasCorrect ? 1 : 0),
+              correct: riddles.length,
               total: riddles.length,
+              totalStars: totalStars,
+              maxStars: maxStars,
             ),
           ),
         );
@@ -163,29 +175,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                   ],
                                 ),
                               ),
-                              // Score badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: EnolaTheme.accentSoft,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.star_rounded,
-                                        color: EnolaTheme.accent, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${playState.correctAnswers}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: EnolaTheme.accent,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // ── Compact star counter ──
+                              _SessionStarBadge(playState: playState),
                             ],
                           ),
                         ),
@@ -207,18 +198,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                         // ── Map ──
                         Expanded(
                           child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                            padding:
+                                const EdgeInsets.fromLTRB(24, 16, 24, 40),
                             child: TreasureMapPath(
                               riddles: riddles,
                               mapId: widget.mapId,
-                              lastCompletedIndex: playState.lastCompletedIndex,
-                              onCurrentNodeTap: playState.lastCompletedIndex <
-                                      riddles.length - 1
-                                  ? () => _onNodeTap(
-                                        riddles,
-                                        playState.lastCompletedIndex + 1,
-                                      )
-                                  : null,
+                              lastCompletedIndex:
+                                  playState.lastCompletedIndex,
+                              onCurrentNodeTap:
+                                  playState.lastCompletedIndex <
+                                          riddles.length - 1
+                                      ? () => _onNodeTap(
+                                            riddles,
+                                            playState.lastCompletedIndex + 1,
+                                          )
+                                      : null,
                             ),
                           ),
                         ),
@@ -232,4 +226,38 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 }
 
+// ── Session star badge shown in PlayScreen header ─────────────────────────────
 
+class _SessionStarBadge extends StatelessWidget {
+  final PlayState playState;
+
+  const _SessionStarBadge({required this.playState});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = playState.totalStars;
+    final earned = playState.riddleStars.length; // riddles completed so far
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: EnolaTheme.accentSoft,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: EnolaTheme.accent, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            earned == 0 ? '—' : '$total',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: EnolaTheme.accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
