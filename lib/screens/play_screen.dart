@@ -57,7 +57,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         correctAnswers = existing.first.correctAnswers;
         final raw = existing.first.riddleStarsJson;
         
-        // Wrap JSON decode in a tiny try/catch so a bad string doesn't hang the app
         List<int> tempStars = [];
         try {
           if (raw != null) {
@@ -78,13 +77,22 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         riddleStars = [];
       }
 
+      // 1. Initialize the provider
       ref.read(playStateProvider.notifier).init(
             sessionId, lastCompleted, correctAnswers, riddleStars);
+
+      // 2. WAIT for the provider to register the data (Crucial for Web/Chrome)
+      // We check up to 10 times with 10ms gaps to ensure playState is not null.
+      int checks = 0;
+      while (ref.read(playStateProvider) == null && checks < 10) {
+        await Future.delayed(const Duration(milliseconds: 10));
+        checks++;
+      }
             
     } catch (e) {
       debugPrint("Session Init Error: $e");
     } finally {
-      // This ensures that no matter what happens, the loader stops
+      // 3. Now we are safe to stop the loader
       if (mounted) {
         setState(() => _initialising = false);
       }
@@ -139,10 +147,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final riddlesAsync = ref.watch(riddlesForMapProvider(widget.mapId));
     final playState = ref.watch(playStateProvider);
 
+    // This local boolean ensures we don't try to render the UI 
+    // until both the async init AND the provider data are ready.
+    final bool showingLoader = _initialising || playState == null;
+
     return Scaffold(
       body: FantasyBackground(
         child: SafeArea(
-          child: _initialising || playState == null
+          child: showingLoader
               ? const Center(
                   child: CircularProgressIndicator(color: EnolaTheme.accent))
               : mapAsync.when(
