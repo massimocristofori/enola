@@ -12,7 +12,6 @@ import 'package:enola/screens/riddle_screen.dart';
 import 'package:enola/screens/result_screen.dart';
 import 'package:enola/services/drift_service.dart';
 
-// ignore: unused_import — needed for orderBy inside initState
 import 'package:drift/drift.dart' as drift;
 
 class PlayScreen extends ConsumerStatefulWidget {
@@ -33,64 +32,106 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<void> _initSession() async {
-  try {
-    final db = DriftService.instance.db;
-    final riddles = await db.getRiddlesForMap(widget.mapId);
+    try {
+      final db = DriftService.instance.db;
+      final riddles = await db.getRiddlesForMap(widget.mapId);
 
-    // 1. Fetch latest session
-    final existing = await (db.select(db.playSessions)
-          ..where((t) => t.mapId.equals(widget.mapId))
-          ..orderBy([(t) => drift.OrderingTerm(
-                expression: t.startedAt,
-                mode: drift.OrderingMode.desc,
-              )])
-          ..limit(1))
-        .get();
+      final existing = await (db.select(db.playSessions)
+            ..where((t) => t.mapId.equals(widget.mapId))
+            ..orderBy([(t) => drift.OrderingTerm(
+                  expression: t.startedAt,
+                  mode: drift.OrderingMode.desc,
+                )])
+            ..limit(1))
+          .get();
 
-    int sessionId;
-    int lastCompleted = -1;
-    int correctAnswers = 0;
-    List<int> riddleStars = [];
+      final int sessionId;
+      final int lastCompleted;
+      final int correctAnswers;
+      final List<int> riddleStars;
 
-    if (existing.isNotEmpty && existing.first.completedAt == null) {
-      final session = existing.first;
-      sessionId = session.id;
-      lastCompleted = session.lastCompletedIndex;
-      correctAnswers = session.correctAnswers;
-      
-      // Safety check for JSON decoding
-      try {
-        if (session.riddleStarsJson != null) {
-          final decoded = jsonDecode(session.riddleStarsJson!);
-          riddleStars = List<int>.from(decoded);
+      if (existing.isNotEmpty && existing.first.completedAt == null) {
+        // Resume existing session
+        sessionId = existing.first.id;
+        lastCompleted = existing.first.lastCompletedIndex;
+        correctAnswers = existing.first.correctAnswers;
+        final raw = existing.first.riddleStarsJson;
+        
+        // Wrap JSON decode in a tiny try/catch so a bad string doesn't hang the app
+        List<int> tempStars = [];
+        try {
+          if (raw != null) {
+            tempStars = (jsonDecode(raw) as List).cast<int>();
+          }
+        } catch (e) {
+          debugPrint("JSON Decode error: $e");
         }
-      } catch (e) {
-        debugPrint("JSON Decode error: $e");
+        riddleStars = tempStars;
+      } else {
+        // New session
+        sessionId = await DriftService.instance.startSession(
+          widget.mapId,
+          riddles.length,
+        );
+        lastCompleted = -1;
+        correctAnswers = 0;
         riddleStars = [];
       }
-    } else {
-      sessionId = await DriftService.instance.startSession(
-        widget.mapId,
-        riddles.length,
-      );
-    }
 
-    // 2. Initialize the provider
-    ref.read(playStateProvider.notifier).init(
-          sessionId, lastCompleted, correctAnswers, riddleStars);
-
-  } catch (e, stack) {
-    debugPrint("Failed to init session: $e");
-    debugPrint(stack.toString());
-    // Optionally: show an error message to the user here
-  } finally {
-    // 3. ALWAYS kill the loader
-    if (mounted) {
-      setState(() => _initialising = false);
+      ref.read(playStateProvider.notifier).init(
+            sessionId, lastCompleted, correctAnswers, riddleStars);
+            
+    } catch (e) {
+      debugPrint("Session Init Error: $e");
+    } finally {
+      // This ensures that no matter what happens, the loader stops
+      if (mounted) {
+        setState(() => _initialising = false);
+      }
     }
   }
-}
 
+  Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
+    final playState = ref.read(playStateProvider);
+    if (playState == null) return;
+
+    final riddle = riddles[riddleIndex];
+    final errorCount = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            RiddleScreen(riddle: riddle, riddleIndex: riddleIndex),
+      ),
+    );
+
+    if (errorCount == null || !mounted) return;
+
+    await ref
+        .read(playStateProvider.notifier)
+        .completeRiddle(riddleIndex, errorCount);
+
+    ref.invalidate(latestSessionProvider(widget.mapId));
+
+    if (riddleIndex == riddles.length - 1) {
+      final totalStars = ref.read(playStateProvider)?.totalStars ?? 0;
+      final maxStars = riddles.length * 3;
+      await ref.read(playStateProvider.notifier).finish();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultScreen(
+              mapId: widget.mapId,
+              correct: riddles.length,
+              total: riddles.length,
+              totalStars: totalStars,
+              maxStars: maxStars,
+            ),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +157,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                     error: (e, _) => Center(child: Text('$e')),
                     data: (riddles) => Column(
                       children: [
-                        // ── Header ──
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
                           child: Row(
@@ -147,13 +187,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                   ],
                                 ),
                               ),
-                              // ── Compact star counter ──
                               _SessionStarBadge(playState: playState),
                             ],
                           ),
                         ),
 
-                        // ── Tap-to-play hint ──
                         if (playState.lastCompletedIndex < riddles.length - 1)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
@@ -167,7 +205,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                             ).animate().fadeIn(delay: 400.ms),
                           ),
 
-                        // ── Map ──
                         Expanded(
                           child: SingleChildScrollView(
                             padding:
@@ -198,8 +235,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 }
 
-// ── Session star badge shown in PlayScreen header ─────────────────────────────
-
 class _SessionStarBadge extends StatelessWidget {
   final PlayState playState;
 
@@ -208,7 +243,7 @@ class _SessionStarBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = playState.totalStars;
-    final earned = playState.riddleStars.length; // riddles completed so far
+    final earned = playState.riddleStars.length;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
