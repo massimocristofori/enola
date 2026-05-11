@@ -183,9 +183,9 @@ class ResultScreen extends StatelessWidget {
                 ),
               ).animate().fadeIn(delay: 900.ms),
               const SizedBox(height: 4),
-              Text(
+              const Text(
                 'stars collected',
-                style: const TextStyle(
+                style:  TextStyle(
                   fontSize: 11,
                   color: EnolaTheme.textSecond,
                 ),
