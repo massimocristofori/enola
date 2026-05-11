@@ -22,9 +22,11 @@ class RiddleScreen extends StatefulWidget {
 }
 
 class _RiddleScreenState extends State<RiddleScreen> {
-  bool _answered = false;
+  bool _solvedCorrectly = false;
   int? _selectedAnswer;
-  bool? _isCorrect;
+  bool? _lastAnswerCorrect;
+  bool _showingFeedback = false;
+  int _errorCount = 0;
   List<String> _orderedItems = [];
 
   @override
@@ -36,27 +38,63 @@ class _RiddleScreenState extends State<RiddleScreen> {
     }
   }
 
+  int get _currentStars {
+    if (_errorCount == 0) return 3;
+    if (_errorCount == 1) return 2;
+    if (_errorCount == 2) return 1;
+    return 0;
+  }
+
+  // ── Multiple choice ──────────────────────────────────────────────────────
+
   void _onMultipleChoiceAnswer(int index, int correctIndex) {
-    if (_answered) return;
+    if (_solvedCorrectly || _showingFeedback) return;
     final correct = index == correctIndex;
     setState(() {
-      _answered = true;
       _selectedAnswer = index;
-      _isCorrect = correct;
+      _lastAnswerCorrect = correct;
+      _showingFeedback = true;
+      if (correct) {
+        _solvedCorrectly = true;
+      } else {
+        _errorCount++;
+      }
     });
   }
 
-  void _onOrderingSubmit(List<String> correctOrder) {
-    if (_answered) return;
-    final correct = _orderedItems.join('|') == correctOrder.join('|');
+  void _retryAfterWrong() {
     setState(() {
-      _answered = true;
-      _isCorrect = correct;
+      _selectedAnswer = null;
+      _lastAnswerCorrect = null;
+      _showingFeedback = false;
     });
   }
 
   void _confirm() {
-    Navigator.pop(context, _isCorrect ?? false);
+    Navigator.pop(context, _errorCount);
+  }
+
+  // ── Ordering ─────────────────────────────────────────────────────────────
+
+  void _onOrderingSubmit(List<String> correctOrder) {
+    if (_solvedCorrectly || _showingFeedback) return;
+    final correct = _orderedItems.join('|') == correctOrder.join('|');
+    setState(() {
+      _lastAnswerCorrect = correct;
+      _showingFeedback = true;
+      if (correct) {
+        _solvedCorrectly = true;
+      } else {
+        _errorCount++;
+      }
+    });
+  }
+
+  void _retryOrdering() {
+    setState(() {
+      _lastAnswerCorrect = null;
+      _showingFeedback = false;
+    });
   }
 
   @override
@@ -76,7 +114,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new_rounded,
                           color: EnolaTheme.textSecond),
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () => Navigator.pop(context, _errorCount),
                     ),
                     Text(
                       'Riddle #${widget.riddleIndex + 1}',
@@ -86,6 +124,9 @@ class _RiddleScreenState extends State<RiddleScreen> {
                         color: EnolaTheme.textPrimary,
                       ),
                     ),
+                    const Spacer(),
+                    // ── Live star counter ──
+                    _StarBadge(stars: _currentStars),
                   ],
                 ),
               ),
@@ -97,7 +138,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
                   child: Column(
                     children: [
                       ParchmentCard(
-                        glowing: _answered && (_isCorrect ?? false),
+                        glowing: _solvedCorrectly,
                         child: Column(
                           children: [
                             Text('Riddle #${widget.riddleIndex + 1}',
@@ -123,11 +164,13 @@ class _RiddleScreenState extends State<RiddleScreen> {
                 ),
               ),
 
-              // ── Feedback + continue button ──
-              if (_answered)
+              // ── Feedback bar ──
+              if (_showingFeedback)
                 _AnswerFeedback(
-                  isCorrect: _isCorrect ?? false,
-                  onContinue: _confirm,
+                  isCorrect: _lastAnswerCorrect ?? false,
+                  onContinue: (_lastAnswerCorrect ?? false)
+                      ? _confirm
+                      : _retryAfterWrong,
                 ).animate().slideY(begin: 1, end: 0).fadeIn(),
             ],
           ),
@@ -154,11 +197,11 @@ class _RiddleScreenState extends State<RiddleScreen> {
         Color borderColor = EnolaTheme.border;
         Color bgColor = Colors.white;
 
-        if (_answered) {
-          if (isCorrectChoice) {
+        if (_showingFeedback) {
+          if (isCorrectChoice && _solvedCorrectly) {
             borderColor = EnolaTheme.correct;
             bgColor = EnolaTheme.correct.withAlpha(25);
-          } else if (isSelected && !isCorrectChoice) {
+          } else if (isSelected && !(_lastAnswerCorrect ?? false)) {
             borderColor = EnolaTheme.wrong;
             bgColor = EnolaTheme.wrong.withAlpha(25);
           }
@@ -180,8 +223,9 @@ class _RiddleScreenState extends State<RiddleScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,
-                  width:
-                      isSelected || (_answered && isCorrectChoice) ? 2 : 1,
+                  width: isSelected || (_showingFeedback && isCorrectChoice && _solvedCorrectly)
+                      ? 2
+                      : 1,
                 ),
               ),
               child: Row(
@@ -195,7 +239,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
                       String.fromCharCode(65 + i),
                       style: TextStyle(
                         fontSize: 12,
-                        color: isSelected ? Colors.white : EnolaTheme.textSecond,
+                        color:
+                            isSelected ? Colors.white : EnolaTheme.textSecond,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -206,9 +251,11 @@ class _RiddleScreenState extends State<RiddleScreen> {
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w500)),
                   ),
-                  if (_answered && isCorrectChoice)
+                  if (_showingFeedback && isCorrectChoice && _solvedCorrectly)
                     const Icon(Icons.check_circle, color: EnolaTheme.correct),
-                  if (_answered && isSelected && !isCorrectChoice)
+                  if (_showingFeedback &&
+                      isSelected &&
+                      !(_lastAnswerCorrect ?? false))
                     const Icon(Icons.cancel, color: EnolaTheme.wrong),
                 ],
               ),
@@ -222,8 +269,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
   // ── Ordering ───────────────────────────────────────────────────────────────
 
   Widget _buildOrdering(Riddle riddle) {
-    final correctOrder =
-        riddle.asOrdering?.items ?? riddle.choices;
+    final correctOrder = riddle.asOrdering?.items ?? riddle.choices;
 
     return Column(
       children: [
@@ -237,7 +283,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           onReorder: (oldIndex, newIndex) {
-            if (_answered) return;
+            if (_solvedCorrectly || _showingFeedback) return;
             if (newIndex > oldIndex) newIndex -= 1;
             setState(() {
               final item = _orderedItems.removeAt(oldIndex);
@@ -264,12 +310,59 @@ class _RiddleScreenState extends State<RiddleScreen> {
           ],
         ),
         const SizedBox(height: 24),
-        if (!_answered)
+        if (!_solvedCorrectly && !_showingFeedback)
           ElevatedButton(
             onPressed: () => _onOrderingSubmit(correctOrder),
             child: const Text('Submit Order'),
           ),
+        if (_showingFeedback && !_solvedCorrectly)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Not quite — try reordering again!',
+              style: TextStyle(
+                color: EnolaTheme.wrong,
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+              ),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+// ── Star badge ────────────────────────────────────────────────────────────────
+
+class _StarBadge extends StatelessWidget {
+  final int stars; // 0–3
+
+  const _StarBadge({required this.stars});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: EnolaTheme.accentSoft,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: EnolaTheme.accent, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            '$stars / 3',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: EnolaTheme.accent,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -307,7 +400,7 @@ class _AnswerFeedback extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              isCorrect ? 'Correct! Well done.' : 'Not quite — keep going!',
+              isCorrect ? 'Correct! Well done.' : 'Not quite — try again!',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
@@ -326,8 +419,10 @@ class _AnswerFeedback extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Continue',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(
+              isCorrect ? 'Continue' : 'Try Again',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
