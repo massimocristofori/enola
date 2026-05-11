@@ -201,7 +201,7 @@ class _MapCard extends ConsumerWidget {
                           ),
                           child: Center(
                             child: Image.asset(
-                              'assets/images/icon.png',
+                              'assets/images/0.jpeg',
                               width: 64,
                               height: 64,
                               fit: BoxFit.contain,
