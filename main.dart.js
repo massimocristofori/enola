@@ -52441,7 +52441,7 @@ for(;;)switch(s){case 0:e=p.a
 e.toString
 e=new A.aeh(e,null)
 k=A.b60("https","generativelanguage.googleapis.com","v1beta",null)
-j=A.b07("gemini-flash-lite-latest")
+j=A.b07("gemini-1.5-flash")
 i=new A.ad7(j,B.M9,null,null,e,k,null,null).afY(A.b([new A.oo("user",A.b([new A.kp("You are a quiz-generation assistant for students.\nGiven the following text, generate exactly "+b+' riddles to test comprehension.\n\nUse ONLY these riddle types:\n- "multipleChoice": a question with 4 answer options, one correct.\n- "ordering": a list of 4-6 items the student must arrange in the correct order.\n\nMix the types. Respond ONLY with a valid JSON array. No markdown, no explanation.\n\nEach element must be one of:\n{\n  "type": "multipleChoice",\n  "question": "...",\n  "choices": ["A", "B", "C", "D"],\n  "correctIndex": 0\n}\nor\n{\n  "type": "ordering",\n  "question": "...",\n  "items": ["first", "second", "third", "fourth"]\n}\n\nText:\n"""\n'+a+'\n"""\n')],t.Uz))],t.kQ),null,null,null,null)
 h=k.gtN()
 s=3
