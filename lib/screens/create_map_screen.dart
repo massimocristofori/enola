@@ -319,7 +319,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Image.asset(
-                                'assets/images/icon.png',
+                                'assets/images/0.jpeg',
                                 width: 56,
                                 height: 56,
                                 fit: BoxFit.contain,
