@@ -90,12 +90,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
     });
   }
 
-  void _retryOrdering() {
-    setState(() {
-      _lastAnswerCorrect = null;
-      _showingFeedback = false;
-    });
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -318,7 +313,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
         if (_showingFeedback && !_solvedCorrectly)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(
+            child: const Text(
               'Not quite — try reordering again!',
               style: TextStyle(
                 color: EnolaTheme.wrong,
