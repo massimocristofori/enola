@@ -165,6 +165,8 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
   void reset() => state = null;
 }
 
-final playStateProvider = StateNotifierProvider<PlayStateNotifier, PlayState?>(
+
+final playStateProvider = StateNotifierProvider.autoDispose<PlayStateNotifier, PlayState?>(
   (_) => PlayStateNotifier(),
 );
+
