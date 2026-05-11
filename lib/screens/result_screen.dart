@@ -6,43 +6,48 @@ import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/home_screen.dart';
 
 class ResultScreen extends StatelessWidget {
-  final String mapId; // ✅ Changed from int to String
+  final String mapId;
   final int correct;
   final int total;
+  final int totalStars;
+  final int maxStars;
 
   const ResultScreen({
     super.key,
     required this.mapId,
     required this.correct,
     required this.total,
+    required this.totalStars,
+    required this.maxStars,
   });
 
   double get _score => total == 0 ? 0 : correct / total;
+  double get _starRatio => maxStars == 0 ? 0 : totalStars / maxStars;
 
   String get _rank {
-    if (_score >= 0.9) return 'Grand Sage';
-    if (_score >= 0.7) return 'Scholar';
-    if (_score >= 0.5) return 'Apprentice';
+    if (_starRatio >= 0.9) return 'Grand Sage';
+    if (_starRatio >= 0.7) return 'Scholar';
+    if (_starRatio >= 0.5) return 'Apprentice';
     return 'Novice';
   }
 
   String get _rankEmoji {
-    if (_score >= 0.9) return '👑';
-    if (_score >= 0.7) return '🏆';
-    if (_score >= 0.5) return '⚔️';
+    if (_starRatio >= 0.9) return '👑';
+    if (_starRatio >= 0.7) return '🏆';
+    if (_starRatio >= 0.5) return '⚔️';
     return '📜';
   }
 
   String get _message {
-    if (_score >= 0.9) return 'The oracle bows before your wisdom.';
-    if (_score >= 0.7) return 'A worthy scholar walks these halls.';
-    if (_score >= 0.5) return 'Your knowledge grows with each quest.';
+    if (_starRatio >= 0.9) return 'The oracle bows before your wisdom.';
+    if (_starRatio >= 0.7) return 'A worthy scholar walks these halls.';
+    if (_starRatio >= 0.5) return 'Your knowledge grows with each quest.';
     return 'The path to mastery begins with a single step.';
   }
 
   Color get _scoreColor {
-    if (_score >= 0.7) return EnolaTheme.correct;
-    if (_score >= 0.5) return EnolaTheme.accent;
+    if (_starRatio >= 0.7) return EnolaTheme.correct;
+    if (_starRatio >= 0.5) return EnolaTheme.accent;
     return EnolaTheme.wrong;
   }
 
@@ -57,9 +62,9 @@ class ResultScreen extends StatelessWidget {
               children: [
                 const Spacer(),
                 _buildCrest(),
-                const SizedBox(height: 32),
-                _buildScore(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
+                _buildStarSummary(),
+                const SizedBox(height: 28),
                 const RuneDivider(),
                 const SizedBox(height: 24),
                 _buildStats(),
@@ -80,9 +85,7 @@ class ResultScreen extends StatelessWidget {
         Text(
           _rankEmoji,
           style: const TextStyle(fontSize: 72),
-        )
-            .animate()
-            .scale(
+        ).animate().scale(
               begin: const Offset(0, 0),
               end: const Offset(1, 1),
               duration: 600.ms,
@@ -128,61 +131,76 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildScore() {
-    final percent = (_score * 100).round();
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(
-          width: 140,
-          height: 140,
-          child: CircularProgressIndicator(
-            value: _score,
-            strokeWidth: 10,
-            backgroundColor: EnolaTheme.surfaceHigh, // Updated for Light Theme
-            valueColor: AlwaysStoppedAnimation<Color>(_scoreColor),
-            strokeCap: StrokeCap.round,
-          ),
-        )
-            .animate()
-            .custom(
-              delay: 800.ms,
-              duration: 1200.ms,
-              curve: Curves.easeInOut,
-              builder: (context, value, child) => SizedBox(
-                width: 140,
-                height: 140,
-                child: CircularProgressIndicator(
-                  value: _score * value,
-                  strokeWidth: 10,
-                  backgroundColor: EnolaTheme.surfaceHigh,
-                  valueColor: AlwaysStoppedAnimation<Color>(_scoreColor),
-                  strokeCap: StrokeCap.round,
+  // ── Compact star summary ───────────────────────────────────────────────────
+
+  Widget _buildStarSummary() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: EnolaTheme.accentSoft,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Animated star icon
+          const Icon(Icons.star_rounded, color: EnolaTheme.accent, size: 32)
+              .animate()
+              .scale(
+                begin: const Offset(0, 0),
+                end: const Offset(1, 1),
+                duration: 500.ms,
+                curve: Curves.elasticOut,
+                delay: 700.ms,
+              ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Big number
+              Text(
+                '$totalStars / $maxStars',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: _scoreColor,
                 ),
-              ),
-            ),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$percent%',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: _scoreColor,
-              ),
-            ).animate().fadeIn(delay: 900.ms, duration: 400.ms),
-            Text(
-              '$correct / $total',
-              style: const TextStyle(
-                fontSize: 14,
-                color: EnolaTheme.textSecond,
-              ),
-            ).animate().fadeIn(delay: 1000.ms, duration: 400.ms),
-          ],
-        ),
-      ],
-    );
+              ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
+              // Progress bar
+              const SizedBox(height: 6),
+              SizedBox(
+                width: 140,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _starRatio,
+                    minHeight: 6,
+                    backgroundColor: EnolaTheme.border,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(_scoreColor),
+                  ),
+                ),
+              ).animate().fadeIn(delay: 900.ms),
+              const SizedBox(height: 4),
+              Text(
+                'stars collected',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: EnolaTheme.textSecond,
+                ),
+              ).animate().fadeIn(delay: 900.ms),
+            ],
+          ),
+        ],
+      ),
+    ).animate().scale(
+          begin: const Offset(0.8, 0.8),
+          end: const Offset(1, 1),
+          duration: 400.ms,
+          curve: Curves.easeOut,
+          delay: 700.ms,
+        );
   }
 
   Widget _buildStats() {
@@ -190,27 +208,27 @@ class ResultScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _StatBox(
-          icon: Icons.check_circle_rounded,
-          value: '$correct',
-          label: 'Correct',
+          icon: Icons.menu_book_rounded,
+          value: '$total',
+          label: 'Riddles',
+          color: EnolaTheme.accent,
+        ),
+        const SizedBox(width: 16),
+        _StatBox(
+          icon: Icons.star_rounded,
+          value: '$totalStars',
+          label: 'Stars',
           color: EnolaTheme.correct,
         ),
         const SizedBox(width: 16),
         _StatBox(
-          icon: Icons.cancel_rounded,
-          value: '${total - correct}',
-          label: 'Wrong',
-          color: EnolaTheme.wrong,
-        ),
-        const SizedBox(width: 16),
-        _StatBox(
-          icon: Icons.menu_book_rounded,
-          value: '$total',
-          label: 'Total',
-          color: EnolaTheme.accent,
+          icon: Icons.emoji_events_rounded,
+          value: '${((_starRatio) * 100).round()}%',
+          label: 'Score',
+          color: _scoreColor,
         ),
       ],
-    ).animate().fadeIn(delay: 1100.ms, duration: 400.ms);
+    ).animate().fadeIn(delay: 1000.ms, duration: 400.ms);
   }
 
   Widget _buildActions(BuildContext context) {
@@ -219,10 +237,7 @@ class ResultScreen extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // Pop back to the PlayScreen/Detail
-              Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.replay_rounded),
             label: const Text('Play Again'),
           ),
@@ -249,7 +264,7 @@ class ResultScreen extends StatelessWidget {
           ),
         ),
       ],
-    ).animate().fadeIn(delay: 1200.ms, duration: 400.ms).slideY(begin: 0.2, end: 0);
+    ).animate().fadeIn(delay: 1100.ms, duration: 400.ms).slideY(begin: 0.2, end: 0);
   }
 }
 
