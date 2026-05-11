@@ -266,7 +266,7 @@ class _ScanScreenState extends State<ScanScreen> {
                     decoration: BoxDecoration(
                       color: _riddleCount == count
                           ? EnolaTheme.accentSoft
-                          : const Color(0xFF1E1A10),
+                          : const Color(0xFFf5f5f5),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _riddleCount == count
@@ -463,7 +463,7 @@ class _AddPageTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1A10),
+          color: const Color(0xFFf5f5f5),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: const Color(0xFF4A3F22), style: BorderStyle.solid),
