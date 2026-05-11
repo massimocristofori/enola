@@ -211,10 +211,10 @@ class _MapDetailBody extends StatelessWidget {
                                       ),
                                       child: Center(
                                         child: Image.asset(
-                                          'assets/images/icon.png',
-                                          width: 72,
-                                          height: 72,
-                                          fit: BoxFit.contain,
+                                          'assets/images/0.jpeg',
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
                                         ),
                                       ),
                                     ),
