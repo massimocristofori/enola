@@ -21,7 +21,7 @@ class ResultScreen extends StatelessWidget {
     required this.maxStars,
   });
 
-  double get _score => total == 0 ? 0 : correct / total;
+  //double get _score => total == 0 ? 0 : correct / total;
   double get _starRatio => maxStars == 0 ? 0 : totalStars / maxStars;
 
   String get _rank {
