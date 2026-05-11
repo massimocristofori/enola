@@ -320,8 +320,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                             children: [
                               Image.asset(
                                 'assets/images/0.jpeg',
-                                width: 56,
-                                height: 56,
+                                width: double.infinity,
+                                height: double.infinity,
                                 fit: BoxFit.contain,
                               ),
                               const SizedBox(height: 8),
