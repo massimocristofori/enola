@@ -219,25 +219,41 @@ class _RiddleNodeState extends State<_RiddleNode>
       decoration: BoxDecoration(
         color: const Color(0xFFF8F4EC),
         borderRadius: radius,
-        border: Border.all(color: const Color(0xFFE8C840), width: 5.0),
+        // Outer Gold Border (4 pixels with opacity)
+        border: Border.all(
+          color: const Color(0xFFE8C840).withOpacity(0.6), // Adjust opacity as needed
+          width: 4.0,
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(13)),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (widget.imageBytes != null)
-              Image.memory(widget.imageBytes!, fit: BoxFit.cover)
-            else
-              Center(
-                child: Icon(Icons.map_rounded,
-                    color: EnolaTheme.accent.withAlpha(120), size: 32),
-              ),
-            Container(color: Colors.white.withOpacity(0.3)),
-          ],
+      // Inner container to create the White Border (2 pixels)
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(15)), // Slightly smaller to fit inside
+          border: Border.all(
+            color: Colors.white,
+            width: 2.0,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(13)),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (widget.imageBytes != null)
+                Image.memory(widget.imageBytes!, fit: BoxFit.cover)
+              else
+                Center(
+                  child: Icon(Icons.map_rounded,
+                      color: EnolaTheme.accent.withAlpha(120), size: 32),
+                ),
+              // Light overlay for parchment feel
+              Container(color: Colors.white.withOpacity(0.3)),
+            ],
+          ),
         ),
       ),
     );
+
   }
 }
 
