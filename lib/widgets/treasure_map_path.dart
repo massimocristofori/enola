@@ -285,7 +285,8 @@ class _StarsRow extends StatelessWidget {
               shadows: isFilled
                   ? [
                       const Shadow(
-                          color: Colors.black26,
+                          //color: Colors.black26,
+                          color: Colors.white,
                           blurRadius: 4,
                           offset: Offset(0, 2))
                     ]
