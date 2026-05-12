@@ -24,6 +24,7 @@ class PlayScreen extends ConsumerStatefulWidget {
 
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
+  String? _initError;
 
   @override
   void initState() {
@@ -35,11 +36,17 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     ref.read(playStateProvider.notifier).reset();
 
     try {
+      debugPrint("STEP 1: ensureReady");
       await DriftService.instance.ensureReady();
 
+      debugPrint("STEP 2: get db");
       final db = DriftService.instance.db;
-      final riddles = await db.getRiddlesForMap(widget.mapId);
 
+      debugPrint("STEP 3: getRiddlesForMap");
+      final riddles = await db.getRiddlesForMap(widget.mapId);
+      debugPrint("STEP 3 done: ${riddles.length} riddles");
+
+      debugPrint("STEP 4: query existing sessions");
       final existing = await (db.select(db.playSessions)
             ..where((t) => t.mapId.equals(widget.mapId))
             ..orderBy([(t) => drift.OrderingTerm(
@@ -48,6 +55,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 )])
             ..limit(1))
           .get();
+      debugPrint("STEP 4 done: ${existing.length} sessions found");
 
       final int sessionId;
       final int lastCompleted;
@@ -55,6 +63,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       final List<int> riddleStars;
 
       if (existing.isNotEmpty && existing.first.completedAt == null) {
+        debugPrint("STEP 5a: resuming session id=${existing.first.id}");
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
         correctAnswers = existing.first.correctAnswers;
@@ -69,21 +78,31 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         }
         riddleStars = tempStars;
       } else {
+        debugPrint("STEP 5b: starting new session");
         sessionId = await DriftService.instance.startSession(
           widget.mapId,
           riddles.length,
         );
+        debugPrint("STEP 5b done: new sessionId=$sessionId");
         lastCompleted = -1;
         correctAnswers = 0;
         riddleStars = [];
       }
 
+      debugPrint("STEP 6: calling init");
       ref.read(playStateProvider.notifier).init(
             sessionId, lastCompleted, correctAnswers, riddleStars);
+      debugPrint("STEP 6 done");
 
     } catch (e, stackTrace) {
       debugPrint("Session Init Error: $e");
       debugPrint("$stackTrace");
+      if (mounted) {
+        setState(() {
+          _initError = 'Error occurred — see logs\n\n$e\n\n$stackTrace';
+          _initialising = false;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _initialising = false);
@@ -140,6 +159,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final playState = ref.watch(playStateProvider);
 
     final bool showingLoader = _initialising || playState == null;
+
+    // Show error on screen if init failed
+    if (_initError != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: SelectableText(
+              _initError!,
+              style: const TextStyle(fontSize: 11, color: Colors.red),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: FantasyBackground(
