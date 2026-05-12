@@ -132,12 +132,31 @@ class _MapGrid extends ConsumerWidget {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 class _MapCard extends ConsumerWidget {
   final RiddleMap map;
   const _MapCard({required this.map});
 
-  // ... (Your _gradients and _gradient() method remain the same)
+  // --- RESTORED GRADIENT DATA ---
+  static const List<List<Color>> _gradients = [
+    [Color(0xFFa78bfa), Color(0xFF7C3AED)],
+    [Color(0xFFf472b6), Color(0xFFEC4899)],
+    [Color(0xFF34d399), Color(0xFF059669)],
+    [Color(0xFFfbbf24), Color(0xFFd97706)],
+    [Color(0xFF60a5fa), Color(0xFF2563EB)],
+    [Color(0xFFf87171), Color(0xFFDC2626)],
+  ];
 
+  // --- RESTORED GRADIENT METHOD ---
+  List<Color> _gradient() {
+    final idx = map.id.codeUnits.fold(0, (a, b) => a + b) % _gradients.length;
+    return _gradients[idx];
+  }
+
+  // Confirmation dialog for deletion
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -151,8 +170,8 @@ class _MapCard extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () {
-              // TODO: Add your delete logic here, e.g.:
-              // ref.read(yourProvider.notifier).deleteMap(map.id);
+              // TODO: Call your delete provider logic here
+              // ref.read(yourMapProvider.notifier).delete(map.id);
               Navigator.pop(context);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -197,7 +216,12 @@ class _MapCard extends ConsumerWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: imageBytes != null
-                      ? Image.memory(imageBytes, fit: BoxFit.cover)
+                      ? Image.memory(
+                          imageBytes,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        )
                       : Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -206,32 +230,38 @@ class _MapCard extends ConsumerWidget {
                               end: Alignment.bottomRight,
                             ),
                           ),
-                          child: Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/0.jpeg',
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
                 ),
               ),
 
-              // ── Top Left "Ear": Edit ──
+              // ── NEW: Top Left Ear (Edit) ──
               Positioned(
-                top: 4,
-                left: 4,
+                top: 6,
+                left: 6,
                 child: _EarButton(
                   icon: Icons.edit_rounded,
-                  color: Colors.white,
                   onTap: () {
-                    // Navigate to your edit screen
+                    // Replace with your actual Edit Screen
                     // Navigator.push(context, MaterialPageRoute(builder: (_) => EditMapScreen(map: map)));
                   },
                 ),
               ),
 
-              // ── Top Right "Ear": Delete ──
+              // ── NEW: Top Right Ear (Delete) ──
               Positioned(
-                top: 4,
-                right: 4,
+                top: 6,
+                right: 6,
                 child: _EarButton(
-                  icon: Icons.delete_outline_rounded,
-                  color: Colors.redAccent,
+                  icon: Icons.delete_forever_rounded,
+                  iconColor: Colors.redAccent,
                   onTap: () => _confirmDelete(context, ref),
                 ),
               ),
@@ -242,7 +272,8 @@ class _MapCard extends ConsumerWidget {
                 right: 0,
                 bottom: 0,
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+                  borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(10)),
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
                     decoration: BoxDecoration(
@@ -259,16 +290,25 @@ class _MapCard extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w400,
-                            color: Colors.black87, // Replaced custom theme for compile-readiness
+                            color: EnolaTheme.textPrimary,
                             height: 1.3,
+                            letterSpacing: 0.1,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.auto_stories_rounded, size: 14, color: Color(0xFF555555)),
+                            const Icon(Icons.auto_stories_rounded,
+                                size: 14, color: Color(0xFF555555)),
                             const SizedBox(width: 4),
-                            Text('$count', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            Text(
+                              '$count',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF555555),
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -284,13 +324,17 @@ class _MapCard extends ConsumerWidget {
   }
 }
 
-// Helper widget for the "Ears" to keep the code clean
+// Helper Widget for the Ear Buttons
 class _EarButton extends StatelessWidget {
   final IconData icon;
-  final Color color;
   final VoidCallback onTap;
+  final Color iconColor;
 
-  const _EarButton({required this.icon, required this.color, required this.onTap});
+  const _EarButton({
+    required this.icon,
+    required this.onTap,
+    this.iconColor = Colors.white,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -299,15 +343,14 @@ class _EarButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.3),
+          color: Colors.black26, // Semi-transparent background for visibility
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 18, color: color),
+        child: Icon(icon, size: 18, color: iconColor),
       ),
     );
   }
 }
-
 
 
 // ── Empty State ───────────────────────────────────────────────────────────────
