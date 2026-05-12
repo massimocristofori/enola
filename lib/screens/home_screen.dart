@@ -339,7 +339,7 @@ class _EarButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.black26, // Semi-transparent background for visibility
           shape: BoxShape.circle,
         ),
