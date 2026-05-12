@@ -299,15 +299,15 @@ class _StarsRow extends StatelessWidget {
             .scale(
               begin: Offset.zero,
               end: const Offset(1, 1),
-              duration: 400.ms,
+              duration: 800.ms,
               // Delay: 1000ms (Wait for transition) + Stagger (Each star follows the other)
-              delay: (1000 + (i * 100)).ms, 
+              delay: (400 + (i * 100)).ms, 
               curve: Curves.easeOutBack, // The bouncy curve
             )
             // 2. Fade Animation (Ensures they don't just 'snap' into existence)
             .fadeIn(
               duration: 200.ms, 
-              delay: (1000 + (i * 100)).ms,
+              delay: (400 + (i * 100)).ms,
             ),
           );
         }),
@@ -347,7 +347,7 @@ class _DotConnectorState extends State<_DotConnector>
     super.initState();
     _fill = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
       value: widget.isUnlocked ? 1.0 : 0.0,
     );
     _progress = CurvedAnimation(parent: _fill, curve: Curves.easeInOut);
@@ -357,7 +357,7 @@ class _DotConnectorState extends State<_DotConnector>
   void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
-      Future.delayed(const Duration(milliseconds: 1000), () {
+      Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) {
           _fill.forward();
         }
