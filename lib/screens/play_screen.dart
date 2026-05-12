@@ -33,82 +33,90 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<void> _initSession() async {
-    ref.read(playStateProvider.notifier).reset();
-
+  try {
+    debugPrint("STEP 0: reset");
     try {
-      debugPrint("STEP 1: ensureReady");
-      await DriftService.instance.ensureReady();
+      ref.read(playStateProvider.notifier).reset();
+    } catch (e) {
+      debugPrint("STEP 0 reset failed (ignored): $e");
+    }
 
-      debugPrint("STEP 2: get db");
-      final db = DriftService.instance.db;
+    debugPrint("STEP 1: ensureReady");
+    await DriftService.instance.ensureReady();
+    debugPrint("STEP 1 done");
 
-      debugPrint("STEP 3: getRiddlesForMap");
-      final riddles = await db.getRiddlesForMap(widget.mapId);
-      debugPrint("STEP 3 done: ${riddles.length} riddles");
+    debugPrint("STEP 2: get db");
+    final db = DriftService.instance.db;
 
-      debugPrint("STEP 4: query existing sessions");
-      final existing = await (db.select(db.playSessions)
-            ..where((t) => t.mapId.equals(widget.mapId))
-            ..orderBy([(t) => drift.OrderingTerm(
-                  expression: t.startedAt,
-                  mode: drift.OrderingMode.desc,
-                )])
-            ..limit(1))
-          .get();
-      debugPrint("STEP 4 done: ${existing.length} sessions found");
+    debugPrint("STEP 3: getRiddlesForMap");
+    final riddles = await db.getRiddlesForMap(widget.mapId);
+    debugPrint("STEP 3 done: ${riddles.length} riddles");
 
-      final int sessionId;
-      final int lastCompleted;
-      final int correctAnswers;
-      final List<int> riddleStars;
+    debugPrint("STEP 4: query existing sessions");
+    final existing = await (db.select(db.playSessions)
+          ..where((t) => t.mapId.equals(widget.mapId))
+          ..orderBy([(t) => drift.OrderingTerm(
+                expression: t.startedAt,
+                mode: drift.OrderingMode.desc,
+              )])
+          ..limit(1))
+        .get();
+    debugPrint("STEP 4 done: ${existing.length} sessions found");
 
-      if (existing.isNotEmpty && existing.first.completedAt == null) {
-        debugPrint("STEP 5a: resuming session id=${existing.first.id}");
-        sessionId = existing.first.id;
-        lastCompleted = existing.first.lastCompletedIndex;
-        correctAnswers = existing.first.correctAnswers;
-        final raw = existing.first.riddleStarsJson;
-        List<int> tempStars = [];
-        try {
-          if (raw != null) {
-            tempStars = (jsonDecode(raw) as List).cast<int>();
-          }
-        } catch (e) {
-          debugPrint("JSON Decode error: $e");
+    final int sessionId;
+    final int lastCompleted;
+    final int correctAnswers;
+    final List<int> riddleStars;
+
+    if (existing.isNotEmpty && existing.first.completedAt == null) {
+      debugPrint("STEP 5a: resuming session id=${existing.first.id}");
+      sessionId = existing.first.id;
+      lastCompleted = existing.first.lastCompletedIndex;
+      correctAnswers = existing.first.correctAnswers;
+      final raw = existing.first.riddleStarsJson;
+      List<int> tempStars = [];
+      try {
+        if (raw != null) {
+          tempStars = (jsonDecode(raw) as List).cast<int>();
         }
-        riddleStars = tempStars;
-      } else {
-        debugPrint("STEP 5b: starting new session");
-        sessionId = await DriftService.instance.startSession(
-          widget.mapId,
-          riddles.length,
-        );
-        debugPrint("STEP 5b done: new sessionId=$sessionId");
-        lastCompleted = -1;
-        correctAnswers = 0;
-        riddleStars = [];
+      } catch (e) {
+        debugPrint("JSON Decode error: $e");
       }
+      riddleStars = tempStars;
+    } else {
+      debugPrint("STEP 5b: starting new session");
+      sessionId = await DriftService.instance.startSession(
+        widget.mapId,
+        riddles.length,
+      );
+      debugPrint("STEP 5b done: new sessionId=$sessionId");
+      lastCompleted = -1;
+      correctAnswers = 0;
+      riddleStars = [];
+    }
 
-      debugPrint("STEP 6: calling init");
-      ref.read(playStateProvider.notifier).init(
-            sessionId, lastCompleted, correctAnswers, riddleStars);
-      debugPrint("STEP 6 done");
+    debugPrint("STEP 6: calling init");
+    ref.read(playStateProvider.notifier).init(
+          sessionId, lastCompleted, correctAnswers, riddleStars);
+    debugPrint("STEP 6 done");
 
-    } catch (e, stackTrace) {
-      debugPrint("Session Init Error: $e");
-      debugPrint("$stackTrace");
-      if (mounted) {
-        setState(() {
-          _initError = 'Error occurred — see logs\n\n$e\n\n$stackTrace';
-          _initialising = false;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _initialising = false);
-      }
+  } catch (e, stackTrace) {
+    debugPrint("CAUGHT ERROR: $e");
+    debugPrint("$stackTrace");
+    if (mounted) {
+      setState(() {
+        _initError = 'CAUGHT: $e\n\n$stackTrace';
+        _initialising = false;
+      });
+      return; // skip finally setState
     }
   }
+
+  if (mounted) {
+    setState(() => _initialising = false);
+  }
+}
+
 
   Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
