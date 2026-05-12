@@ -230,7 +230,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                   ],
                                 ),
                               ),
-                              _SessionStarBadge(playState: playState),
+                              //_SessionStarBadge(playState: playState),
+                              Expanded(
+                                child: _StarProgressBar(
+                                  earned: playState.totalStars,
+                                  max: riddles.length * 3,
+                                ),
+                              ),
+
                             ],
                           ),
                         ),
@@ -257,6 +264,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                               mapId: widget.mapId,
                               lastCompletedIndex:
                                   playState.lastCompletedIndex,
+                              riddleStars: playState.riddleStars,        // NEW
+                              imageBytes: map?.imageBytes,               // NEW
                               onCurrentNodeTap:
                                   playState.lastCompletedIndex <
                                           riddles.length - 1
@@ -278,31 +287,82 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 }
 
-class _SessionStarBadge extends StatelessWidget {
-  final PlayState playState;
+class _StarProgressBar extends StatelessWidget {
+  final int earned;
+  final int max;
 
-  const _SessionStarBadge({required this.playState});
+  const _StarProgressBar({required this.earned, required this.max});
 
   @override
   Widget build(BuildContext context) {
-    final total = playState.totalStars;
-    final earned = playState.riddleStars.length;
+    final progress = max == 0 ? 0.0 : (earned / max).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: EnolaTheme.accentSoft,
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFFF4F4F4),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, color: EnolaTheme.accent, size: 16),
-          const SizedBox(width: 4),
           Text(
-            earned == 0 ? '—' : '$total',
+            '$earned',
             style: const TextStyle(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: Color(0xFFE8A020),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const thumbSize = 28.0;
+                final trackWidth = constraints.maxWidth;
+                final thumbLeft = (progress * (trackWidth - thumbSize))
+                    .clamp(0.0, trackWidth - thumbSize);
+
+                return SizedBox(
+                  height: 28,
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0E0E0),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      Container(
+                        height: 6,
+                        width: thumbLeft + thumbSize / 2,
+                        decoration: BoxDecoration(
+                          color: EnolaTheme.accent.withAlpha(80),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      Positioned(
+                        left: thumbLeft,
+                        child: const Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFE8A020),
+                          size: thumbSize,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            '$max',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
               color: EnolaTheme.accent,
             ),
           ),
