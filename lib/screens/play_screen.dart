@@ -25,17 +25,22 @@ class PlayScreen extends ConsumerStatefulWidget {
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
 
+  
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initSession());
   }
-
+  
   Future<void> _initSession() async {
+    // Reset any stale state from a previous run before we start
+    ref.read(playStateProvider.notifier).reset();
+  
     try {
       final db = DriftService.instance.db;
       final riddles = await db.getRiddlesForMap(widget.mapId);
-
+  
       final existing = await (db.select(db.playSessions)
             ..where((t) => t.mapId.equals(widget.mapId))
             ..orderBy([(t) => drift.OrderingTerm(
@@ -44,19 +49,17 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 )])
             ..limit(1))
           .get();
-
+  
       final int sessionId;
       final int lastCompleted;
       final int correctAnswers;
       final List<int> riddleStars;
-
+  
       if (existing.isNotEmpty && existing.first.completedAt == null) {
-        // Resume existing session
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
         correctAnswers = existing.first.correctAnswers;
         final raw = existing.first.riddleStarsJson;
-        
         List<int> tempStars = [];
         try {
           if (raw != null) {
@@ -67,7 +70,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         }
         riddleStars = tempStars;
       } else {
-        // New session
         sessionId = await DriftService.instance.startSession(
           widget.mapId,
           riddles.length,
@@ -76,28 +78,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         correctAnswers = 0;
         riddleStars = [];
       }
-
-      // 1. Initialize the provider
+  
+      // init() synchronously sets state — no polling needed
       ref.read(playStateProvider.notifier).init(
             sessionId, lastCompleted, correctAnswers, riddleStars);
-
-      // 2. WAIT for the provider to register the data (Crucial for Web/Chrome)
-      // We check up to 10 times with 10ms gaps to ensure playState is not null.
-      int checks = 0;
-      while (ref.read(playStateProvider) == null && checks < 10) {
-        await Future.delayed(const Duration(milliseconds: 10));
-        checks++;
-      }
-            
+  
     } catch (e) {
       debugPrint("Session Init Error: $e");
     } finally {
-      // 3. Now we are safe to stop the loader
       if (mounted) {
         setState(() => _initialising = false);
       }
     }
   }
+
 
   Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
