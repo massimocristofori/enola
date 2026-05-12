@@ -37,7 +37,7 @@ class PlaySessions extends Table {
   DateTimeColumn get completedAt => dateTime().nullable()();
   IntColumn get totalRiddles => integer().withDefault(const Constant(0))();
   IntColumn get correctAnswers => integer().withDefault(const Constant(0))();
-  TextColumn get riddleStarsJson => text().nullable()(); // ← NEW
+  TextColumn get riddleStarsJson => text().nullable()();
 }
 
 sealed class RiddlePayload {
@@ -100,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 4; // ← bumped
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -112,7 +112,27 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(riddleMaps, riddleMaps.imageBytes);
       }
       if (from < 4) {
-        await m.addColumn(playSessions, playSessions.riddleStarsJson); // ← NEW
+        await m.addColumn(playSessions, playSessions.riddleStarsJson);
+      }
+    },
+    beforeOpen: (details) async {
+      // Enable foreign keys
+      await details.executor.runCustom('PRAGMA foreign_keys = ON');
+
+      // Safety net for web/WASM: ensure all columns exist regardless
+      // of whether migrations ran correctly. SQLite throws if the column
+      // already exists, which we silently ignore.
+      final safeAlters = [
+        'ALTER TABLE riddles ADD COLUMN payload_json TEXT;',
+        'ALTER TABLE riddle_maps ADD COLUMN image_bytes BLOB;',
+        'ALTER TABLE play_sessions ADD COLUMN riddle_stars_json TEXT;',
+      ];
+      for (final sql in safeAlters) {
+        try {
+          await details.executor.runCustom(sql);
+        } catch (_) {
+          // Column already exists — expected on most opens
+        }
       }
     },
   );
