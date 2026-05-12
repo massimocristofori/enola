@@ -257,26 +257,28 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
                         Expanded(
                           child: SingleChildScrollView(
-                            padding:
-                                const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                            child: TreasureMapPath(
-                              riddles: riddles,
-                              mapId: widget.mapId,
-                              lastCompletedIndex:
-                                  playState.lastCompletedIndex,
-                              riddleStars: playState.riddleStars,        // NEW
-                              imageBytes: map?.imageBytes,               // NEW
-                              onCurrentNodeTap:
-                                  playState.lastCompletedIndex <
-                                          riddles.length - 1
+                            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                            child: Center( // 1. Center the map
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 500), // 2. Fix the max width
+                                child: TreasureMapPath(
+                                  riddles: riddles,
+                                  mapId: widget.mapId,
+                                  lastCompletedIndex: playState.lastCompletedIndex,
+                                  riddleStars: playState.riddleStars,
+                                  imageBytes: map?.imageBytes,
+                                  onCurrentNodeTap: playState.lastCompletedIndex < riddles.length - 1
                                       ? () => _onNodeTap(
                                             riddles,
                                             playState.lastCompletedIndex + 1,
                                           )
                                       : null,
+                                ),
+                              ),
                             ),
                           ),
                         ),
+
                       ],
                     ),
                   ),
