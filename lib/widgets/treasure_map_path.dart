@@ -130,7 +130,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   void _checkActivation() {
     if (widget.status == NodeStatus.current) {
       // Delay the "activation" to match the dot connector animation (1200ms)
-      Future.delayed(const Duration(milliseconds: 2300), () {
+      Future.delayed(const Duration(milliseconds: 2000), () {
         if (mounted) {
           setState(() => _isReached = true);
           _pulse.repeat(reverse: true);
@@ -347,7 +347,7 @@ class _DotConnectorState extends State<_DotConnector>
     super.initState();
     _fill = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1000),
       value: widget.isUnlocked ? 1.0 : 0.0,
     );
     _progress = CurvedAnimation(parent: _fill, curve: Curves.easeInOut);
@@ -357,7 +357,7 @@ class _DotConnectorState extends State<_DotConnector>
   void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
-      Future.delayed(const Duration(milliseconds: 1800), () {
+      Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) {
           _fill.forward();
         }
