@@ -6,6 +6,8 @@ import 'package:enola/database/database.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/providers/map_providers.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
 
 enum NodeStatus { completed, current, locked }
 
@@ -297,8 +299,8 @@ class _StarsRow extends StatelessWidget {
               begin: Offset.zero,
               end: const Offset(1, 1),
               duration: 400.ms,
-              delay: (i * 100).ms, // Stagger: Star 1, then 2, then 3
-              curve: Curves.backOut, // This creates the "bounce" effect
+              delay: (i * 100).ms,
+              curve: Curves.easeOutBack, // Fixed the curve name
             )
             .fadeIn(duration: 200.ms, delay: (i * 100).ms),
           );
@@ -307,6 +309,7 @@ class _StarsRow extends StatelessWidget {
     );
   }
 }
+
 
 
 // ── Dot connector ─────────────────────────────────────────────────────────────
