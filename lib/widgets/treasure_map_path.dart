@@ -97,7 +97,7 @@ class _RiddleNode extends StatefulWidget {
   final VoidCallback? onTap;
 
   const _RiddleNode({
-    super.key,
+    //super.key,
     required this.index,
     required this.status,
     required this.stars,
@@ -223,7 +223,7 @@ class _RiddleNodeState extends State<_RiddleNode>
         borderRadius: radius,
         // Outer Gold Border (4 pixels with opacity)
         border: Border.all(
-          color: const Color(0xFFE8C840).withOpacity(0.6), // Adjust opacity as needed
+          color: const Color(0xFFE8C840).withValues(alpha: 0.6), // Adjust opacity as needed
           width: 3.0,
         ),
       ),
@@ -324,7 +324,7 @@ class _DotConnector extends StatefulWidget {
   final int seed;
 
   const _DotConnector({
-    super.key,
+    //super.key,
     required this.from,
     required this.to,
     required this.isUnlocked,
@@ -449,7 +449,7 @@ class _DotPainter extends CustomPainter {
       
       final paint = Paint()
         ..color = isLit 
-            ? baseColor.withOpacity(randomOpacity) 
+            ? baseColor.withValues(alpha: randomOpacity) 
             : lockedColor
         ..style = PaintingStyle.fill;
 
