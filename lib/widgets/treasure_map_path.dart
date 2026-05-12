@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
@@ -70,6 +71,8 @@ class TreasureMapPath extends ConsumerWidget {
                 from: alignment,
                 to: _getAlignment(index + 1),
                 isUnlocked: isCompleted,
+                // Passing index to seed "random" colors so they are consistent on rebuild
+                seed: index, 
               ),
           ],
         );
@@ -77,14 +80,9 @@ class TreasureMapPath extends ConsumerWidget {
     );
   }
 
+  // Updated to 2 columns: Alternates Left and Right
   Alignment _getAlignment(int index) {
-    const alignments = [
-      Alignment.centerLeft,
-      Alignment.center,
-      Alignment.centerRight,
-      Alignment.center,
-    ];
-    return alignments[index % 4];
+    return (index % 2 == 0) ? Alignment.centerLeft : Alignment.centerRight;
   }
 }
 
@@ -150,32 +148,27 @@ class _RiddleNodeState extends State<_RiddleNode>
     final isCompleted = widget.status == NodeStatus.completed;
     final isCurrent = widget.status == NodeStatus.current;
 
-    Widget node = GestureDetector(
+    return GestureDetector(
       onTap: widget.onTap,
-      child: SizedBox(
-        width: 110, 
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 25.0), 
-              child: _buildBox(isCompleted, isCurrent, isLocked),
-            ),
-            if (isCompleted)
-              Positioned(
-                top: 0,
-                child: _StarsRow(stars: widget.stars),
+      child: Container(
+        width: 110,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: ScaleTransition(
+          scale: isCurrent ? _pulse : const AlwaysStoppedAnimation(1.0),
+          child: Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 25.0), 
+                child: _buildBox(isCompleted, isCurrent, isLocked),
               ),
-          ],
+              if (isCompleted)
+                Positioned(top: 0, child: _StarsRow(stars: widget.stars)),
+            ],
+          ),
         ),
       ),
     );
-
-    if (isCurrent) {
-      node = ScaleTransition(scale: _pulse, child: node);
-    }
-
-    return node;
   }
 
   Widget _buildBox(bool isCompleted, bool isCurrent, bool isLocked) {
@@ -189,9 +182,7 @@ class _RiddleNodeState extends State<_RiddleNode>
         decoration: BoxDecoration(
           color: EnolaTheme.accent,
           borderRadius: radius,
-          boxShadow: [
-            BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12),
-          ],
+          boxShadow: [BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12)],
         ),
         child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
       );
@@ -204,10 +195,7 @@ class _RiddleNodeState extends State<_RiddleNode>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: radius,
-          border: Border.all(
-            color: EnolaTheme.accent.withAlpha(80),
-            width: 2,
-          ),
+          border: Border.all(color: EnolaTheme.accent.withAlpha(80), width: 2),
         ),
       );
     }
@@ -218,10 +206,7 @@ class _RiddleNodeState extends State<_RiddleNode>
       decoration: BoxDecoration(
         color: const Color(0xFFF8F4EC),
         borderRadius: radius,
-        border: Border.all(
-          color: const Color(0xFFE8C840),
-          width: 5.0,
-        ),
+        border: Border.all(color: const Color(0xFFE8C840), width: 5.0),
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(13)),
@@ -231,14 +216,7 @@ class _RiddleNodeState extends State<_RiddleNode>
             if (widget.imageBytes != null)
               Image.memory(widget.imageBytes!, fit: BoxFit.cover)
             else
-              Center(
-                child: Icon(
-                  Icons.map_rounded,
-                  color: EnolaTheme.accent.withAlpha(120),
-                  size: 32,
-                ),
-              ),
-            // Transparent white layer over the image
+              Center(child: Icon(Icons.map_rounded, color: EnolaTheme.accent.withAlpha(120), size: 32)),
             Container(color: Colors.white.withOpacity(0.3)),
           ],
         ),
@@ -251,7 +229,6 @@ class _RiddleNodeState extends State<_RiddleNode>
 
 class _StarsRow extends StatelessWidget {
   final int stars;
-
   const _StarsRow({required this.stars});
 
   @override
@@ -263,22 +240,16 @@ class _StarsRow extends StatelessWidget {
         alignment: Alignment.bottomCenter,
         children: List.generate(3, (i) {
           final isFilled = i < stars;
-          final bool isMiddle = i == 1;
-          
           double horizontalOffset = (i - 1) * 22.0; 
-          double verticalOffset = isMiddle ? -3.0 : 0.0;
+          double verticalOffset = (i == 1) ? -3.0 : 0.0;
 
           return Transform.translate(
             offset: Offset(horizontalOffset, verticalOffset),
             child: Icon(
               Icons.star_rounded,
               size: 42,
-              color: isFilled
-                  ? const Color(0xFFE8C840)
-                  : const Color(0xFFE8C840).withAlpha(55),
-              shadows: isFilled ? [
-                const Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
-              ] : null,
+              color: isFilled ? const Color(0xFFE8C840) : const Color(0xFFE8C840).withAlpha(55),
+              shadows: isFilled ? [const Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))] : null,
             ),
           );
         }),
@@ -293,11 +264,13 @@ class _DotConnector extends StatefulWidget {
   final Alignment from;
   final Alignment to;
   final bool isUnlocked;
+  final int seed;
 
   const _DotConnector({
     required this.from,
     required this.to,
     required this.isUnlocked,
+    required this.seed,
   });
 
   @override
@@ -339,7 +312,7 @@ class _DotConnectorState extends State<_DotConnector>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 50,
+      height: 80, // Increased height for better diagonal curves
       width: double.infinity,
       child: AnimatedBuilder(
         animation: _progress,
@@ -347,10 +320,11 @@ class _DotConnectorState extends State<_DotConnector>
           painter: _DotPainter(
             from: widget.from,
             to: widget.to,
-            unlockedColor: EnolaTheme.accent,
+            baseColor: EnolaTheme.accent,
             lockedColor: EnolaTheme.accent.withAlpha(55),
             progress: _progress.value,
-            dotCount: 3,
+            dotCount: 4,
+            seed: widget.seed,
           ),
         ),
       ),
@@ -361,31 +335,46 @@ class _DotConnectorState extends State<_DotConnector>
 class _DotPainter extends CustomPainter {
   final Alignment from;
   final Alignment to;
-  final Color unlockedColor;
+  final Color baseColor;
   final Color lockedColor;
   final double progress;
   final int dotCount;
+  final int seed;
 
   const _DotPainter({
     required this.from,
     required this.to,
-    required this.unlockedColor,
+    required this.baseColor,
     required this.lockedColor,
     required this.progress,
     required this.dotCount,
+    required this.seed,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final startX = ((from.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
-    final endX = ((to.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
+    // Start from the SIDE of the node
+    final bool isFromLeft = from.x < 0;
+    final double startX = isFromLeft 
+        ? (size.width * 0.15 + 30) // Left node's right side
+        : (size.width * 0.85 - 30); // Right node's left side
+    
+    // End at the TOP of the next node
+    final double endX = (to.x < 0) 
+        ? size.width * 0.15 
+        : size.width * 0.85;
 
     final path = Path()
-      ..moveTo(startX, 0)
-      ..cubicTo(startX, size.height * 0.5, endX, size.height * 0.5, endX, size.height);
+      ..moveTo(startX, 0) // Starts at level with current node
+      ..cubicTo(
+        startX + (isFromLeft ? 50 : -50), 0, // Pull out horizontally
+        endX, size.height * 0.2, // Aim for top center
+        endX, size.height, // Finish at next node
+      );
 
     final metrics = path.computeMetrics().first;
     final totalLength = metrics.length;
+    final random = math.Random(seed);
 
     for (int i = 1; i <= dotCount; i++) {
       final t = i / (dotCount + 1);
@@ -393,8 +382,14 @@ class _DotPainter extends CustomPainter {
       if (tangent == null) continue;
 
       final isLit = t <= progress;
+      
+      // Random "Gradient" logic: varies opacity between 0.6 and 1.0 for unlocked dots
+      final double randomOpacity = 0.6 + (random.nextDouble() * 0.4);
+      
       final paint = Paint()
-        ..color = isLit ? unlockedColor : lockedColor
+        ..color = isLit 
+            ? baseColor.withOpacity(randomOpacity) 
+            : lockedColor
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(tangent.position, 7, paint);
