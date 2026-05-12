@@ -357,7 +357,11 @@ class _DotConnectorState extends State<_DotConnector>
   void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
-      _fill.forward();
+      Future.delayed(const Duration(milliseconds: 1800), () {
+        if (mounted) {
+          _fill.forward();
+        }
+      });
     } else if (!widget.isUnlocked) {
       _fill.value = 0.0;
     }
