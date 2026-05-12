@@ -71,7 +71,11 @@ class _RiddleScreenState extends State<RiddleScreen> {
   }
 
   void _confirm() {
-    Navigator.pop(context, _errorCount);
+    if (_solvedCorrectly) {
+      Navigator.pop(context, _errorCount);
+    } else {
+      Navigator.pop(context, null);
+    }
   }
 
   // ── Ordering ─────────────────────────────────────────────────────────────
@@ -109,7 +113,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new_rounded,
                           color: EnolaTheme.textSecond),
-                      onPressed: () => Navigator.pop(context, _errorCount),
+                      onPressed: () => Navigator.pop(context, null),
                     ),
                     Text(
                       'Riddle #${widget.riddleIndex + 1}',
