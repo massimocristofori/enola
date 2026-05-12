@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
@@ -10,14 +11,10 @@ enum NodeStatus { completed, current, locked }
 class TreasureMapPath extends ConsumerWidget {
   final List<Riddle> riddles;
   final String mapId;
-
-  /// When provided the path is interactive — tapping the current node
-  /// calls this callback. When null the path is in preview/read-only mode.
   final VoidCallback? onCurrentNodeTap;
-
-  /// Override the progress shown (used during an active play session).
-  /// When null the widget reads from [latestSessionProvider].
   final int? lastCompletedIndex;
+  final List<int> riddleStars; // NEW: per-riddle star counts (0–3)
+  final Uint8List? imageBytes; // NEW: map cover image
 
   const TreasureMapPath({
     super.key,
@@ -25,6 +22,8 @@ class TreasureMapPath extends ConsumerWidget {
     required this.mapId,
     this.onCurrentNodeTap,
     this.lastCompletedIndex,
+    this.riddleStars = const [],
+    this.imageBytes,
   });
 
   @override
@@ -50,6 +49,8 @@ class TreasureMapPath extends ConsumerWidget {
                 ? NodeStatus.current
                 : NodeStatus.locked;
 
+        final stars = index < riddleStars.length ? riddleStars[index] : 0;
+
         return Column(
           children: [
             Align(
@@ -57,13 +58,15 @@ class TreasureMapPath extends ConsumerWidget {
               child: _RiddleNode(
                 index: index + 1,
                 status: status,
+                stars: stars,
+                imageBytes: imageBytes,
                 onTap: isCurrent && onCurrentNodeTap != null
                     ? onCurrentNodeTap
                     : null,
               ),
             ),
             if (!isLast)
-              _PathConnector(
+              _DotConnector(
                 from: alignment,
                 to: _getAlignment(index + 1),
                 isUnlocked: isCompleted,
@@ -90,9 +93,17 @@ class TreasureMapPath extends ConsumerWidget {
 class _RiddleNode extends StatefulWidget {
   final int index;
   final NodeStatus status;
+  final int stars;
+  final Uint8List? imageBytes;
   final VoidCallback? onTap;
 
-  const _RiddleNode({required this.index, required this.status, this.onTap});
+  const _RiddleNode({
+    required this.index,
+    required this.status,
+    required this.stars,
+    this.imageBytes,
+    this.onTap,
+  });
 
   @override
   State<_RiddleNode> createState() => _RiddleNodeState();
@@ -139,33 +150,25 @@ class _RiddleNodeState extends State<_RiddleNode>
     final isCompleted = widget.status == NodeStatus.completed;
     final isCurrent = widget.status == NodeStatus.current;
 
-    final color = isLocked ? Colors.grey.withAlpha(80) : EnolaTheme.accent;
+    Widget node = GestureDetector(
+      onTap: widget.onTap,
+      child: SizedBox(
+        width: 90,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Stars row above node (only for completed)
+            if (isCompleted)
+              _StarsRow(stars: widget.stars)
+            else
+              const SizedBox(height: 20), // keep spacing consistent
 
-    Widget node = Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        color: isCompleted
-            ? EnolaTheme.accent
-            : isLocked
-                ? Colors.grey.shade200
-                : EnolaTheme.background,
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 3),
-        boxShadow: isLocked
-            ? []
-            : [BoxShadow(color: color.withAlpha(100), blurRadius: 10)],
-      ),
-      child: Center(
-        child: isCompleted
-            ? const Icon(Icons.check, color: Colors.white, size: 20)
-            : Text(
-                '${widget.index}',
-                style: TextStyle(
-                  color: isLocked ? Colors.grey : EnolaTheme.textPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            const SizedBox(height: 4),
+
+            // Node box
+            _buildBox(isCompleted, isCurrent, isLocked),
+          ],
+        ),
       ),
     );
 
@@ -173,43 +176,115 @@ class _RiddleNodeState extends State<_RiddleNode>
       node = ScaleTransition(scale: _pulse, child: node);
     }
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        width: 80,
-        margin: const EdgeInsets.symmetric(horizontal: 30),
-        child: Column(
-          children: [
-            if (isCurrent)
-              const TorchFlame(size: 24)
-            else
-              const SizedBox(height: 0),
-            node,
+    return node;
+  }
+
+  Widget _buildBox(bool isCompleted, bool isCurrent, bool isLocked) {
+    const double size = 80;
+    const radius = BorderRadius.all(Radius.circular(18));
+
+    // Current: solid teal with star icon
+    if (isCurrent) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: EnolaTheme.accent,
+          borderRadius: radius,
+          boxShadow: [
+            BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12),
           ],
         ),
+        child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
+      );
+    }
+
+    // Locked: outline only
+    if (isLocked) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: radius,
+          border: Border.all(
+            color: EnolaTheme.accent.withAlpha(80),
+            width: 2,
+          ),
+        ),
+      );
+    }
+
+    // Completed: gold border + image
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4EC),
+        borderRadius: radius,
+        border: Border.all(
+          color: const Color(0xFFE8C840),
+          width: 2.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(15.5)),
+        child: widget.imageBytes != null
+            ? Image.memory(widget.imageBytes!, fit: BoxFit.cover)
+            : Center(
+                child: Icon(
+                  Icons.map_rounded,
+                  color: EnolaTheme.accent.withAlpha(120),
+                  size: 36,
+                ),
+              ),
       ),
     );
   }
 }
 
-// ── Path connector ────────────────────────────────────────────────────────────
+// ── Stars row ─────────────────────────────────────────────────────────────────
 
-class _PathConnector extends StatefulWidget {
+class _StarsRow extends StatelessWidget {
+  final int stars; // 0–3
+
+  const _StarsRow({required this.stars});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (i) {
+        return Icon(
+          Icons.star_rounded,
+          size: 20,
+          color: i < stars
+              ? const Color(0xFFE8C840)
+              : const Color(0xFFE8C840).withAlpha(55),
+        );
+      }),
+    );
+  }
+}
+
+// ── Dot connector ─────────────────────────────────────────────────────────────
+
+class _DotConnector extends StatefulWidget {
   final Alignment from;
   final Alignment to;
   final bool isUnlocked;
 
-  const _PathConnector({
+  const _DotConnector({
     required this.from,
     required this.to,
     required this.isUnlocked,
   });
 
   @override
-  State<_PathConnector> createState() => _PathConnectorState();
+  State<_DotConnector> createState() => _DotConnectorState();
 }
 
-class _PathConnectorState extends State<_PathConnector>
+class _DotConnectorState extends State<_DotConnector>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fill;
   late final Animation<double> _progress;
@@ -226,7 +301,7 @@ class _PathConnectorState extends State<_PathConnector>
   }
 
   @override
-  void didUpdateWidget(_PathConnector old) {
+  void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
       _fill.forward();
@@ -249,12 +324,13 @@ class _PathConnectorState extends State<_PathConnector>
       child: AnimatedBuilder(
         animation: _progress,
         builder: (_, __) => CustomPaint(
-          painter: _PathPainter(
+          painter: _DotPainter(
             from: widget.from,
             to: widget.to,
             unlockedColor: EnolaTheme.accent,
-            lockedColor: Colors.grey.withAlpha(50),
+            lockedColor: EnolaTheme.accent.withAlpha(55),
             progress: _progress.value,
+            dotCount: 4,
           ),
         ),
       ),
@@ -262,53 +338,59 @@ class _PathConnectorState extends State<_PathConnector>
   }
 }
 
-class _PathPainter extends CustomPainter {
+class _DotPainter extends CustomPainter {
   final Alignment from;
   final Alignment to;
   final Color unlockedColor;
   final Color lockedColor;
-  final double progress; // 0.0 → 1.0
+  final double progress;
+  final int dotCount;
 
-  _PathPainter({
+  const _DotPainter({
     required this.from,
     required this.to,
     required this.unlockedColor,
     required this.lockedColor,
     required this.progress,
+    required this.dotCount,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    double startX = ((from.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
-    double endX = ((to.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
+    final startX =
+        ((from.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
+    final endX =
+        ((to.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
 
-    // Draw grey base path
-    final basePaint = Paint()
-      ..color = lockedColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    final basePath = Path()
+    // Same cubic curve as before — just draw dots along it instead of a line
+    final path = Path()
       ..moveTo(startX, 0)
-      ..cubicTo(startX, size.height * 0.5, endX, size.height * 0.5, endX, size.height);
+      ..cubicTo(
+        startX, size.height * 0.5,
+        endX,   size.height * 0.5,
+        endX,   size.height,
+      );
 
-    canvas.drawPath(basePath, basePaint);
+    final metrics = path.computeMetrics().first;
+    final totalLength = metrics.length;
 
-    // Draw colored fill on top, clipped to progress
-    if (progress > 0) {
-      final fillPaint = Paint()
-        ..color = unlockedColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round;
+    for (int i = 1; i <= dotCount; i++) {
+      final t = i / (dotCount + 1);
+      final tangent = metrics.getTangentForOffset(totalLength * t);
+      if (tangent == null) continue;
 
-      final metrics = basePath.computeMetrics().first;
-      final filled = metrics.extractPath(0, metrics.length * progress);
-      canvas.drawPath(filled, fillPaint);
+      final isLit = t <= progress;
+      final paint = Paint()
+        ..color = isLit ? unlockedColor : lockedColor
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(tangent.position, 5, paint);
     }
   }
 
   @override
-  bool shouldRepaint(_PathPainter old) => old.progress != progress;
+  bool shouldRepaint(_DotPainter old) =>
+      old.progress != progress ||
+      old.from != from ||
+      old.to != to;
 }
