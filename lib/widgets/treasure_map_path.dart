@@ -244,10 +244,7 @@ class _RiddleNodeState extends State<_RiddleNode>
               if (widget.imageBytes != null)
                 Image.memory(widget.imageBytes!, fit: BoxFit.cover)
               else
-                Center(
-                  child: Icon(Icons.map_rounded,
-                      color: EnolaTheme.accent.withAlpha(120), size: 32),
-                ),
+                Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
               // Light overlay for parchment feel
               Container(color: Colors.white.withOpacity(0.6)),
             ],
