@@ -249,7 +249,7 @@ class _RiddleNodeState extends State<_RiddleNode>
                       color: EnolaTheme.accent.withAlpha(120), size: 32),
                 ),
               // Light overlay for parchment feel
-              Container(color: Colors.white.withOpacity(0.3)),
+              Container(color: Colors.white.withOpacity(0.6)),
             ],
           ),
         ),
