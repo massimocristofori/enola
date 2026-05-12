@@ -70,16 +70,12 @@ int starsForErrors(int errors) {
 }
 
 // ── Live play state ───────────────────────────────────────────────────────────
-// Holds the in-memory progress for the currently active play session.
-// lastCompletedIndex mirrors PlaySession.lastCompletedIndex:
-//   -1  = not started
-//    n  = riddle at index n has been answered
 
 class PlayState {
   final int sessionId;
   final int lastCompletedIndex;
   final int correctAnswers;
-  final List<int> riddleStars; // one entry per completed riddle, value 0–3
+  final List<int> riddleStars;
 
   const PlayState({
     required this.sessionId,
@@ -120,8 +116,6 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
     );
   }
 
-  /// Call after the user completes a riddle.
-  /// [errors] = number of wrong attempts before getting it right.
   Future<void> completeRiddle(int riddleIndex, int errors) async {
     if (state == null) return;
 
@@ -130,17 +124,18 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
 
     final next = state!.copyWith(
       lastCompletedIndex: riddleIndex,
-      // With retry-until-correct every completed riddle counts as correct.
       correctAnswers: state!.correctAnswers + 1,
       riddleStars: stars,
     );
     state = next;
 
-    // Persist to DB
     final db = DriftService.instance.db;
     final session = await (db.select(db.playSessions)
           ..where((t) => t.id.equals(state!.sessionId)))
-        .getSingle();
+        .getSingleOrNull(); // ← safe on web
+
+    if (session == null) return;
+
     await db.update(db.playSessions).replace(
       session.copyWith(
         lastCompletedIndex: next.lastCompletedIndex,
@@ -155,7 +150,13 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
     final db = DriftService.instance.db;
     final session = await (db.select(db.playSessions)
           ..where((t) => t.id.equals(state!.sessionId)))
-        .getSingle();
+        .getSingleOrNull(); // ← safe on web
+
+    if (session == null) {
+      state = null;
+      return;
+    }
+
     await db.update(db.playSessions).replace(
       session.copyWith(completedAt: drift.Value(DateTime.now())),
     );
@@ -165,8 +166,6 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
   void reset() => state = null;
 }
 
-
 final playStateProvider = StateNotifierProvider.autoDispose<PlayStateNotifier, PlayState?>(
   (_) => PlayStateNotifier(),
 );
-
