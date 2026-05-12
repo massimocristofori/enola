@@ -246,7 +246,7 @@ class _RiddleNodeState extends State<_RiddleNode>
               else
                 Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
               // Light overlay for parchment feel
-              Container(color: Colors.white.withOpacity(0.6)),
+              Container(color: Colors.white.withValues(alpha: 0.6)),
             ],
           ),
         ),
