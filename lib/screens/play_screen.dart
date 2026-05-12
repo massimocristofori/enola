@@ -24,23 +24,21 @@ class PlayScreen extends ConsumerStatefulWidget {
 
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
-
-  
+  String? _initError;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initSession());
   }
-  
+
   Future<void> _initSession() async {
-    // Reset any stale state from a previous run before we start
     ref.read(playStateProvider.notifier).reset();
-  
+
     try {
       final db = DriftService.instance.db;
       final riddles = await db.getRiddlesForMap(widget.mapId);
-  
+
       final existing = await (db.select(db.playSessions)
             ..where((t) => t.mapId.equals(widget.mapId))
             ..orderBy([(t) => drift.OrderingTerm(
@@ -49,12 +47,12 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                 )])
             ..limit(1))
           .get();
-  
+
       final int sessionId;
       final int lastCompleted;
       final int correctAnswers;
       final List<int> riddleStars;
-  
+
       if (existing.isNotEmpty && existing.first.completedAt == null) {
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
@@ -78,20 +76,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         correctAnswers = 0;
         riddleStars = [];
       }
-  
-      // init() synchronously sets state — no polling needed
+
       ref.read(playStateProvider.notifier).init(
             sessionId, lastCompleted, correctAnswers, riddleStars);
-  
-    } catch (e) {
-      debugPrint("Session Init Error: $e");
+
+    } catch (e, stackTrace) {
+      if (mounted) {
+        setState(() => _initError = '$e\n\n$stackTrace');
+      }
     } finally {
       if (mounted) {
         setState(() => _initialising = false);
       }
     }
   }
-
 
   Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
@@ -141,100 +139,103 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final riddlesAsync = ref.watch(riddlesForMapProvider(widget.mapId));
     final playState = ref.watch(playStateProvider);
 
-    // This local boolean ensures we don't try to render the UI 
-    // until both the async init AND the provider data are ready.
     final bool showingLoader = _initialising || playState == null;
 
     return Scaffold(
       body: FantasyBackground(
         child: SafeArea(
-          child: showingLoader
-              ? const Center(
-                  child: CircularProgressIndicator(color: EnolaTheme.accent))
-              : mapAsync.when(
-                  loading: () => const Center(
-                      child:
-                          CircularProgressIndicator(color: EnolaTheme.accent)),
-                  error: (e, _) => Center(child: Text('$e')),
-                  data: (map) => riddlesAsync.when(
-                    loading: () => const Center(
-                        child: CircularProgressIndicator(
-                            color: EnolaTheme.accent)),
-                    error: (e, _) => Center(child: Text('$e')),
-                    data: (riddles) => Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                onPressed: () => Navigator.pop(context),
+          child: _initError != null
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: SelectableText(
+                    _initError!,
+                    style: const TextStyle(fontSize: 11, color: Colors.red),
+                  ),
+                )
+              : showingLoader
+                  ? const Center(
+                      child: CircularProgressIndicator(color: EnolaTheme.accent))
+                  : mapAsync.when(
+                      loading: () => const Center(
+                          child: CircularProgressIndicator(color: EnolaTheme.accent)),
+                      error: (e, _) => Center(child: Text('$e')),
+                      data: (map) => riddlesAsync.when(
+                        loading: () => const Center(
+                            child: CircularProgressIndicator(
+                                color: EnolaTheme.accent)),
+                        error: (e, _) => Center(child: Text('$e')),
+                        data: (riddles) => Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.close_rounded),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          map?.title ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 16,
+                                            color: EnolaTheme.textPrimary,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${playState.lastCompletedIndex + 1} / ${riddles.length} completed',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: EnolaTheme.textSecond,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  _SessionStarBadge(playState: playState),
+                                ],
                               ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      map?.title ?? '',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                        color: EnolaTheme.textPrimary,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${playState.lastCompletedIndex + 1} / ${riddles.length} completed',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: EnolaTheme.textSecond,
-                                      ),
-                                    ),
-                                  ],
+                            ),
+
+                            if (playState.lastCompletedIndex < riddles.length - 1)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Text(
+                                  'Tap the glowing node to answer the next riddle',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                    color: EnolaTheme.textSecond.withAlpha(180),
+                                  ),
+                                ).animate().fadeIn(delay: 400.ms),
+                              ),
+
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                                child: TreasureMapPath(
+                                  riddles: riddles,
+                                  mapId: widget.mapId,
+                                  lastCompletedIndex: playState.lastCompletedIndex,
+                                  onCurrentNodeTap:
+                                      playState.lastCompletedIndex <
+                                              riddles.length - 1
+                                          ? () => _onNodeTap(
+                                                riddles,
+                                                playState.lastCompletedIndex + 1,
+                                              )
+                                          : null,
                                 ),
                               ),
-                              _SessionStarBadge(playState: playState),
-                            ],
-                          ),
-                        ),
-
-                        if (playState.lastCompletedIndex < riddles.length - 1)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
-                              'Tap the glowing node to answer the next riddle',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                                color: EnolaTheme.textSecond.withAlpha(180),
-                              ),
-                            ).animate().fadeIn(delay: 400.ms),
-                          ),
-
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding:
-                                const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                            child: TreasureMapPath(
-                              riddles: riddles,
-                              mapId: widget.mapId,
-                              lastCompletedIndex:
-                                  playState.lastCompletedIndex,
-                              onCurrentNodeTap:
-                                  playState.lastCompletedIndex <
-                                          riddles.length - 1
-                                      ? () => _onNodeTap(
-                                            riddles,
-                                            playState.lastCompletedIndex + 1,
-                                          )
-                                      : null,
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
         ),
       ),
     );
