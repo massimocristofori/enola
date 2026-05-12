@@ -295,21 +295,26 @@ class _StarsRow extends StatelessWidget {
                   : null,
             )
             .animate()
+            // 1. Scale Animation (The "Pop")
             .scale(
               begin: Offset.zero,
               end: const Offset(1, 1),
               duration: 400.ms,
-              delay: (i * 100).ms,
-              curve: Curves.easeOutBack, // Fixed the curve name
+              // Delay: 1000ms (Wait for transition) + Stagger (Each star follows the other)
+              delay: (1000 + (i * 100)).ms, 
+              curve: Curves.easeOutBack, // The bouncy curve
             )
-            .fadeIn(duration: 200.ms, delay: (i * 100).ms),
+            // 2. Fade Animation (Ensures they don't just 'snap' into existence)
+            .fadeIn(
+              duration: 200.ms, 
+              delay: (1000 + (i * 100)).ms,
+            ),
           );
         }),
       ),
     );
   }
 }
-
 
 
 // ── Dot connector ─────────────────────────────────────────────────────────────
