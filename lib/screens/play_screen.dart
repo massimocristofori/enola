@@ -24,7 +24,6 @@ class PlayScreen extends ConsumerStatefulWidget {
 
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
-  String? _initError;
 
   @override
   void initState() {
@@ -36,6 +35,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     ref.read(playStateProvider.notifier).reset();
 
     try {
+      await DriftService.instance.ensureReady();
+
       final db = DriftService.instance.db;
       final riddles = await db.getRiddlesForMap(widget.mapId);
 
@@ -81,9 +82,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             sessionId, lastCompleted, correctAnswers, riddleStars);
 
     } catch (e, stackTrace) {
-      if (mounted) {
-        setState(() => _initError = '$e\n\n$stackTrace');
-      }
+      debugPrint("Session Init Error: $e");
+      debugPrint("$stackTrace");
     } finally {
       if (mounted) {
         setState(() => _initialising = false);
@@ -144,98 +144,92 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     return Scaffold(
       body: FantasyBackground(
         child: SafeArea(
-          child: _initError != null
-              ? SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: SelectableText(
-                    _initError!,
-                    style: const TextStyle(fontSize: 11, color: Colors.red),
-                  ),
-                )
-              : showingLoader
-                  ? const Center(
-                      child: CircularProgressIndicator(color: EnolaTheme.accent))
-                  : mapAsync.when(
-                      loading: () => const Center(
-                          child: CircularProgressIndicator(color: EnolaTheme.accent)),
-                      error: (e, _) => Center(child: Text('$e')),
-                      data: (map) => riddlesAsync.when(
-                        loading: () => const Center(
-                            child: CircularProgressIndicator(
-                                color: EnolaTheme.accent)),
-                        error: (e, _) => Center(child: Text('$e')),
-                        data: (riddles) => Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
-                              child: Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.close_rounded),
-                                    onPressed: () => Navigator.pop(context),
-                                  ),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          map?.title ?? '',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 16,
-                                            color: EnolaTheme.textPrimary,
-                                          ),
-                                        ),
-                                        Text(
-                                          '${playState.lastCompletedIndex + 1} / ${riddles.length} completed',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: EnolaTheme.textSecond,
-                                          ),
-                                        ),
-                                      ],
+          child: showingLoader
+              ? const Center(
+                  child: CircularProgressIndicator(color: EnolaTheme.accent))
+              : mapAsync.when(
+                  loading: () => const Center(
+                      child: CircularProgressIndicator(color: EnolaTheme.accent)),
+                  error: (e, _) => Center(child: Text('$e')),
+                  data: (map) => riddlesAsync.when(
+                    loading: () => const Center(
+                        child: CircularProgressIndicator(
+                            color: EnolaTheme.accent)),
+                    error: (e, _) => Center(child: Text('$e')),
+                    data: (riddles) => Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      map?.title ?? '',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 16,
+                                        color: EnolaTheme.textPrimary,
+                                      ),
                                     ),
-                                  ),
-                                  _SessionStarBadge(playState: playState),
-                                ],
-                              ),
-                            ),
-
-                            if (playState.lastCompletedIndex < riddles.length - 1)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Text(
-                                  'Tap the glowing node to answer the next riddle',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                    color: EnolaTheme.textSecond.withAlpha(180),
-                                  ),
-                                ).animate().fadeIn(delay: 400.ms),
-                              ),
-
-                            Expanded(
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                                child: TreasureMapPath(
-                                  riddles: riddles,
-                                  mapId: widget.mapId,
-                                  lastCompletedIndex: playState.lastCompletedIndex,
-                                  onCurrentNodeTap:
-                                      playState.lastCompletedIndex <
-                                              riddles.length - 1
-                                          ? () => _onNodeTap(
-                                                riddles,
-                                                playState.lastCompletedIndex + 1,
-                                              )
-                                          : null,
+                                    Text(
+                                      '${playState.lastCompletedIndex + 1} / ${riddles.length} completed',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: EnolaTheme.textSecond,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
+                              _SessionStarBadge(playState: playState),
+                            ],
+                          ),
                         ),
-                      ),
+
+                        if (playState.lastCompletedIndex < riddles.length - 1)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'Tap the glowing node to answer the next riddle',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: EnolaTheme.textSecond.withAlpha(180),
+                              ),
+                            ).animate().fadeIn(delay: 400.ms),
+                          ),
+
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding:
+                                const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                            child: TreasureMapPath(
+                              riddles: riddles,
+                              mapId: widget.mapId,
+                              lastCompletedIndex:
+                                  playState.lastCompletedIndex,
+                              onCurrentNodeTap:
+                                  playState.lastCompletedIndex <
+                                          riddles.length - 1
+                                      ? () => _onNodeTap(
+                                            riddles,
+                                            playState.lastCompletedIndex + 1,
+                                          )
+                                      : null,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
         ),
       ),
     );
