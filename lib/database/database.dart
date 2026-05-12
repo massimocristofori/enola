@@ -117,7 +117,7 @@ class AppDatabase extends _$AppDatabase {
     },
     beforeOpen: (details) async {
       // Enable foreign keys
-      await details.executor.runCustom('PRAGMA foreign_keys = ON');
+      await customStatement('PRAGMA foreign_keys = ON');
 
       // Safety net for web/WASM: ensure all columns exist regardless
       // of whether migrations ran correctly. SQLite throws if the column
@@ -129,7 +129,7 @@ class AppDatabase extends _$AppDatabase {
       ];
       for (final sql in safeAlters) {
         try {
-          await details.executor.runCustom(sql);
+          await customStatement(sql);
         } catch (_) {
           // Column already exists — expected on most opens
         }
