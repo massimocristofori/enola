@@ -14,7 +14,7 @@ class TreasureMapPath extends ConsumerWidget {
   final String mapId;
   final VoidCallback? onCurrentNodeTap;
   final int? lastCompletedIndex;
-  final List<int> riddleStars; 
+  final List<int> riddleStars;
   final Uint8List? imageBytes;
 
   const TreasureMapPath({
@@ -61,6 +61,7 @@ class TreasureMapPath extends ConsumerWidget {
                 status: status,
                 stars: stars,
                 imageBytes: imageBytes,
+                // Only allow tap if it's the current node
                 onTap: isCurrent && onCurrentNodeTap != null
                     ? onCurrentNodeTap
                     : null,
@@ -71,8 +72,7 @@ class TreasureMapPath extends ConsumerWidget {
                 from: alignment,
                 to: _getAlignment(index + 1),
                 isUnlocked: isCompleted,
-                // Passing index to seed "random" colors so they are consistent on rebuild
-                seed: index, 
+                seed: index,
               ),
           ],
         );
@@ -80,7 +80,6 @@ class TreasureMapPath extends ConsumerWidget {
     );
   }
 
-  // Updated to 2 columns: Alternates Left and Right
   Alignment _getAlignment(int index) {
     return (index % 2 == 0) ? Alignment.centerLeft : Alignment.centerRight;
   }
@@ -96,6 +95,7 @@ class _RiddleNode extends StatefulWidget {
   final VoidCallback? onTap;
 
   const _RiddleNode({
+    super.key,
     required this.index,
     required this.status,
     required this.stars,
@@ -110,6 +110,7 @@ class _RiddleNode extends StatefulWidget {
 class _RiddleNodeState extends State<_RiddleNode>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
+  bool _isReached = false;
 
   @override
   void initState() {
@@ -120,19 +121,29 @@ class _RiddleNodeState extends State<_RiddleNode>
       lowerBound: 0.92,
       upperBound: 1.08,
     );
+
+    _checkActivation();
+  }
+
+  void _checkActivation() {
     if (widget.status == NodeStatus.current) {
-      _pulse.repeat(reverse: true);
+      // Delay the "activation" to match the dot connector animation (1200ms)
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) {
+          setState(() => _isReached = true);
+          _pulse.repeat(reverse: true);
+        }
+      });
+    } else if (widget.status == NodeStatus.completed) {
+      _isReached = true;
     }
   }
 
   @override
   void didUpdateWidget(_RiddleNode old) {
     super.didUpdateWidget(old);
-    if (widget.status == NodeStatus.current) {
-      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
-    } else {
-      _pulse.stop();
-      _pulse.value = 1.0;
+    if (widget.status != old.status) {
+      _checkActivation();
     }
   }
 
@@ -144,23 +155,23 @@ class _RiddleNodeState extends State<_RiddleNode>
 
   @override
   Widget build(BuildContext context) {
-    final isLocked = widget.status == NodeStatus.locked;
+    final isLocked = widget.status == NodeStatus.locked || (widget.status == NodeStatus.current && !_isReached);
     final isCompleted = widget.status == NodeStatus.completed;
-    final isCurrent = widget.status == NodeStatus.current;
+    final isCurrentReached = widget.status == NodeStatus.current && _isReached;
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: isCurrentReached ? widget.onTap : null,
       child: Container(
         width: 110,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: ScaleTransition(
-          scale: isCurrent ? _pulse : const AlwaysStoppedAnimation(1.0),
+          scale: isCurrentReached ? _pulse : const AlwaysStoppedAnimation(1.0),
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 25.0), 
-                child: _buildBox(isCompleted, isCurrent, isLocked),
+                padding: const EdgeInsets.only(top: 18.0), // Reduced from 25.0
+                child: _buildBox(isCompleted, isCurrentReached, isLocked),
               ),
               if (isCompleted)
                 Positioned(top: 0, child: _StarsRow(stars: widget.stars)),
@@ -172,7 +183,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   }
 
   Widget _buildBox(bool isCompleted, bool isCurrent, bool isLocked) {
-    const double size = 60; 
+    const double size = 60;
     const radius = BorderRadius.all(Radius.circular(18));
 
     if (isCurrent) {
@@ -182,7 +193,9 @@ class _RiddleNodeState extends State<_RiddleNode>
         decoration: BoxDecoration(
           color: EnolaTheme.accent,
           borderRadius: radius,
-          boxShadow: [BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12)],
+          boxShadow: [
+            BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12)
+          ],
         ),
         child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
       );
@@ -216,7 +229,10 @@ class _RiddleNodeState extends State<_RiddleNode>
             if (widget.imageBytes != null)
               Image.memory(widget.imageBytes!, fit: BoxFit.cover)
             else
-              Center(child: Icon(Icons.map_rounded, color: EnolaTheme.accent.withAlpha(120), size: 32)),
+              Center(
+                child: Icon(Icons.map_rounded,
+                    color: EnolaTheme.accent.withAlpha(120), size: 32),
+              ),
             Container(color: Colors.white.withOpacity(0.3)),
           ],
         ),
@@ -235,12 +251,12 @@ class _StarsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 100,
-      height: 45,
+      height: 42,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: List.generate(3, (i) {
           final isFilled = i < stars;
-          double horizontalOffset = (i - 1) * 22.0; 
+          double horizontalOffset = (i - 1) * 22.0;
           double verticalOffset = (i == 1) ? -3.0 : 0.0;
 
           return Transform.translate(
@@ -248,8 +264,17 @@ class _StarsRow extends StatelessWidget {
             child: Icon(
               Icons.star_rounded,
               size: 42,
-              color: isFilled ? const Color(0xFFE8C840) : const Color(0xFFE8C840).withAlpha(55),
-              shadows: isFilled ? [const Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))] : null,
+              color: isFilled
+                  ? const Color(0xFFE8C840)
+                  : const Color(0xFFE8C840).withAlpha(55),
+              shadows: isFilled
+                  ? [
+                      const Shadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2))
+                    ]
+                  : null,
             ),
           );
         }),
@@ -267,6 +292,7 @@ class _DotConnector extends StatefulWidget {
   final int seed;
 
   const _DotConnector({
+    super.key,
     required this.from,
     required this.to,
     required this.isUnlocked,
@@ -312,7 +338,7 @@ class _DotConnectorState extends State<_DotConnector>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 80, // Increased height for better diagonal curves
+      height: 60, // Reduced from 80 for tighter layout
       width: double.infinity,
       child: AnimatedBuilder(
         animation: _progress,
@@ -323,7 +349,7 @@ class _DotConnectorState extends State<_DotConnector>
             baseColor: EnolaTheme.accent,
             lockedColor: EnolaTheme.accent.withAlpha(55),
             progress: _progress.value,
-            dotCount: 4,
+            dotCount: 3, // Reduced from 4
             seed: widget.seed,
           ),
         ),
@@ -353,23 +379,24 @@ class _DotPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Start from the SIDE of the node
     final bool isFromLeft = from.x < 0;
-    final double startX = isFromLeft 
-        ? (size.width * 0.15 + 30) // Left node's right side
-        : (size.width * 0.85 - 30); // Right node's left side
     
-    // End at the TOP of the next node
+    // Start from the side of current node
+    final double startX = isFromLeft 
+        ? (size.width * 0.15 + 35) 
+        : (size.width * 0.85 - 35);
+    
+    // End at the side of the next node
     final double endX = (to.x < 0) 
-        ? size.width * 0.15 
-        : size.width * 0.85;
+        ? size.width * 0.15 + 30
+        : size.width * 0.85 - 30;
 
     final path = Path()
-      ..moveTo(startX, 0) // Starts at level with current node
+      ..moveTo(startX, 0)
       ..cubicTo(
-        startX + (isFromLeft ? 50 : -50), 0, // Pull out horizontally
-        endX, size.height * 0.2, // Aim for top center
-        endX, size.height, // Finish at next node
+        startX + (isFromLeft ? 60 : -60), size.height * 0.1,
+        endX + (to.x < 0 ? -20 : 20), size.height * 0.5,
+        endX, size.height,
       );
 
     final metrics = path.computeMetrics().first;
@@ -382,8 +409,6 @@ class _DotPainter extends CustomPainter {
       if (tangent == null) continue;
 
       final isLit = t <= progress;
-      
-      // Random "Gradient" logic: varies opacity between 0.6 and 1.0 for unlocked dots
       final double randomOpacity = 0.6 + (random.nextDouble() * 0.4);
       
       final paint = Paint()
