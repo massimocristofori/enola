@@ -387,7 +387,7 @@ class _DotConnectorState extends State<_DotConnector>
             baseColor: EnolaTheme.accent,
             lockedColor: EnolaTheme.accent.withAlpha(55),
             progress: _progress.value,
-            dotCount: 3, // Reduced from 4
+            dotCount: 2, // Reduced from 4
             seed: widget.seed,
           ),
         ),
