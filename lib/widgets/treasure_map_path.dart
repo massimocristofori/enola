@@ -224,7 +224,7 @@ class _RiddleNodeState extends State<_RiddleNode>
         // Outer Gold Border (4 pixels with opacity)
         border: Border.all(
           color: const Color(0xFFE8C840).withOpacity(0.6), // Adjust opacity as needed
-          width: 4.0,
+          width: 3.0,
         ),
       ),
       // Inner container to create the White Border (2 pixels)
