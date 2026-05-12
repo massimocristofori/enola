@@ -9,10 +9,14 @@ import 'package:enola/database/schema_utils.dart';
 class DriftService {
   static final DriftService instance = DriftService._internal();
   late AppDatabase db;
+  late Future<void> _ready;
 
   DriftService._internal() {
     db = AppDatabase(impl.connect());
+    _ready = db.customSelect('SELECT 1').get().then((_) {}).catchError((_) {});
   }
+
+  Future<void> ensureReady() => _ready;
 
   // ── MAPS ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +149,6 @@ class DriftService {
         totalRiddles: Value(totalRiddles),
         correctAnswers: const Value(0),
         startedAt: Value(DateTime.now()),
-        // publicId omitted — clientDefault on the table handles it
       ),
     );
   }
