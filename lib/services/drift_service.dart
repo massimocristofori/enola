@@ -141,11 +141,11 @@ class DriftService {
   Future<int> startSession(String mapId, int totalRiddles) async {
     return await db.into(db.playSessions).insert(
       PlaySessionsCompanion.insert(
-        publicId: Value(const Uuid().v4()),
         mapId: mapId,
         totalRiddles: Value(totalRiddles),
         correctAnswers: const Value(0),
         startedAt: Value(DateTime.now()),
+        // publicId omitted — clientDefault on the table handles it
       ),
     );
   }
@@ -153,7 +153,8 @@ class DriftService {
   Future<void> incrementScore(int sessionId) async {
     final current = await (db.select(db.playSessions)
           ..where((t) => t.id.equals(sessionId)))
-        .getSingle();
+        .getSingleOrNull();
+    if (current == null) return;
     await db.update(db.playSessions).replace(
       current.copyWith(correctAnswers: current.correctAnswers + 1),
     );
