@@ -130,7 +130,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   void _checkActivation() {
     if (widget.status == NodeStatus.current) {
       // Delay the "activation" to match the dot connector animation (1200ms)
-      Future.delayed(const Duration(milliseconds: 1200), () {
+      Future.delayed(const Duration(milliseconds: 2300), () {
         if (mounted) {
           setState(() => _isReached = true);
           _pulse.repeat(reverse: true);
