@@ -27,10 +27,14 @@ class TreasureMapPath extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Note: Removed ref.watch logic here to keep code concise, 
-    // but ensure your session logic remains in your local implementation.
-    final int lastCompleted = lastCompletedIndex ?? -1;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final int lastCompleted;
+    if (lastCompletedIndex != null) {
+      lastCompleted = lastCompletedIndex!;
+    } else {
+      final sessionAsync = ref.watch(latestSessionProvider(mapId));
+      lastCompleted = sessionAsync.valueOrNull?.lastCompletedIndex ?? -1;
+    }
 
     return Column(
       children: List.generate(riddles.length, (index) {
@@ -127,7 +131,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   void didUpdateWidget(_RiddleNode old) {
     super.didUpdateWidget(old);
     if (widget.status == NodeStatus.current) {
-      _pulse.repeat(reverse: true);
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
     } else {
       _pulse.stop();
       _pulse.value = 1.0;
@@ -175,7 +179,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   }
 
   Widget _buildBox(bool isCompleted, bool isCurrent, bool isLocked) {
-    const double size = 60; // Increased back to 60
+    const double size = 60; 
     const radius = BorderRadius.all(Radius.circular(18));
 
     if (isCurrent) {
@@ -208,7 +212,6 @@ class _RiddleNodeState extends State<_RiddleNode>
       );
     }
 
-    // Completed: Bolder gold border + Image with Transparent White Layer
     return Container(
       width: size,
       height: size,
@@ -255,15 +258,14 @@ class _StarsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 100,
+      height: 45,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: List.generate(3, (i) {
           final isFilled = i < stars;
           final bool isMiddle = i == 1;
           
-          // Positioning stars closer (offsets: -22, 0, 22)
           double horizontalOffset = (i - 1) * 22.0; 
-          // Move middle star up by 3 pixels
           double verticalOffset = isMiddle ? -3.0 : 0.0;
 
           return Transform.translate(
