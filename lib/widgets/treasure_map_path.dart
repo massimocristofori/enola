@@ -13,8 +13,8 @@ class TreasureMapPath extends ConsumerWidget {
   final String mapId;
   final VoidCallback? onCurrentNodeTap;
   final int? lastCompletedIndex;
-  final List<int> riddleStars; // NEW: per-riddle star counts (0–3)
-  final Uint8List? imageBytes; // NEW: map cover image
+  final List<int> riddleStars; 
+  final Uint8List? imageBytes;
 
   const TreasureMapPath({
     super.key,
@@ -150,23 +150,26 @@ class _RiddleNodeState extends State<_RiddleNode>
     final isCompleted = widget.status == NodeStatus.completed;
     final isCurrent = widget.status == NodeStatus.current;
 
+    // Use a Stack to allow stars to overlap the box
     Widget node = GestureDetector(
       onTap: widget.onTap,
       child: SizedBox(
-        width: 90,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        width: 100, // Slightly wider to accommodate larger stars
+        child: Stack(
+          alignment: Alignment.topCenter,
           children: [
-            // Stars row above node (only for completed)
+            // The Box (positioned with padding to make room for overlapping stars)
+            Padding(
+              padding: const EdgeInsets.only(top: 28.0), 
+              child: _buildBox(isCompleted, isCurrent, isLocked),
+            ),
+
+            // The Stars (positioned to overlap the box)
             if (isCompleted)
-              _StarsRow(stars: widget.stars)
-            else
-              const SizedBox(height: 20), // keep spacing consistent
-
-            const SizedBox(height: 4),
-
-            // Node box
-            _buildBox(isCompleted, isCurrent, isLocked),
+              Positioned(
+                top: 0,
+                child: _StarsRow(stars: widget.stars),
+              ),
           ],
         ),
       ),
@@ -180,10 +183,9 @@ class _RiddleNodeState extends State<_RiddleNode>
   }
 
   Widget _buildBox(bool isCompleted, bool isCurrent, bool isLocked) {
-    const double size = 80;
-    const radius = BorderRadius.all(Radius.circular(18));
+    const double size = 52; // Slightly smaller node
+    const radius = BorderRadius.all(Radius.circular(16));
 
-    // Current: solid teal with star icon
     if (isCurrent) {
       return Container(
         width: size,
@@ -195,11 +197,10 @@ class _RiddleNodeState extends State<_RiddleNode>
             BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12),
           ],
         ),
-        child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
+        child: const Icon(Icons.star_rounded, color: Colors.white, size: 36),
       );
     }
 
-    // Locked: outline only
     if (isLocked) {
       return Container(
         width: size,
@@ -215,7 +216,7 @@ class _RiddleNodeState extends State<_RiddleNode>
       );
     }
 
-    // Completed: gold border + image
+    // Completed: Bolder gold border
     return Container(
       width: size,
       height: size,
@@ -224,18 +225,18 @@ class _RiddleNodeState extends State<_RiddleNode>
         borderRadius: radius,
         border: Border.all(
           color: const Color(0xFFE8C840),
-          width: 2.5,
+          width: 5.0, // Bolder border
         ),
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(15.5)),
+        borderRadius: const BorderRadius.all(Radius.circular(11)),
         child: widget.imageBytes != null
             ? Image.memory(widget.imageBytes!, fit: BoxFit.cover)
             : Center(
                 child: Icon(
                   Icons.map_rounded,
                   color: EnolaTheme.accent.withAlpha(120),
-                  size: 36,
+                  size: 30,
                 ),
               ),
       ),
@@ -246,7 +247,7 @@ class _RiddleNodeState extends State<_RiddleNode>
 // ── Stars row ─────────────────────────────────────────────────────────────────
 
 class _StarsRow extends StatelessWidget {
-  final int stars; // 0–3
+  final int stars;
 
   const _StarsRow({required this.stars});
 
@@ -255,12 +256,16 @@ class _StarsRow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (i) {
+        final isFilled = i < stars;
         return Icon(
           Icons.star_rounded,
-          size: 20,
-          color: i < stars
+          size: 42, // Bigger stars (nearly doubled)
+          color: isFilled
               ? const Color(0xFFE8C840)
               : const Color(0xFFE8C840).withAlpha(55),
+          shadows: isFilled ? [
+            const Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
+          ] : null,
         );
       }),
     );
@@ -294,10 +299,10 @@ class _DotConnectorState extends State<_DotConnector>
     super.initState();
     _fill = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1200), // Slower connection speed
       value: widget.isUnlocked ? 1.0 : 0.0,
     );
-    _progress = CurvedAnimation(parent: _fill, curve: Curves.easeOut);
+    _progress = CurvedAnimation(parent: _fill, curve: Curves.easeInOut);
   }
 
   @override
@@ -330,7 +335,7 @@ class _DotConnectorState extends State<_DotConnector>
             unlockedColor: EnolaTheme.accent,
             lockedColor: EnolaTheme.accent.withAlpha(55),
             progress: _progress.value,
-            dotCount: 4,
+            dotCount: 3,
           ),
         ),
       ),
@@ -362,7 +367,6 @@ class _DotPainter extends CustomPainter {
     final endX =
         ((to.x + 1) / 2 * size.width).clamp(50.0, size.width - 50.0);
 
-    // Same cubic curve as before — just draw dots along it instead of a line
     final path = Path()
       ..moveTo(startX, 0)
       ..cubicTo(
@@ -384,7 +388,7 @@ class _DotPainter extends CustomPainter {
         ..color = isLit ? unlockedColor : lockedColor
         ..style = PaintingStyle.fill;
 
-      canvas.drawCircle(tangent.position, 5, paint);
+      canvas.drawCircle(tangent.position, 7, paint); // Slightly bigger dots
     }
   }
 
