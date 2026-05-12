@@ -291,13 +291,23 @@ class _StarsRow extends StatelessWidget {
                           offset: Offset(0, 2))
                     ]
                   : null,
-            ),
+            )
+            .animate()
+            .scale(
+              begin: Offset.zero,
+              end: const Offset(1, 1),
+              duration: 400.ms,
+              delay: (i * 100).ms, // Stagger: Star 1, then 2, then 3
+              curve: Curves.backOut, // This creates the "bounce" effect
+            )
+            .fadeIn(duration: 200.ms, delay: (i * 100).ms),
           );
         }),
       ),
     );
   }
 }
+
 
 // ── Dot connector ─────────────────────────────────────────────────────────────
 
