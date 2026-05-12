@@ -260,7 +260,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                             padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
                             child: Center( // 1. Center the map
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 500), // 2. Fix the max width
+                                constraints: const BoxConstraints(maxWidth: 400), // 2. Fix the max width
                                 child: TreasureMapPath(
                                   riddles: riddles,
                                   mapId: widget.mapId,
