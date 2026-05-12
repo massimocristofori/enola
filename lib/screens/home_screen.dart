@@ -334,7 +334,7 @@ class _EarButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  const Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
