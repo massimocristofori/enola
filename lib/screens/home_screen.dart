@@ -132,9 +132,6 @@ class _MapGrid extends ConsumerWidget {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class _MapCard extends ConsumerWidget {
   final RiddleMap map;
