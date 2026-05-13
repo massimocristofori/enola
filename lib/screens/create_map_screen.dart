@@ -640,7 +640,7 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
 
     switch (_selectedType) {
       case RiddleType.multipleChoice:
-        _choices = List<String>.from(mc?.choices ?? widget.riddle.choices);
+        _choices = List<String>.from(mc?.choices ?? widget.riddle.choices ?? []);
         _correctIndex = mc?.correctIndex ?? widget.riddle.correctIndex ?? 0;
         _tfCorrectIndex = 0;
         _orderItems = [];
@@ -650,7 +650,7 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         _correctIndex = 0;
         _orderItems = [];
       case RiddleType.ordering:
-        _orderItems = List<String>.from(ord?.items ?? widget.riddle.choices);
+        _orderItems = List<String>.from(ord?.items ?? widget.riddle.choices ?? []);
         _choices = [];
         _correctIndex = 0;
         _tfCorrectIndex = 0;
