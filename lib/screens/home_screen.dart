@@ -179,147 +179,155 @@ class _MapCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countAsync = ref.watch(riddleCountProvider(map.id));
-    final count = countAsync.valueOrNull ?? 0;
-    final grad = _gradient();
+Widget build(BuildContext context, WidgetRef ref) {
+  final countAsync = ref.watch(riddleCountProvider(map.id));
+  final count = countAsync.valueOrNull ?? 0;
+  final grad = _gradient();
 
-    final Uint8List? imageBytes =
-        map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
+  final Uint8List? imageBytes =
+      map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Stack(
-            children: [
-              // ── Full card image / gradient ──
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: imageBytes != null
-                      ? Image.memory(
-                          imageBytes,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                        )
-                      : Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: grad,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/images/0.jpeg',
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                ),
-              ),
+  return GestureDetector(
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
+    ),
+    // --- KEY: clipBehavior.none so ears can overflow ---
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
 
-              // ── NEW: Top Left Ear (Edit) ──
-              Positioned(
-                top: 6,
-                left: 6,
-                child: _EarButton(
-                  icon: Icons.edit_rounded,
-                  onTap: () {
-                    // Replace with your actual Edit Screen
-                    // Navigator.push(context, MaterialPageRoute(builder: (_) => EditMapScreen(map: map)));
-                  },
-                ),
-              ),
-
-              // ── NEW: Top Right Ear (Delete) ──
-              Positioned(
-                top: 6,
-                right: 6,
-                child: _EarButton(
-                  icon: Icons.delete_forever_rounded,
-                  iconColor: Colors.redAccent,
-                  onTap: () => _confirmDelete(context, ref),
-                ),
-              ),
-
-              // ── Bottom info bar ──
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(10)),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.72),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          map.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                            color: EnolaTheme.textPrimary,
-                            height: 1.3,
-                            letterSpacing: 0.1,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.auto_stories_rounded,
-                                size: 14, color: Color(0xFF555555)),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$count',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF555555),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+        // ── The card itself ──
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Stack(
+              children: [
+                // ── Full card image / gradient ──
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: imageBytes != null
+                        ? Image.memory(
+                            imageBytes,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: grad,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/images/0.jpeg',
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+
+                // ── Bottom info bar ──
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(10)),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.72),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            map.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              color: EnolaTheme.textPrimary,
+                              height: 1.3,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.auto_stories_rounded,
+                                  size: 14, color: Color(0xFF555555)),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$count',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF555555),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
-    );
-  }
+
+        // ── Top-left ear (Edit) — overflows the card ──
+        Positioned(
+          top: -14,
+          left: -14,
+          child: _EarButton(
+            icon: Icons.edit_rounded,
+            onTap: () {
+              // Navigator.push(context, MaterialPageRoute(builder: (_) => EditMapScreen(map: map)));
+            },
+          ),
+        ),
+
+        // ── Top-right ear (Delete) — overflows the card ──
+        Positioned(
+          top: -14,
+          right: -14,
+          child: _EarButton(
+            icon: Icons.delete_forever_rounded,
+            iconColor: Colors.redAccent,
+            onTap: () => _confirmDelete(context, ref),
+          ),
+        ),
+
+      ],
+    ),
+  );
 }
+
 
 // Helper Widget for the Ear Buttons
 class _EarButton extends StatelessWidget {
