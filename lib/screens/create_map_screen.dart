@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:image_picker/image_picker.dart';
 
 import 'package:enola/database/database.dart';
 import 'package:enola/services/drift_service.dart';
@@ -49,7 +48,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       if (_existingMap != null) {
         _titleCtrl.text = _existingMap!.title;
         _subjectCtrl.text = _existingMap!.subject ?? '';
-        if (_existingMap!.imageBytes != null) _imageBytes = Uint8List.fromList(_existingMap!.imageBytes!);
+        if (_existingMap!.imageBytes != null) _imageBytes = _existingMap!.imageBytes;
       }
     } catch (e) {
       _showError("Load Error: $e");
@@ -59,36 +58,29 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   }
 
   void _showError(String msg) {
-    debugPrint("🚨 ERROR: $msg");
     setState(() => _lastError = msg);
   }
 
   void _addRiddle() {
-    try {
-      final newRiddle = Riddle(
-        id: 0,
-        mapId: 'temp',
-        typeIndex: 0,
-        question: '',
-        orderInMap: _riddles.length,
-        choicesJson: jsonEncode([]),
-        correctIndex: 0,
-      );
-      
-      setState(() {
-        _riddles.add(newRiddle);
-      });
+    final newRiddle = Riddle(
+      id: 0,
+      mapId: 'temp',
+      typeIndex: 0,
+      question: '',
+      orderInMap: _riddles.length,
+      choicesJson: jsonEncode([]),
+      correctIndex: 0,
+    );
+    
+    setState(() => _riddles.add(newRiddle));
 
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_pageCtrl.hasClients) {
-          _pageCtrl.animateToPage(_riddles.length, 
-              duration: const Duration(milliseconds: 300), 
-              curve: Curves.easeOut);
-        }
-      });
-    } catch (e) {
-      _showError("Add Riddle Crash: $e");
-    }
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_pageCtrl.hasClients) {
+        _pageCtrl.animateToPage(_riddles.length, 
+            duration: const Duration(milliseconds: 300), 
+            curve: Curves.easeOut);
+      }
+    });
   }
 
   Future<void> _save() async {
@@ -98,8 +90,11 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       final db = DriftService.instance.db;
       final mapId = _existingMap?.id ?? const Uuid().v4();
 
+      // Ensure your DriftService.saveMap handles these types correctly
       await DriftService.instance.saveMap(
-        mapId, _titleCtrl.text.trim(), null, 
+        mapId, 
+        _titleCtrl.text.trim(), 
+        null, 
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
         imageBytes: _imageBytes,
       );
@@ -114,7 +109,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
             question: r.question,
             typeIndex: r.typeIndex,
             orderInMap: i,
-            choicesJson: drift.Value(jsonEncode(r.choices ?? [])),
+            choicesJson: drift.Value(r.choicesJson),
             correctIndex: drift.Value(r.correctIndex),
           ));
         }
@@ -138,48 +133,24 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         title: const Text("Edit Map"),
         actions: [IconButton(icon: const Icon(Icons.save), onPressed: _saving ? null : _save)],
       ),
-      body: Stack(
-        children: [
-          Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageCtrl,
-                    itemCount: 1 + _riddles.length,
-                    itemBuilder: (context, index) {
-                      if (index == 0) return _buildMapDetails();
-                      return _RiddleEditorPage(
-                        key: ValueKey('riddle_page_${index - 1}'),
-                        riddle: _riddles[index - 1],
-                        onChanged: (u) => setState(() => _riddles[index - 1] = u),
-                        onDelete: () {
-                          setState(() => _riddles.removeAt(index - 1));
-                          _pageCtrl.jumpToPage(0);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_lastError != null)
-            Positioned(
-              top: 0, left: 0, right: 0,
-              child: Container(
-                color: Colors.red,
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(_lastError!, style: const TextStyle(color: Colors.white))),
-                    IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => setState(() => _lastError = null))
-                  ],
-                ),
-              ),
-            ),
-        ],
+      body: Form(
+        key: _formKey,
+        child: PageView.builder(
+          controller: _pageCtrl,
+          itemCount: 1 + _riddles.length,
+          itemBuilder: (context, index) {
+            if (index == 0) return _buildMapDetails();
+            return _RiddleEditorPage(
+              key: ValueKey('riddle_page_${index - 1}'),
+              riddle: _riddles[index - 1],
+              onChanged: (u) => setState(() => _riddles[index - 1] = u),
+              onDelete: () {
+                setState(() => _riddles.removeAt(index - 1));
+                _pageCtrl.jumpToPage(0);
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(onPressed: _addRiddle, child: const Icon(Icons.add)),
     );
@@ -217,20 +188,18 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     _qCtrl = TextEditingController(text: widget.riddle.question);
   }
 
-  List<String> _getSafeChoices() {
-    final raw = widget.riddle.choices;
-    if (raw == null) return [];
-    try {
-      final List<dynamic> list = raw as List<dynamic>;
-      return list.map((e) => e.toString()).toList();
-    } catch (e) {
-      return [];
+  @override
+  void didUpdateWidget(_RiddleEditorPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.riddle.question != _qCtrl.text) {
+      _qCtrl.text = widget.riddle.question;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final choices = _getSafeChoices();
+    // Using the extension method from your database.dart
+    final List<String> currentChoices = widget.riddle.choices;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -246,32 +215,39 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
           TextField(
             controller: _qCtrl,
             decoration: const InputDecoration(labelText: "Question"),
+            maxLines: 2,
             onChanged: (v) => widget.onChanged(widget.riddle.copyWith(question: v)),
           ),
           const SizedBox(height: 20),
-          ...List.generate(choices.length, (i) {
+          ...List.generate(currentChoices.length, (i) {
             return Row(
               children: [
                 Radio<int>(
                   value: i,
                   groupValue: widget.riddle.correctIndex,
-                  onChanged: (val) => widget.onChanged(widget.riddle.copyWith(correctIndex: val ?? 0)),
+                  onChanged: (val) => widget.onChanged(
+                    widget.riddle.copyWith(correctIndex: drift.Value(val))
+                  ),
                 ),
                 Expanded(
                   child: TextFormField(
-                    initialValue: choices[i],
+                    initialValue: currentChoices[i],
                     onChanged: (v) {
-                      final newChoices = List<String>.from(choices);
+                      final newChoices = List<String>.from(currentChoices);
                       newChoices[i] = v;
-                      widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
+                      widget.onChanged(
+                        widget.riddle.copyWith(choicesJson: drift.Value(jsonEncode(newChoices)))
+                      );
                     },
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.remove),
                   onPressed: () {
-                    final newChoices = List<String>.from(choices)..removeAt(i);
-                    widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
+                    final newChoices = List<String>.from(currentChoices)..removeAt(i);
+                    widget.onChanged(
+                      widget.riddle.copyWith(choicesJson: drift.Value(jsonEncode(newChoices)))
+                    );
                   },
                 )
               ],
@@ -279,8 +255,10 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
           }),
           TextButton(
             onPressed: () {
-              final newChoices = List<String>.from(choices)..add("");
-              widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
+              final newChoices = List<String>.from(currentChoices)..add("");
+              widget.onChanged(
+                widget.riddle.copyWith(choicesJson: drift.Value(jsonEncode(newChoices)))
+              );
             },
             child: const Text("Add Choice"),
           ),
