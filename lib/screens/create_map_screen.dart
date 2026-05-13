@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:image_picker/image_picker.dart';
 
 import 'package:enola/database/database.dart';
 import 'package:enola/services/drift_service.dart';
 import 'package:enola/providers/map_providers.dart';
+import 'package:enola/services/gemini_service.dart'; // Assuming this is your AI service
 
 class CreateMapScreen extends ConsumerStatefulWidget {
   final String? existingMapId;
@@ -29,6 +31,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
 
   bool _loading = false;
   bool _saving = false;
+  bool _isGeneratingAI = false;
   String? _lastError;
 
   @override
@@ -48,7 +51,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       if (_existingMap != null) {
         _titleCtrl.text = _existingMap!.title;
         _subjectCtrl.text = _existingMap!.subject ?? '';
-        if (_existingMap!.imageBytes != null) _imageBytes = _existingMap!.imageBytes;
+        _imageBytes = _existingMap!.imageBytes;
       }
     } catch (e) {
       _showError("Load Error: $e");
@@ -57,30 +60,54 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     }
   }
 
-  void _showError(String msg) {
-    setState(() => _lastError = msg);
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1024);
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() => _imageBytes = bytes);
+    }
   }
 
-  void _addRiddle() {
-    final newRiddle = Riddle(
-      id: 0,
-      mapId: 'temp',
-      typeIndex: 0,
-      question: '',
-      orderInMap: _riddles.length,
-      choicesJson: jsonEncode([]),
-      correctIndex: 0,
-    );
-    
-    setState(() => _riddles.add(newRiddle));
+  Future<void> _generateWithAI() async {
+    if (_subjectCtrl.text.isEmpty) {
+      _showError("Please enter a subject first");
+      return;
+    }
+    setState(() => _isGeneratingAI = true);
+    try {
+      // Restore your specific Gemini logic here
+      final result = await GeminiService.instance.generateRiddles(_subjectCtrl.text);
+      setState(() => _riddles.addAll(result));
+    } catch (e) {
+      _showError("AI Error: $e");
+    } finally {
+      setState(() => _isGeneratingAI = false);
+    }
+  }
 
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_pageCtrl.hasClients) {
-        _pageCtrl.animateToPage(_riddles.length, 
-            duration: const Duration(milliseconds: 300), 
-            curve: Curves.easeOut);
-      }
-    });
+  Future<void> _deleteMap() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text("Delete Map?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text("Delete", style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true && _existingMap != null) {
+      await DriftService.instance.db.delete(DriftService.instance.db.riddleMaps)
+          .where((t) => t.id.equals(_existingMap!.id)).go();
+      ref.invalidate(allMapsProvider);
+      Navigator.pop(context);
+    }
+  }
+
+  void _showError(String msg) {
+    setState(() => _lastError = msg);
   }
 
   Future<void> _save() async {
@@ -90,11 +117,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       final db = DriftService.instance.db;
       final mapId = _existingMap?.id ?? const Uuid().v4();
 
-      // Ensure your DriftService.saveMap handles these types correctly
       await DriftService.instance.saveMap(
-        mapId, 
-        _titleCtrl.text.trim(), 
-        null, 
+        mapId, _titleCtrl.text.trim(), null, 
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
         imageBytes: _imageBytes,
       );
@@ -131,28 +155,44 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Edit Map"),
-        actions: [IconButton(icon: const Icon(Icons.save), onPressed: _saving ? null : _save)],
+        actions: [
+          if (_existingMap != null) IconButton(icon: const Icon(Icons.delete_forever), onPressed: _deleteMap),
+          IconButton(icon: const Icon(Icons.save), onPressed: _saving ? null : _save)
+        ],
       ),
       body: Form(
         key: _formKey,
-        child: PageView.builder(
-          controller: _pageCtrl,
-          itemCount: 1 + _riddles.length,
-          itemBuilder: (context, index) {
-            if (index == 0) return _buildMapDetails();
-            return _RiddleEditorPage(
-              key: ValueKey('riddle_page_${index - 1}'),
-              riddle: _riddles[index - 1],
-              onChanged: (u) => setState(() => _riddles[index - 1] = u),
-              onDelete: () {
-                setState(() => _riddles.removeAt(index - 1));
-                _pageCtrl.jumpToPage(0);
-              },
-            );
-          },
+        child: Column(
+          children: [
+            if (_isGeneratingAI) const LinearProgressIndicator(),
+            Expanded(
+              child: PageView.builder(
+                controller: _pageCtrl,
+                itemCount: 1 + _riddles.length,
+                itemBuilder: (context, index) {
+                  if (index == 0) return _buildMapDetails();
+                  return _RiddleEditorPage(
+                    key: ValueKey('riddle_${index - 1}'),
+                    riddle: _riddles[index - 1],
+                    onChanged: (u) => setState(() => _riddles[index - 1] = u),
+                    onDelete: () {
+                      setState(() => _riddles.removeAt(index - 1));
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _addRiddle, child: const Icon(Icons.add)),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(heroTag: 'ai', onPressed: _generateWithAI, child: const Icon(Icons.auto_awesome)),
+          const SizedBox(height: 10),
+          FloatingActionButton(heroTag: 'add', onPressed: () => setState(() => _riddles.add(Riddle(id: 0, mapId: '', typeIndex: 0, question: '', orderInMap: _riddles.length))), child: const Icon(Icons.add)),
+        ],
+      ),
     );
   }
 
@@ -160,15 +200,16 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text("Map Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        TextFormField(controller: _titleCtrl, decoration: const InputDecoration(labelText: "Title")),
-        TextFormField(controller: _subjectCtrl, decoration: const InputDecoration(labelText: "Subject")),
+        if (_imageBytes != null) Image.memory(_imageBytes!, height: 150),
+        ElevatedButton.icon(onPressed: _pickImage, icon: const Icon(Icons.image), label: const Text("Set Cover Image")),
+        TextFormField(controller: _titleCtrl, decoration: const InputDecoration(labelText: "Map Title")),
+        TextFormField(controller: _subjectCtrl, decoration: const InputDecoration(labelText: "Subject (for AI)")),
       ],
     );
   }
 }
 
-class _RiddleEditorPage extends StatefulWidget {
+class _RiddleEditorPage extends StatelessWidget {
   final Riddle riddle;
   final ValueChanged<Riddle> onChanged;
   final VoidCallback onDelete;
@@ -176,30 +217,8 @@ class _RiddleEditorPage extends StatefulWidget {
   const _RiddleEditorPage({super.key, required this.riddle, required this.onChanged, required this.onDelete});
 
   @override
-  State<_RiddleEditorPage> createState() => _RiddleEditorPageState();
-}
-
-class _RiddleEditorPageState extends State<_RiddleEditorPage> {
-  late TextEditingController _qCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _qCtrl = TextEditingController(text: widget.riddle.question);
-  }
-
-  @override
-  void didUpdateWidget(_RiddleEditorPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.riddle.question != _qCtrl.text) {
-      _qCtrl.text = widget.riddle.question;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Using the extension method from your database.dart
-    final List<String> currentChoices = widget.riddle.choices;
+    final List<String> choices = riddle.choices;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -208,60 +227,37 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Riddle Editor", style: TextStyle(fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: widget.onDelete),
+              Text("Riddle #${riddle.orderInMap + 1}"),
+              IconButton(icon: const Icon(Icons.delete), onPressed: onDelete),
             ],
           ),
           TextField(
-            controller: _qCtrl,
+            controller: TextEditingController(text: riddle.question)..selection = TextSelection.collapsed(offset: riddle.question.length),
+            onChanged: (v) => onChanged(riddle.copyWith(question: v)),
             decoration: const InputDecoration(labelText: "Question"),
-            maxLines: 2,
-            onChanged: (v) => widget.onChanged(widget.riddle.copyWith(question: v)),
           ),
           const SizedBox(height: 20),
-          ...List.generate(currentChoices.length, (i) {
+          ...List.generate(choices.length, (i) {
             return Row(
               children: [
                 Radio<int>(
                   value: i,
-                  groupValue: widget.riddle.correctIndex,
-                  onChanged: (val) => widget.onChanged(
-                    widget.riddle.copyWith(correctIndex: drift.Value(val))
-                  ),
+                  groupValue: riddle.correctIndex,
+                  onChanged: (val) => onChanged(riddle.copyWith(correctIndex: drift.Value(val))),
                 ),
                 Expanded(
-                  child: TextFormField(
-                    initialValue: currentChoices[i],
+                  child: TextField(
+                    controller: TextEditingController(text: choices[i])..selection = TextSelection.collapsed(offset: choices[i].length),
                     onChanged: (v) {
-                      final newChoices = List<String>.from(currentChoices);
-                      newChoices[i] = v;
-                      widget.onChanged(
-                        widget.riddle.copyWith(choicesJson: drift.Value(jsonEncode(newChoices)))
-                      );
+                      final list = List<String>.from(choices);
+                      list[i] = v;
+                      onChanged(riddle.copyWith(choicesJson: drift.Value(jsonEncode(list))));
                     },
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  onPressed: () {
-                    final newChoices = List<String>.from(currentChoices)..removeAt(i);
-                    widget.onChanged(
-                      widget.riddle.copyWith(choicesJson: drift.Value(jsonEncode(newChoices)))
-                    );
-                  },
-                )
               ],
             );
           }),
-          TextButton(
-            onPressed: () {
-              final newChoices = List<String>.from(currentChoices)..add("");
-              widget.onChanged(
-                widget.riddle.copyWith(choicesJson: drift.Value(jsonEncode(newChoices)))
-              );
-            },
-            child: const Text("Add Choice"),
-          ),
         ],
       ),
     );
