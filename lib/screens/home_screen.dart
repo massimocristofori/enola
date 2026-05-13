@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -132,12 +133,10 @@ class _MapGrid extends ConsumerWidget {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-
 class _MapCard extends ConsumerWidget {
   final RiddleMap map;
   const _MapCard({required this.map});
 
-  // --- RESTORED GRADIENT DATA ---
   static const List<List<Color>> _gradients = [
     [Color(0xFFa78bfa), Color(0xFF7C3AED)],
     [Color(0xFFf472b6), Color(0xFFEC4899)],
@@ -147,19 +146,18 @@ class _MapCard extends ConsumerWidget {
     [Color(0xFFf87171), Color(0xFFDC2626)],
   ];
 
-  // --- RESTORED GRADIENT METHOD ---
   List<Color> _gradient() {
     final idx = map.id.codeUnits.fold(0, (a, b) => a + b) % _gradients.length;
     return _gradients[idx];
   }
 
-  // Confirmation dialog for deletion
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Map'),
-        content: const Text('Are you sure you want to delete this map? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to delete this map? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -167,11 +165,10 @@ class _MapCard extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () {
-              // TODO: Call your delete provider logic here
-              // ref.read(yourMapProvider.notifier).delete(map.id);
               Navigator.pop(context);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child:
+                const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -179,158 +176,224 @@ class _MapCard extends ConsumerWidget {
   }
 
   @override
-Widget build(BuildContext context, WidgetRef ref) {
-  final countAsync = ref.watch(riddleCountProvider(map.id));
-  final count = countAsync.valueOrNull ?? 0;
-  final grad = _gradient();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final grad = _gradient();
 
-  final Uint8List? imageBytes =
-      map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
+    final Uint8List? imageBytes =
+        map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
-  return GestureDetector(
-    onTap: () => Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
-    ),
-    // --- KEY: clipBehavior.none so ears can overflow ---
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
 
-        // ── The card itself ──
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Stack(
-              children: [
-                // ── Full card image / gradient ──
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: imageBytes != null
-                        ? Image.memory(
-                            imageBytes,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: grad,
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: Center(
-                              child: Image.asset(
-                                'assets/images/0.jpeg',
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                  ),
+          // ── The card itself ──
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-
-                // ── Bottom info bar ──
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(10)),
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.72),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            map.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w400,
-                              color: EnolaTheme.textPrimary,
-                              height: 1.3,
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(Icons.auto_stories_rounded,
-                                  size: 14, color: Color(0xFF555555)),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$count',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF555555),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Stack(
+                children: [
+                  // ── Full card image / gradient ──
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: imageBytes != null
+                          ? Image.memory(
+                              imageBytes,
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: grad,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
                               ),
-                            ],
-                          ),
-                        ],
+                              child: Center(
+                                child: Image.asset(
+                                  'assets/images/0.jpeg',
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  // ── Bottom info bar ──
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(10)),
+                      child: _CardInfoBar(mapId: map.id, title: map.title),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Top-left ear (Edit) ──
+          Positioned(
+            top: -6,
+            left: -6,
+            child: _EarButton(
+              icon: Icons.edit_rounded,
+              iconColor: EnolaTheme.textSecond,
+              onTap: () {},
+            ),
+          ),
+
+          // ── Top-right ear (Delete) ──
+          Positioned(
+            top: -6,
+            right: -6,
+            child: _EarButton(
+              icon: Icons.delete_forever_rounded,
+              iconColor: Colors.redAccent,
+              onTap: () => _confirmDelete(context, ref),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Card Info Bar ─────────────────────────────────────────────────────────────
+
+class _CardInfoBar extends ConsumerWidget {
+  final String mapId;
+  final String title;
+
+  const _CardInfoBar({required this.mapId, required this.title});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countAsync = ref.watch(riddleCountProvider(mapId));
+    final sessionAsync = ref.watch(latestSessionProvider(mapId));
+
+    final count = countAsync.valueOrNull ?? 0;
+    final maxStars = count * 3;
+
+    final session = sessionAsync.valueOrNull;
+
+    // Parse achieved stars from riddleStarsJson
+    int achievedStars = 0;
+    if (session != null && session.riddleStarsJson != null) {
+      try {
+        final list = jsonDecode(session.riddleStarsJson!) as List;
+        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+      } catch (_) {
+        achievedStars = 0;
+      }
+    }
+
+    final hasBeenPlayed = session != null;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // --- Title ---
+          Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w400,
+              color: EnolaTheme.textPrimary,
+              height: 1.3,
+              letterSpacing: 0.1,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // --- Stars row: not played ---
+          if (!hasBeenPlayed)
+            Row(
+              children: [
+                const Icon(Icons.star_rounded,
+                    size: 15, color: Color(0xFFf59e0b)),
+                const SizedBox(width: 4),
+                Text(
+                  '$maxStars',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF555555),
+                  ),
+                ),
+              ],
+            )
+
+          // --- Progress bar: played ---
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        size: 15, color: Color(0xFFf59e0b)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$achievedStars / $maxStars',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF555555),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: maxStars > 0 ? achievedStars / maxStars : 0,
+                    minHeight: 5,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFf59e0b)),
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-
-        // ── Top-left ear (Edit) — overflows the card ──
-        Positioned(
-          top: -6,
-          left: -6,
-          child: _EarButton(
-            icon: Icons.edit_rounded,
-            iconColor: EnolaTheme.textSecond,
-            onTap: () {
-              // Navigator.push(context, MaterialPageRoute(builder: (_) => EditMapScreen(map: map)));
-            },
-          ),
-        ),
-
-        // ── Top-right ear (Delete) — overflows the card ──
-        Positioned(
-          top: -6,
-          right: -6,
-          child: _EarButton(
-            icon: Icons.delete_forever_rounded,
-            iconColor: Colors.redAccent,
-            onTap: () => _confirmDelete(context, ref),
-          ),
-        ),
-
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 }
 
-// Helper Widget for the Ear Buttons
+// ── Ear Button ────────────────────────────────────────────────────────────────
+
 class _EarButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -349,7 +412,7 @@ class _EarButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: const BoxDecoration(
-          color: Colors.white, // Semi-transparent background for visibility
+          color: Colors.white,
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 22, color: iconColor),
@@ -357,7 +420,6 @@ class _EarButton extends StatelessWidget {
     );
   }
 }
-
 
 // ── Empty State ───────────────────────────────────────────────────────────────
 
