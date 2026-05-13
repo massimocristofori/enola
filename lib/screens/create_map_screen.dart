@@ -135,23 +135,23 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     final blank = _blankRiddle();
     setState(() => _riddles.insert(insertAt, blank));
     final targetPage = insertAt + 1;
-    // animate after the frame so PageView has rebuilt
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _pageCtrl.animateToPage(
-        targetPage,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-      );
+      if (_pageCtrl.hasClients) {
+        _pageCtrl.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
   void _deleteRiddle(int riddleIndex) {
     setState(() => _riddles.removeAt(riddleIndex));
-    // if we deleted the last riddle, move back one page
     final newPage = (_currentPage > _riddles.length) ? _riddles.length : _currentPage;
     if (newPage != _currentPage) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _pageCtrl.jumpToPage(newPage);
+        if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(newPage);
       });
     }
   }
@@ -192,16 +192,15 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         typeIndex: RiddleType.multipleChoice.index,
         question: '',
         orderInMap: 0,
-        payloadJson: null,
-        choicesJson: null,
-        correctIndex: null,
+        payloadJson: jsonEncode({}),
+        choicesJson: jsonEncode([]),
+        correctIndex: 0,
       );
 
   // ── SAVE ───────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
-      // snap to map page so user sees the validation error
       _pageCtrl.animateToPage(0,
           duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
       return;
@@ -250,7 +249,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       case RiddleType.multipleChoice:
       case RiddleType.trueFalse:
         final mc = riddle.asMultipleChoice;
-        final choices = mc?.choices ?? riddle.choices;
+        final choices = mc?.choices ?? riddle.choices ?? [];
         final correct = mc?.correctIndex ?? riddle.correctIndex ?? 0;
         final payload =
             MultipleChoicePayload(choices: choices, correctIndex: correct);
@@ -266,7 +265,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
 
       case RiddleType.ordering:
         final ord = riddle.asOrdering;
-        final items = ord?.items ?? riddle.choices;
+        final items = ord?.items ?? riddle.choices ?? [];
         final payload = OrderingPayload(items: items);
         return RiddlesCompanion.insert(
           mapId: mapId,
@@ -292,9 +291,11 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       setState(() => _riddles.insertAll(insertAt, generated));
       final targetPage = insertAt + 1;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _pageCtrl.animateToPage(targetPage,
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeInOut);
+        if (_pageCtrl.hasClients) {
+          _pageCtrl.animateToPage(targetPage,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut);
+        }
       });
     }
   }
@@ -316,7 +317,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
             key: _formKey,
             child: Stack(
               children: [
-                // ── Main pager ──
                 Column(
                   children: [
                     _buildAppBar(),
@@ -332,11 +332,10 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                       ),
                     ),
                     _buildPageIndicator(),
-                    const SizedBox(height: 80), // FAB clearance
+                    const SizedBox(height: 80),
                   ],
                 ),
 
-                // ── FAB area ──
                 Positioned(
                   right: 20,
                   bottom: 20,
@@ -344,7 +343,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // small + button — always visible
                       _SmallFab(
                         icon: Icons.auto_fix_high_rounded,
                         tooltip: 'Scan with AI',
@@ -357,7 +355,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                         onTap: _insertRiddleAfterCurrent,
                       ),
                       const SizedBox(height: 10),
-                      // main save FAB
                       FloatingActionButton.extended(
                         heroTag: 'save_fab',
                         onPressed: _saving ? null : _save,
@@ -386,8 +383,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     );
   }
 
-  // ── APP BAR ────────────────────────────────────────────────────────────────
-
   Widget _buildAppBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -411,8 +406,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       ),
     );
   }
-
-  // ── PAGE 0 — MAP DETAILS ───────────────────────────────────────────────────
 
   Widget _buildMapDetailsPage() {
     return SingleChildScrollView(
@@ -503,8 +496,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     );
   }
 
-  // ── PAGES 1..n — RIDDLE EDITOR ─────────────────────────────────────────────
-
   Widget _buildRiddlePage(int riddleIndex) {
     final riddle = _riddles[riddleIndex];
     return _RiddleEditorPage(
@@ -521,8 +512,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     );
   }
 
-  // ── PAGE INDICATOR ─────────────────────────────────────────────────────────
-
   Widget _buildPageIndicator() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -535,9 +524,13 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
             final isMapPage = i == 0;
 
             return GestureDetector(
-              onTap: () => _pageCtrl.animateToPage(i,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut),
+              onTap: () {
+                 if (_pageCtrl.hasClients) {
+                    _pageCtrl.animateToPage(i,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut);
+                 }
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -548,8 +541,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                       ? EnolaTheme.accent
                       : EnolaTheme.accent.withAlpha(60),
                   borderRadius: isMapPage
-                      ? BorderRadius.circular(5) // pill/circle for map page
-                      : BorderRadius.circular(3), // square for riddle pages
+                      ? BorderRadius.circular(5)
+                      : BorderRadius.circular(3),
                   border: isMapPage
                       ? Border.all(color: EnolaTheme.accent, width: 1.5)
                       : null,
@@ -562,8 +555,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     );
   }
 }
-
-// ── SMALL FAB ─────────────────────────────────────────────────────────────────
 
 class _SmallFab extends StatelessWidget {
   final IconData icon;
@@ -592,8 +583,6 @@ class _SmallFab extends StatelessWidget {
     );
   }
 }
-
-// ── RIDDLE EDITOR PAGE ────────────────────────────────────────────────────────
 
 class _RiddleEditorPage extends StatefulWidget {
   final Riddle riddle;
@@ -666,8 +655,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     super.dispose();
   }
 
-  // ── EMIT changes up to parent ──────────────────────────────────────────────
-
   void _emit() {
     final String? payloadJson;
     final String? legacyChoicesJson;
@@ -720,8 +707,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     _emit();
   }
 
-  // ── BUILD ──────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -729,7 +714,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header row ──
           Row(
             children: [
               Text(
@@ -737,7 +721,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
                 style: EnolaTheme.sectionHeader,
               ),
               const Spacer(),
-              // move left
               IconButton(
                 icon: Icon(
                   Icons.chevron_left_rounded,
@@ -747,7 +730,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
                 ),
                 onPressed: widget.onMoveLeft,
               ),
-              // move right
               IconButton(
                 icon: Icon(
                   Icons.chevron_right_rounded,
@@ -757,7 +739,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
                 ),
                 onPressed: widget.onMoveRight,
               ),
-              // delete
               IconButton(
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: EnolaTheme.wrong),
@@ -766,8 +747,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
             ],
           ),
           const SizedBox(height: 12),
-
-          // ── Type selector ──
           const Text("TYPE", style: EnolaTheme.sectionHeader),
           const SizedBox(height: 10),
           Row(
@@ -821,12 +800,8 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
             }).toList(),
           ),
           const SizedBox(height: 20),
-
-          // ── Question ──
           FantasyTextField(controller: _qCtrl, label: 'The Question'),
           const SizedBox(height: 20),
-
-          // ── Type-specific form ──
           if (_selectedType == RiddleType.multipleChoice)
             _buildMultipleChoiceForm()
           else if (_selectedType == RiddleType.trueFalse)
@@ -865,8 +840,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
       ),
     );
   }
-
-  // ── MULTIPLE CHOICE ────────────────────────────────────────────────────────
 
   Widget _buildMultipleChoiceForm() {
     return Column(
@@ -955,8 +928,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     );
   }
 
-  // ── TRUE / FALSE ───────────────────────────────────────────────────────────
-
   Widget _buildTrueFalseForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1010,8 +981,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
       ),
     );
   }
-
-  // ── ORDERING ───────────────────────────────────────────────────────────────
 
   Widget _buildOrderingForm() {
     return Column(
@@ -1095,8 +1064,6 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
       ],
     );
   }
-
-  // ── HELPERS ────────────────────────────────────────────────────────────────
 
   String _typeShortLabel(RiddleType type) {
     switch (type) {
