@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,6 +24,16 @@ class _ScanScreenState extends State<ScanScreen> {
   String? _error;
   String _status = '';
 
+  // Timer-related state for handling Quota/Rate limits
+  int _retrySeconds = 0;
+  Timer? _countdownTimer;
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _addPage() async {
     final picked = await _picker.pickImage(
       source: ImageSource.camera,
@@ -45,7 +56,7 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Future<void> _generate() async {
-    if (_pages.isEmpty) return;
+    if (_pages.isEmpty || _retrySeconds > 0) return;
 
     if (GeminiService.instance.apiKey == null ||
         GeminiService.instance.apiKey!.isEmpty) {
@@ -61,7 +72,7 @@ class _ScanScreenState extends State<ScanScreen> {
     });
 
     try {
-      setState(() => _status = 'Extracting text from ${_pages.length} page(s)…');
+      setState(() => _status = 'Extracting text and consulting the Oracle…');
 
       final riddles = await RiddleGenerationService.instance.generateFromImages(
         imagePaths: _pages.map((file) => file.path).toList(),
@@ -72,7 +83,7 @@ class _ScanScreenState extends State<ScanScreen> {
         if (riddles.isEmpty) {
           setState(() {
             _generating = false;
-            _error = 'Got 0 riddles. Check OCR output or Gemini response.';
+            _error = 'The Oracle returned no riddles. Try clearer images.';
           });
         } else {
           Navigator.pop(context, riddles);
@@ -80,13 +91,45 @@ class _ScanScreenState extends State<ScanScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _error = 'Generation failed: $e';
-          _generating = false;
-          _status = '';
-        });
+        final errorStr = e.toString();
+        
+        // Handle the Quota Exceeded error from image.png
+        if (errorStr.contains('Quota exceeded') || errorStr.contains('429')) {
+          final match = RegExp(r'retry in ([\d.]+)s').firstMatch(errorStr);
+          final seconds = double.tryParse(match?.group(1) ?? '30')?.ceil() ?? 30;
+
+          setState(() {
+            _generating = false;
+            _retrySeconds = seconds;
+            _error = "The Oracle is exhausted and needs to rest.";
+          });
+
+          _startCountdown();
+        } else {
+          setState(() {
+            _error = 'Generation failed: $e';
+            _generating = false;
+            _status = '';
+          });
+        }
       }
     }
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          if (_retrySeconds > 0) {
+            _retrySeconds--;
+          } else {
+            _error = null;
+            timer.cancel();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -306,22 +349,37 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Widget _buildError() {
+    final isQuota = _retrySeconds > 0;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: EnolaTheme.wrong.withValues(alpha: 0.1),
+        color: isQuota 
+            ? EnolaTheme.accent.withValues(alpha: 0.1) 
+            : EnolaTheme.wrong.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: EnolaTheme.wrong.withValues(alpha: 0.5)),
+        border: Border.all(
+            color: isQuota 
+                ? EnolaTheme.accent.withValues(alpha: 0.5) 
+                : EnolaTheme.wrong.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              color: EnolaTheme.wrong, size: 18),
+          Icon(
+            isQuota ? Icons.hourglass_empty_rounded : Icons.error_outline_rounded,
+            color: isQuota ? EnolaTheme.accent : EnolaTheme.wrong,
+            size: 18,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              _error!,
-              style: const TextStyle(color: EnolaTheme.wrong, fontSize: 13),
+              isQuota 
+                  ? "The Oracle is resting. Please wait $_retrySeconds seconds..." 
+                  : _error!,
+              style: TextStyle(
+                color: isQuota ? EnolaTheme.textPrimary : EnolaTheme.wrong, 
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -330,15 +388,19 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Widget _buildGenerateButton() {
+    final bool canGenerate = _pages.isNotEmpty && _retrySeconds == 0;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: _pages.isEmpty ? null : _generate,
+        onPressed: canGenerate ? _generate : null,
         icon: const Icon(Icons.auto_fix_high_rounded),
         label: Text(
           _pages.isEmpty
               ? 'Add pages first'
-              : 'Generate $_riddleCount Riddles',
+              : _retrySeconds > 0 
+                  ? 'Oracle cooling down...' 
+                  : 'Generate $_riddleCount Riddles',
         ),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
