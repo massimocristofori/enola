@@ -19,7 +19,7 @@ class HomeScreen extends ConsumerWidget {
     final mapsAsync = ref.watch(allMapsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F0F5),
+      backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
         child: Column(
           children: [
@@ -306,6 +306,7 @@ Widget build(BuildContext context, WidgetRef ref) {
           left: -6,
           child: _EarButton(
             icon: Icons.edit_rounded,
+            iconColor: Colors.darkgrey,
             onTap: () {
               // Navigator.push(context, MaterialPageRoute(builder: (_) => EditMapScreen(map: map)));
             },
@@ -351,7 +352,7 @@ class _EarButton extends StatelessWidget {
           color: Colors.white, // Semi-transparent background for visibility
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 20, color: iconColor),
+        child: Icon(icon, size: 22, color: iconColor),
       ),
     );
   }
