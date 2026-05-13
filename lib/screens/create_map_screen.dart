@@ -36,7 +36,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint("🚨 LOG: Init CreateMapScreen");
     if (widget.existingMapId != null) _loadExisting();
   }
 
@@ -53,7 +52,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         _subjectCtrl.text = _existingMap!.subject ?? '';
         if (_existingMap!.imageBytes != null) _imageBytes = Uint8List.fromList(_existingMap!.imageBytes!);
       }
-      debugPrint("🚨 LOG: Loaded ${_riddles.length} riddles.");
     } catch (e) {
       _showError("Load Error: $e");
     } finally {
@@ -67,7 +65,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   }
 
   void _addRiddle() {
-    debugPrint("🚨 LOG: Adding riddle button pressed");
     try {
       final newRiddle = Riddle(
         id: 0,
@@ -75,7 +72,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         typeIndex: 0,
         question: '',
         orderInMap: _riddles.length,
-        choicesJson: jsonEncode([]), // Ensure it's never null
+        choicesJson: jsonEncode([]),
         correctIndex: 0,
       );
       
@@ -154,20 +151,16 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                     onPageChanged: (i) => setState(() => _currentPage = i),
                     itemCount: 1 + _riddles.length,
                     itemBuilder: (context, index) {
-                      try {
-                        if (index == 0) return _buildMapDetails();
-                        return _RiddleEditorPage(
-                          key: ValueKey('riddle_page_${index - 1}'),
-                          riddle: _riddles[index - 1],
-                          onChanged: (u) => setState(() => _riddles[index - 1] = u),
-                          onDelete: () {
-                            setState(() => _riddles.removeAt(index - 1));
-                            _pageCtrl.jumpToPage(0);
-                          },
-                        );
-                      } catch (e) {
-                        return Center(child: Text("Page Build Error: $e"));
-                      }
+                      if (index == 0) return _buildMapDetails();
+                      return _RiddleEditorPage(
+                        key: ValueKey('riddle_page_${index - 1}'),
+                        riddle: _riddles[index - 1],
+                        onChanged: (u) => setState(() => _riddles[index - 1] = u),
+                        onDelete: () {
+                          setState(() => _riddles.removeAt(index - 1));
+                          _pageCtrl.jumpToPage(0);
+                        },
+                      );
                     },
                   ),
                 ),
@@ -231,11 +224,9 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     final raw = widget.riddle.choices;
     if (raw == null) return [];
     try {
-      // Direct cast to dynamic list to bypass minified type mismatch
       final List<dynamic> list = raw as List<dynamic>;
       return list.map((e) => e.toString()).toList();
     } catch (e) {
-      debugPrint("🚨 Choices Casting Error: $e");
       return [];
     }
   }
@@ -251,54 +242,46 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Riddle Editor", style: TextStyle(color: Colors.blue.shade800, fontWeight: FontWeight.bold)),
+              const Text("Riddle Editor", style: TextStyle(fontWeight: FontWeight.bold)),
               IconButton(icon: const Icon(Icons.delete_forever, color: Colors.red), onPressed: widget.onDelete),
             ],
           ),
-          const SizedBox(height: 10),
           TextField(
             controller: _qCtrl,
-            decoration: const InputDecoration(labelText: "Riddle Question", border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: "Riddle Question"),
             maxLines: 2,
             onChanged: (v) => widget.onChanged(widget.riddle.copyWith(question: v)),
           ),
           const SizedBox(height: 20),
-          const Text("Multiple Choice Options:", style: TextStyle(fontWeight: FontWeight.w500)),
-          const Text("Select the radio button for the correct answer", style: TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 10),
+          const Text("Options:"),
           ...List.generate(choices.length, (i) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                children: [
-                  Radio<int>(
-                    value: i,
-                    groupValue: widget.riddle.correctIndex,
-                    onChanged: (val) => widget.onChanged(widget.riddle.copyWith(correctIndex: val)),
-                  ),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: choices[i],
-                      decoration: InputDecoration(hintText: "Option ${i + 1}"),
-                      onChanged: (v) {
-                        final newChoices = List<String>.from(choices);
-                        newChoices[i] = v;
-                        widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
-                      },
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      final newChoices = List<String>.from(choices)..removeAt(i);
+            return Row(
+              children: [
+                Radio<int>(
+                  value: i,
+                  groupValue: widget.riddle.correctIndex,
+                  onChanged: (val) => widget.onChanged(widget.riddle.copyWith(correctIndex: val ?? 0)),
+                ),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: choices[i],
+                    onChanged: (v) {
+                      final newChoices = List<String>.from(choices);
+                      newChoices[i] = v;
                       widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
                     },
-                  )
-                ],
-              ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    final newChoices = List<String>.from(choices)..removeAt(i);
+                    widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
+                  },
+                )
+              ],
             );
           }),
-          const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: () {
               final newChoices = List<String>.from(choices)..add("");
@@ -312,3 +295,4 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     );
   }
 }
+```</T>
