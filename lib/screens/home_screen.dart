@@ -327,7 +327,7 @@ Widget build(BuildContext context, WidgetRef ref) {
     ),
   );
 }
-
+}
 
 // Helper Widget for the Ear Buttons
 class _EarButton extends StatelessWidget {
