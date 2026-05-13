@@ -306,7 +306,7 @@ Widget build(BuildContext context, WidgetRef ref) {
           left: -6,
           child: _EarButton(
             icon: Icons.edit_rounded,
-            iconColor: Colors.darkgrey,
+            iconColor: EnolaTheme.textSecond,
             onTap: () {
               // Navigator.push(context, MaterialPageRoute(builder: (_) => EditMapScreen(map: map)));
             },
