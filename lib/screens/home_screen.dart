@@ -302,8 +302,8 @@ Widget build(BuildContext context, WidgetRef ref) {
 
         // ── Top-left ear (Edit) — overflows the card ──
         Positioned(
-          top: -10,
-          left: -10,
+          top: -6,
+          left: -6,
           child: _EarButton(
             icon: Icons.edit_rounded,
             onTap: () {
@@ -314,8 +314,8 @@ Widget build(BuildContext context, WidgetRef ref) {
 
         // ── Top-right ear (Delete) — overflows the card ──
         Positioned(
-          top: -10,
-          right: -10,
+          top: -6,
+          right: -6,
           child: _EarButton(
             icon: Icons.delete_forever_rounded,
             iconColor: Colors.redAccent,
