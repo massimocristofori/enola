@@ -30,7 +30,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
 
   bool _loading = false;
   bool _saving = false;
-  int _currentPage = 0;
   String? _lastError;
 
   @override
@@ -148,7 +147,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                 Expanded(
                   child: PageView.builder(
                     controller: _pageCtrl,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
                     itemCount: 1 + _riddles.length,
                     itemBuilder: (context, index) {
                       if (index == 0) return _buildMapDetails();
@@ -168,16 +166,17 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
             ),
           ),
           if (_lastError != null)
-            Container(
-              color: Colors.red.withOpacity(0.9),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text("🚨 APP ERROR", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text(_lastError!, style: const TextStyle(color: Colors.white)),
-                  ElevatedButton(onPressed: () => setState(() => _lastError = null), child: const Text("Dismiss"))
-                ],
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: Container(
+                color: Colors.red,
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(_lastError!, style: const TextStyle(color: Colors.white))),
+                    IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => setState(() => _lastError = null))
+                  ],
+                ),
               ),
             ),
         ],
@@ -190,11 +189,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text("Step 1: Map Identity", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text("Map Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         TextFormField(controller: _titleCtrl, decoration: const InputDecoration(labelText: "Title")),
         TextFormField(controller: _subjectCtrl, decoration: const InputDecoration(labelText: "Subject")),
-        const SizedBox(height: 20),
-        const Text("Tap [+] to add your first riddle.", style: TextStyle(color: Colors.grey)),
       ],
     );
   }
@@ -243,17 +240,15 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Riddle Editor", style: TextStyle(fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(Icons.delete_forever, color: Colors.red), onPressed: widget.onDelete),
+              IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: widget.onDelete),
             ],
           ),
           TextField(
             controller: _qCtrl,
-            decoration: const InputDecoration(labelText: "Riddle Question"),
-            maxLines: 2,
+            decoration: const InputDecoration(labelText: "Question"),
             onChanged: (v) => widget.onChanged(widget.riddle.copyWith(question: v)),
           ),
           const SizedBox(height: 20),
-          const Text("Options:"),
           ...List.generate(choices.length, (i) {
             return Row(
               children: [
@@ -273,7 +268,7 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.remove),
                   onPressed: () {
                     final newChoices = List<String>.from(choices)..removeAt(i);
                     widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
@@ -282,17 +277,15 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
               ],
             );
           }),
-          OutlinedButton.icon(
+          TextButton(
             onPressed: () {
               final newChoices = List<String>.from(choices)..add("");
               widget.onChanged(widget.riddle.copyWith(choicesJson: jsonEncode(newChoices)));
             },
-            icon: const Icon(Icons.add),
-            label: const Text("Add Option"),
+            child: const Text("Add Choice"),
           ),
         ],
       ),
     );
   }
 }
-```</T>
