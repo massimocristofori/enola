@@ -10,7 +10,8 @@ import 'package:enola/providers/map_providers.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/create_map_screen.dart';
-import 'package:enola/screens/map_detail_screen.dart';
+import 'package:enola/screens/play_screen.dart';
+import 'package:enola/services/drift_service.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -151,28 +152,51 @@ class _MapCard extends ConsumerWidget {
     return _gradients[idx];
   }
 
+  // ── Delete ──────────────────────────────────────────────────────────────────
+
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Map'),
         content: const Text(
             'Are you sure you want to delete this map? This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _deleteMap(context, ref);
             },
-            child:
-                const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteMap(BuildContext context, WidgetRef ref) async {
+    try {
+      final db = DriftService.instance.db;
+      // CASCADE on PlaySessions and Riddles is set in the schema,
+      // so deleting the map row removes everything automatically.
+      await (db.delete(db.riddleMaps)
+            ..where((t) => t.id.equals(map.id)))
+          .go();
+      ref.invalidate(allMapsProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not delete map: $e'),
+            backgroundColor: EnolaTheme.wrong,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -183,9 +207,10 @@ class _MapCard extends ConsumerWidget {
         map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
     return GestureDetector(
+      // ── Tap card → play ──
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => MapDetailScreen(mapId: map.id)),
+        MaterialPageRoute(builder: (_) => PlayScreen(mapId: map.id)),
       ),
       child: Stack(
         clipBehavior: Clip.none,
@@ -262,7 +287,12 @@ class _MapCard extends ConsumerWidget {
             child: _EarButton(
               icon: Icons.edit_rounded,
               iconColor: EnolaTheme.textSecond,
-              onTap: () {},
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CreateMapScreen(existingMapId: map.id),
+                ),
+              ),
             ),
           ),
 
@@ -300,7 +330,6 @@ class _CardInfoBar extends ConsumerWidget {
 
     final session = sessionAsync.valueOrNull;
 
-    // Parse achieved stars from riddleStarsJson
     int achievedStars = 0;
     if (session != null && session.riddleStarsJson != null) {
       try {
@@ -335,7 +364,7 @@ class _CardInfoBar extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
 
-          // --- Stars row: not played ---
+          // --- Not played: star icon + max stars ---
           if (!hasBeenPlayed)
             Row(
               children: [
@@ -353,7 +382,7 @@ class _CardInfoBar extends ConsumerWidget {
               ],
             )
 
-          // --- Progress bar: played ---
+          // --- Played: progress bar ---
           else
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
