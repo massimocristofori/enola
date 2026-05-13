@@ -302,8 +302,8 @@ Widget build(BuildContext context, WidgetRef ref) {
 
         // ── Top-left ear (Edit) — overflows the card ──
         Positioned(
-          top: -14,
-          left: -14,
+          top: -10,
+          left: -10,
           child: _EarButton(
             icon: Icons.edit_rounded,
             onTap: () {
@@ -314,8 +314,8 @@ Widget build(BuildContext context, WidgetRef ref) {
 
         // ── Top-right ear (Delete) — overflows the card ──
         Positioned(
-          top: -14,
-          right: -14,
+          top: -10,
+          right: -10,
           child: _EarButton(
             icon: Icons.delete_forever_rounded,
             iconColor: Colors.redAccent,
@@ -348,10 +348,10 @@ class _EarButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: const BoxDecoration(
-          color: Colors.black26, // Semi-transparent background for visibility
+          color: Colors.white, // Semi-transparent background for visibility
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 18, color: iconColor),
+        child: Icon(icon, size: 20, color: iconColor),
       ),
     );
   }
