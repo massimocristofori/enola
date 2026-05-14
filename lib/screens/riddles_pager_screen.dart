@@ -1,4 +1,4 @@
-import 'dart:convert';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
@@ -341,8 +341,9 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
 
     switch (_selectedType) {
       case RiddleType.multipleChoice:
-        _choices =
-            List<String>.from(mc?.choices ?? widget.riddle.choices ?? []);
+
+				_choices = List<String>.from(mc?.choices ?? (widget.riddle.choices as List<String>?) ?? []);
+
         _correctIndex =
             mc?.correctIndex ?? widget.riddle.correctIndex ?? 0;
         _tfCorrectIndex = 0;
@@ -354,8 +355,7 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         _correctIndex = 0;
         _orderItems = [];
       case RiddleType.ordering:
-        _orderItems =
-            List<String>.from(ord?.items ?? widget.riddle.choices ?? []);
+				_orderItems = List<String>.from(ord?.items ?? (widget.riddle.choices as List<String>?) ?? []);
         _choices = [];
         _correctIndex = 0;
         _tfCorrectIndex = 0;
