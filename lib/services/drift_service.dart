@@ -168,7 +168,7 @@ class DriftService {
     required Riddle riddle,
   }) async {
     final companion = RiddlesCompanion(
-      id: const Value.absent(),
+      //id: const Value.absent(),
       mapId: Value(mapId),
       question: Value(riddle.question),
       typeIndex: Value(riddle.typeIndex),
