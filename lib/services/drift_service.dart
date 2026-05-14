@@ -140,6 +140,42 @@ class DriftService {
     });
   }
 
+
+  Future<int> insertBlankRiddle({
+    required String mapId,
+    required int orderInMap,
+  }) async {
+    final companion = RiddlesCompanion.insert(
+      mapId: mapId,
+      question: '',
+      typeIndex: Value(RiddleType.multipleChoice.index),
+      orderInMap: orderInMap,
+      payloadJson: const Value(null),
+      choicesJson: const Value(null),
+      correctIndex: const Value(null),
+    );
+    return await db.into(db.riddles).insert(companion);
+  }
+  
+  Future<void> saveRiddleFromRow({
+    required String mapId,
+    required int orderInMap,
+    required Riddle riddle,
+  }) async {
+    final companion = RiddlesCompanion(
+      id: Value(riddle.id),
+      mapId: Value(mapId),
+      question: Value(riddle.question),
+      typeIndex: Value(riddle.typeIndex),
+      orderInMap: Value(orderInMap),
+      payloadJson: Value(riddle.payloadJson),
+      choicesJson: Value(riddle.choicesJson),
+      correctIndex: Value(riddle.correctIndex),
+    );
+    await db.into(db.riddles).insertOnConflictUpdate(companion);
+  }
+
+
   // ── PLAY SESSIONS ─────────────────────────────────────────────────────────
 
   Future<int> startSession(String mapId, int totalRiddles) async {
