@@ -19,6 +19,22 @@ class GeminiService {
   String? apiKey;
   
 
+	GenerativeModel get _model {
+		assert(apiKey != null && apiKey!.isNotEmpty, 'GeminiService: apiKey not set');
+  
+  		return GenerativeModel(
+    		// 2.5 Flash is the current "reliable" workhorse
+    		model: 'gemini-2.5-flash', 
+    		apiKey: apiKey!,
+    		// Since 2.5 is GA, you can use the stable v1 endpoint
+    		apiVersion: 'v1', 
+    		generationConfig: GenerationConfig(
+      		responseMimeType: 'application/json',
+	    ),
+	  );
+	}
+
+
   GenerativeModel get _model {
     assert(apiKey != null && apiKey!.isNotEmpty,
         'GeminiService: apiKey not set');
