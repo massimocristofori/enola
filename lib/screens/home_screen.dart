@@ -72,7 +72,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'My Quest Maps',
+                'Enola - My Maps',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
