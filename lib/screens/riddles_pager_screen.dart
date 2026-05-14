@@ -55,6 +55,10 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
 
   Future<void> _insertBlankRiddle(
       {required int atIndex, bool navigate = false}) async {
+
+
+		print('insertBlankRiddle started');
+
     // shift orderInMap of riddles at and after insertion point
     final db = DriftService.instance.db;
     for (int i = atIndex; i < _riddles.length; i++) {
@@ -63,17 +67,19 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
           .write(RiddlesCompanion(orderInMap: drift.Value(i + 1)));
     }
 
+		print('insertBlankRiddle 1');
+
     final newId = await DriftService.instance.insertBlankRiddle(
       mapId: widget.mapId,
       orderInMap: atIndex,
     );
-
+		print('insertBlankRiddle 2');
     final inserted = await (db.select(db.riddles)
           ..where((t) => t.id.equals(newId)))
         .getSingle();
-
+		print('insertBlankRiddle 3');
     setState(() => _riddles.insert(atIndex, inserted));
-
+		print('insertBlankRiddle 4');
     if (navigate) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _pageCtrl.animateToPage(
@@ -83,6 +89,7 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
         );
       });
     }
+		print('insertBlankRiddle end');
   }
 
   Future<void> _deleteRiddle(int riddleIndex) async {
