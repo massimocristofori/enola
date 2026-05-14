@@ -148,7 +148,7 @@ class DriftService {
     final companion = RiddlesCompanion.insert(
       mapId: mapId,
       question: '',
-      typeIndex: Value(RiddleType.multipleChoice.index),
+      typeIndex: RiddleType.multipleChoice.index,
       orderInMap: orderInMap,
       payloadJson: const Value(null),
       choicesJson: const Value(null),
