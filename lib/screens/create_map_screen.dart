@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -205,7 +206,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
   }
 
   RiddlesCompanion _riddleToCompanion(Riddle riddle, String mapId, int order) {
-    import 'dart:convert';
     // reuse schema_utils helpers via riddle itself
     return RiddlesCompanion.insert(
       mapId: mapId,
