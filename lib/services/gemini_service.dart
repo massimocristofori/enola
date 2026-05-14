@@ -23,32 +23,9 @@ class GeminiService {
     assert(apiKey != null && apiKey!.isNotEmpty,
         'GeminiService: apiKey not set');
     return GenerativeModel(
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       apiKey: apiKey!,
     );
-  }
-
-  // ── 1. Extract text from page images ─────────────────────────────────────
-
-  /// Sends one or more page images to Gemini and gets back a single
-  /// concatenated text transcription.
-  Future<String> extractTextFromImages(List<File> pageImages) async {
-    final parts = <Part>[
-      TextPart(
-        'You are an OCR assistant. '
-        'Transcribe ALL text visible in the following book page image(s), '
-        'preserving paragraph structure. '
-        'Output ONLY the transcribed text, nothing else.',
-      ),
-    ];
-
-    for (final img in pageImages) {
-      final bytes = await img.readAsBytes();
-      parts.add(DataPart('image/jpeg', bytes));
-    }
-
-    final response = await _model.generateContent([Content.multi(parts)]);
-    return response.text ?? '';
   }
 
   // ── 2. Generate riddles from text ─────────────────────────────────────────
