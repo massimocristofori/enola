@@ -138,7 +138,7 @@ class _MapCard extends ConsumerWidget {
   final RiddleMap map;
   const _MapCard({required this.map});
 
-  static const List<List<Color>> _gradients = [
+  /*static const List<List<Color>> _gradients = [
     [Color(0xFFa78bfa), Color(0xFF7C3AED)],
     [Color(0xFFf472b6), Color(0xFFEC4899)],
     [Color(0xFF34d399), Color(0xFF059669)],
@@ -150,7 +150,7 @@ class _MapCard extends ConsumerWidget {
   List<Color> _gradient() {
     final idx = map.id.codeUnits.fold(0, (a, b) => a + b) % _gradients.length;
     return _gradients[idx];
-  }
+  }*/
 
   // ── Delete ──────────────────────────────────────────────────────────────────
 
@@ -201,7 +201,7 @@ class _MapCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final grad = [Color(0xFFffffff), Color(0xFFf3f6f4)];//_gradient();
+    //final grad = [Color(0xFFffffff), Color(0xFFf3f6f4)];//_gradient();
 
     final Uint8List? imageBytes =
         map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
@@ -247,7 +247,7 @@ class _MapCard extends ConsumerWidget {
                           : Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: grad,
+                                  colors: [Color(0xFFffffff), Color(0xFFf3f6f4)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
