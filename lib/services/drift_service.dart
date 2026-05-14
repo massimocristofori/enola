@@ -146,15 +146,15 @@ class DriftService {
 	}) async {
 	  return await db.into(db.riddles).insert(
 	    RiddlesCompanion(
-	      id: drift.Value.absent(),
-	      mapId: drift.Value(mapId),
-	      orderInMap: drift.Value(orderInMap),
+	      id: Value.absent(),
+	      mapId: Value(mapId),
+	      orderInMap: Value(orderInMap),
 	      // Default template values to prevent UI crashes
-	      question: drift.Value("New Riddle"),
-	      typeIndex: drift.Value(0), // 0 = Multiple Choice
-	      correctIndex: drift.Value(0),
-	      payloadJson: drift.Value('{}'),
-	      choicesJson: drift.Value('["Option 1", "Option 2"]'),
+	      question: Value("New Riddle"),
+	      typeIndex: Value(0), // 0 = Multiple Choice
+	      correctIndex: Value(0),
+	      payloadJson: Value('{}'),
+	      choicesJson: Value('["Option 1", "Option 2"]'),
 	    ),
 	  );
 	}
