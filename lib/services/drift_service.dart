@@ -140,22 +140,27 @@ class DriftService {
     });
   }
 
+	Future<int> insertBlankRiddle({
+	  required String mapId,
+	  required int orderInMap,
+	}) async {
+	  return await db.into(db.riddles).insert(
+	    RiddlesCompanion(
+	      id: const drift.Value.absent(),
+	      mapId: drift.Value(mapId),
+	      orderInMap: drift.Value(orderInMap),
+	      // Default template values to prevent UI crashes
+	      question: const drift.Value("New Riddle"),
+	      typeIndex: const drift.Value(0), // 0 = Multiple Choice
+	      correctIndex: const drift.Value(0),
+	      payloadJson: const drift.Value('{}'),
+	      choicesJson: const drift.Value('["Option 1", "Option 2"]'),
+	    ),
+	  );
+	}
 
-  Future<int> insertBlankRiddle({
-    required String mapId,
-    required int orderInMap,
-  }) async {
-    final companion = RiddlesCompanion.insert(
-      mapId: mapId,
-      question: '',
-      typeIndex: RiddleType.multipleChoice.index,
-      orderInMap: orderInMap,
-      payloadJson: const Value(null),
-      choicesJson: const Value(null),
-      correctIndex: const Value(null),
-    );
-    return await db.into(db.riddles).insert(companion);
-  }
+
+
   
   Future<void> saveRiddleFromRow({
     required String mapId,
