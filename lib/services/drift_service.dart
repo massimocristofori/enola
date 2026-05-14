@@ -163,7 +163,7 @@ class DriftService {
     required Riddle riddle,
   }) async {
     final companion = RiddlesCompanion(
-      id: Value(riddle.id),
+      id: const Value.absent(),
       mapId: Value(mapId),
       question: Value(riddle.question),
       typeIndex: Value(riddle.typeIndex),
@@ -172,7 +172,7 @@ class DriftService {
       choicesJson: Value(riddle.choicesJson),
       correctIndex: Value(riddle.correctIndex),
     );
-    await db.into(db.riddles).insertOnConflictUpdate(companion);
+    await db.into(db.riddles).insert(companion);
   }
 
 
