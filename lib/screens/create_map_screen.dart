@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -133,7 +132,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
         imageBytes: _imageBytes,
       );
-      // reload so _savedMap is populated
       final db = DriftService.instance.db;
       _savedMap = await (db.select(db.riddleMaps)
             ..where((t) => t.id.equals(mapId)))
@@ -186,18 +184,18 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       MaterialPageRoute(builder: (_) => const ScanScreen()),
     );
     if (generated != null && generated.isNotEmpty && _savedMap != null) {
-      // save generated riddles straight to DB
       final db = DriftService.instance.db;
       final existing = await (db.select(db.riddles)
             ..where((t) => t.mapId.equals(_savedMap!.id)))
           .get();
       int order = existing.length;
-      await db.batch((batch) {
-        batch.insertAll(db.riddles, [
-          for (final r in generated)
-            _riddleToCompanion(r, _savedMap!.id, order++),
-        ]);
-      });
+      for (final r in generated) {
+        await DriftService.instance.saveRiddleFromRow(
+          mapId: _savedMap!.id,
+          orderInMap: order++,
+          riddle: r,
+        );
+      }
       final updated = await (db.select(db.riddles)
             ..where((t) => t.mapId.equals(_savedMap!.id)))
           .get();
@@ -205,20 +203,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     }
   }
 
-  RiddlesCompanion _riddleToCompanion(Riddle riddle, String mapId, int order) {
-    // reuse schema_utils helpers via riddle itself
-    return RiddlesCompanion.insert(
-      mapId: mapId,
-      question: riddle.question,
-      typeIndex: riddle.typeIndex,
-      orderInMap: order,
-      payloadJson: drift.Value(riddle.payloadJson),
-      choicesJson: drift.Value(riddle.choicesJson),
-      correctIndex: drift.Value(riddle.correctIndex),
-    );
-  }
-
-  // ── UI ─────────────────────────────────────────────────────────────────────
+  // ── BUILD ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -492,7 +477,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     );
   }
 
-  // ── AI BUTTON ─────────────────────────────────────────────────────────────
+  // ── AI BUTTON ──────────────────────────────────────────────────────────────
 
   Widget _buildAiButton() {
     final locked = !_isSaved;
@@ -539,7 +524,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                     Text(
                       'AI Riddle Generator',
                       style: TextStyle(
-                        color: locked ? EnolaTheme.textPrimary : Colors.white,
+                        color:
+                            locked ? EnolaTheme.textPrimary : Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
