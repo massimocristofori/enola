@@ -52970,8 +52970,9 @@ n.W(new A.aEo(n))
 h=$.aWp()
 g=A.U(d).i("a_<1,l>")
 d=A.Y(new A.a_(d,new A.aEp(),g),g.i("ac.E"))
+g=Date.now()
 s=7
-return A.o(h.yR(d,"temp_"+Date.now()),$async$Ap)
+return A.o(h.yR(n.f,d,"temp_"+g),$async$Ap)
 case 7:m=b
 if(n.c!=null)if(J.hS(m))n.W(new A.aEq(n))
 else{d=n.c
@@ -53285,7 +53286,7 @@ e.toString
 e=new A.aeQ(e,null)
 k=A.b6Y("https","generativelanguage.googleapis.com","v1beta",null)
 j=A.b11("gemini-2.5-flash")
-i=new A.adG(j,B.MK,new A.adF("application/json"),null,e,k,null,null).ah5(A.b([new A.oz("user",A.b([new A.ky("You are a quiz-generation assistant for students.\nGiven the following text, generate exactly "+b+' riddles to test comprehension.\n\nUse ONLY these riddle types:\n- "multipleChoice": a question with 4 answer options, one correct.\n- "ordering": a list of 4-6 items the student must arrange in the correct order.\n\nMix the types. Respond ONLY with a valid JSON array. No markdown, no explanation.\n\nEach element must be one of:\n{\n  "type": "multipleChoice",\n  "question": "...",\n  "choices": ["A", "B", "C", "D"],\n  "correctIndex": 0\n}\nor\n{\n  "type": "ordering",\n  "question": "...",\n  "items": ["first", "second", "third", "fourth"]\n}\n\nText:\n"""\n'+a+'\n"""\n')],t.Uz))],t.kQ),null,null,null,null)
+i=new A.adG(j,B.MK,new A.adF("application/json"),null,e,k,null,null).ah5(A.b([new A.oz("user",A.b([new A.ky("You are a quiz-generation assistant for students.\nIMPORTANT: You must respond in the SAME LANGUAGE as the provided text.\n\nGiven the following text, generate exactly "+b+' riddles to test comprehension.\n\nUse ONLY these riddle types:\n- "multipleChoice": a question with 4 answer options, one correct.\n- "ordering": a list of 4-6 items the student must arrange in the correct order.\n\nMix the types. Respond ONLY with a valid JSON array. No markdown, no explanation.\n\nEach element must be one of:\n{\n  "type": "multipleChoice",\n  "question": "...",\n  "choices": ["A", "B", "C", "D"],\n  "correctIndex": 0\n}\nor\n{\n  "type": "ordering",\n  "question": "...",\n  "items": ["first", "second", "third", "fourth"]\n}\n\nText:\n"""\n'+a+'\n"""\n')],t.Uz))],t.kQ),null,null,null,null)
 h=k.gtW()
 s=3
 return A.o(e.xZ(k.aCO(A.aP4(h,A.b([j.b,j.a+":generateContent"],t.s),A.U(h).c)),i).bi(A.b9v(),t.Nf),$async$yS)
@@ -53338,27 +53339,28 @@ ah0(a){var s,r,q,p,o,n,m
 for(s=a.b,r=s.length,q=0,p="";q<r;++q){for(o=s[q].b,n=o.length,m=0;m<n;++m)p+=o[m].a+"\n"
 p+="\n"}return B.c.fB(p.charCodeAt(0)==0?p:p)}}
 A.anq.prototype={
-yR(a,b){return this.a5C(a,b)},
-a5C(a,b){var s=0,r=A.u(t.DG),q,p=this,o,n,m
-var $async$yR=A.v(function(c,d){if(c===1)return A.q(d,r)
-for(;;)switch(s){case 0:o=A.U(a).i("a_<1,mA>")
-n=A.Y(new A.a_(a,new A.anr(),o),o.i("ac.E"))
-m=b
+yR(a,b,c){return this.a5C(a,b,c)},
+a5C(a,b,c){var s=0,r=A.u(t.DG),q,p=this,o,n,m,l
+var $async$yR=A.v(function(d,e){if(d===1)return A.q(e,r)
+for(;;)switch(s){case 0:o=A.U(b).i("a_<1,mA>")
+n=A.Y(new A.a_(b,new A.anr(),o),o.i("ac.E"))
+m=a
+l=c
 s=3
 return A.o($.aWd().Dj(n),$async$yR)
-case 3:q=p.yT(m,d)
+case 3:q=p.yT(m,l,e)
 s=1
 break
 case 1:return A.r(q,r)}})
 return A.t($async$yR,r)},
-yT(a,b){return this.a5E(a,b)},
-a5E(a,b){var s=0,r=A.u(t.DG),q,p=2,o=[],n,m,l,k,j
-var $async$yT=A.v(function(c,d){if(c===1){o.push(d)
+yT(a,b,c){return this.a5E(a,b,c)},
+a5E(a,b,c){var s=0,r=A.u(t.DG),q,p=2,o=[],n,m,l,k,j
+var $async$yT=A.v(function(d,e){if(d===1){o.push(e)
 s=p}for(;;)switch(s){case 0:p=4
 s=7
-return A.o($.aIV().yS(b,5),$async$yT)
-case 7:n=d
-l=J.aYY(n).gfq().io(0,new A.ans(a),t.jA).ex(0)
+return A.o($.aIV().yS(c,a),$async$yT)
+case 7:n=e
+l=J.aYY(n).gfq().io(0,new A.ans(b),t.jA).ex(0)
 q=l
 s=1
 break
