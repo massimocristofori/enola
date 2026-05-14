@@ -201,7 +201,7 @@ class _MapCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final grad = _gradient();
+    final grad = [Color(0xFFffffff), Color(0xFFDC2626)];//_gradient();
 
     final Uint8List? imageBytes =
         map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
