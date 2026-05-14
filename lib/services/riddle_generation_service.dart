@@ -14,20 +14,22 @@ class RiddleGenerationService {
   Future<List<Riddle>> generateFromImages({
     required List<String> imagePaths,
     required String mapId,
+		int count = 5,
   }) async {
     final files = imagePaths.map((path) => File(path)).toList();
     final extractedText = await OCRService.instance.extractTextFromImages(files);
-    return generateRiddlesFromText(text: extractedText, mapId: mapId);
+    return generateRiddlesFromText(text: extractedText, mapId: mapId, count: count);
   }
 
   /// Calls GeminiService.generateRiddles and maps raw JSON → typed Riddle objects.
   Future<List<Riddle>> generateRiddlesFromText({
     required String text,
     required String mapId,
+		int count = 5,
   }) async {
     try {
       final List<Map<String, dynamic>> rawRiddles =
-          await GeminiService.instance.generateRiddles(text, count: 5);
+          await GeminiService.instance.generateRiddles(text, count: count);
 
       return rawRiddles.asMap().entries.map<Riddle>((entry) {
         final index = entry.key;
