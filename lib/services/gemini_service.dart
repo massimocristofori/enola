@@ -44,6 +44,8 @@ class GeminiService {
   }) async {
     final prompt = '''
 You are a quiz-generation assistant for students.
+IMPORTANT: You must respond in the SAME LANGUAGE as the provided text.
+
 Given the following text, generate exactly $count riddles to test comprehension.
 
 Use ONLY these riddle types:
