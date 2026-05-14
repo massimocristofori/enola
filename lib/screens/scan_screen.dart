@@ -77,6 +77,7 @@ class _ScanScreenState extends State<ScanScreen> {
       final riddles = await RiddleGenerationService.instance.generateFromImages(
         imagePaths: _pages.map((file) => file.path).toList(),
         mapId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+				count: _riddleCount,
       );
 
       if (mounted) {
