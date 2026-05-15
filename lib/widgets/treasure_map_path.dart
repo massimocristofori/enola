@@ -414,7 +414,7 @@ class _DotConnectorState extends State<_DotConnector>
           painter: _GridDotPainter(
             isEvenRow: widget.isEvenRow,
             baseColor: EnolaTheme.accent,
-            lockedColor: EnolaTheme.accent.withValues(alpha: 0.2),
+            lockedColor: EnolaTheme.accent.withValues(alpha: 0.1),
             progress: _progress.value,
             seed: widget.seed,
           ),
@@ -456,7 +456,7 @@ class _GridDotPainter extends CustomPainter {
     }
 
     final random = math.Random(seed);
-    final double randomOpacity = 0.6 + (random.nextDouble() * 0.4);
+    final double randomOpacity = 0.4 + (random.nextDouble() * 0.4);
 
     // Dynamic state paint rules for Dot 1
     final paint1 = Paint()
@@ -472,7 +472,7 @@ class _GridDotPainter extends CustomPainter {
           : lockedColor
       ..style = PaintingStyle.fill;
 
-    const double dotRadius = 7.0;
+    const double dotRadius = 8.0;
     canvas.drawCircle(dot1, dotRadius, paint1);
     canvas.drawCircle(dot2, dotRadius, paint2);
   }
