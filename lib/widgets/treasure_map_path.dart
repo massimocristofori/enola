@@ -8,7 +8,6 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/providers/map_providers.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-
 enum NodeStatus { completed, current, locked }
 
 class TreasureMapPath extends ConsumerWidget {
@@ -41,8 +40,7 @@ class TreasureMapPath extends ConsumerWidget {
 
     return Column(
       children: List.generate(riddles.length, (index) {
-        // --- CHANGE 1: tighter alignments ---
-        final alignment = _getAlignment(index);
+        final isEvenRow = index % 2 == 0;
         final isLast = index == riddles.length - 1;
         final isCompleted = index <= lastCompleted;
         final isCurrent = index == lastCompleted + 1;
@@ -55,38 +53,49 @@ class TreasureMapPath extends ConsumerWidget {
 
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
-        return Column(
+        // Build our side-by-side components
+        final nodeWidget = _RiddleNode(
+          index: index + 1,
+          status: status,
+          stars: stars,
+          imageBytes: imageBytes,
+          onTap: isCurrent && onCurrentNodeTap != null ? onCurrentNodeTap : null,
+        );
+
+        final dotsWidget = isLast
+            ? const SizedBox.shrink() // Don't print trailing path dots after the final level
+            : _DotConnector(
+                isUnlocked: isCompleted,
+                isEvenRow: isEvenRow,
+                seed: index,
+              );
+
+        // Grid-Row Layout implementation
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Align(
-              alignment: alignment,
-              child: _RiddleNode(
-                index: index + 1,
-                status: status,
-                stars: stars,
-                imageBytes: imageBytes,
-                onTap: isCurrent && onCurrentNodeTap != null
-                    ? onCurrentNodeTap
-                    : null,
+            // Left Column Block
+            Expanded(
+              child: SizedBox(
+                height: 110, // Match node bounding footprint to keep things uniform
+                child: Center(
+                  child: isEvenRow ? nodeWidget : dotsWidget,
+                ),
               ),
             ),
-            if (!isLast)
-              _DotConnector(
-                from: alignment,
-                to: _getAlignment(index + 1),
-                isUnlocked: isCompleted,
-                seed: index,
+            // Right Column Block
+            Expanded(
+              child: SizedBox(
+                height: 110,
+                child: Center(
+                  child: isEvenRow ? dotsWidget : nodeWidget,
+                ),
               ),
+            ),
           ],
         );
       }),
     );
-  }
-
-  // --- CHANGE 1: was centerLeft/centerRight, now ±0.5 ---
-  Alignment _getAlignment(int index) {
-    return (index % 2 == 0)
-        ? const Alignment(-0.6, 0)
-        : const Alignment(0.6, 0);
   }
 }
 
@@ -120,6 +129,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   void initState() {
     super.initState();
     _pulse = AnimationController(
+      verticalSync: false, // Flutter Animate safe fallback
       vsync: this,
       duration: const Duration(milliseconds: 900),
       lowerBound: 0.92,
@@ -201,7 +211,7 @@ class _RiddleNodeState extends State<_RiddleNode>
           borderRadius: radius,
           boxShadow: [
             BoxShadow(
-                color: EnolaTheme.accent.withAlpha(100), blurRadius: 12)
+                color: EnolaTheme.accent.withValues(alpha: 0.4), blurRadius: 12)
           ],
         ),
         child:
@@ -217,12 +227,11 @@ class _RiddleNodeState extends State<_RiddleNode>
           color: Colors.white,
           borderRadius: radius,
           border:
-              Border.all(color: EnolaTheme.accent.withAlpha(80), width: 2),
+              Border.all(color: EnolaTheme.accent.withValues(alpha: 0.3), width: 2),
         ),
       );
     }
 
-    // --- CHANGE 3: gradient overlay instead of flat white ---
     return Container(
       width: size,
       height: size,
@@ -250,9 +259,8 @@ class _RiddleNodeState extends State<_RiddleNode>
               else
                 Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
 
-              // --- CHANGE 3: top=white → bottom=transparent gradient ---
               Container(
-                decoration:  BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -260,7 +268,7 @@ class _RiddleNodeState extends State<_RiddleNode>
                       Colors.white,
                       Colors.white.withValues(alpha: 0.3),
                     ],
-                    stops: [0.0, 1.0],
+                    stops: const [0.0, 1.0],
                   ),
                 ),
               ),
@@ -297,7 +305,7 @@ class _StarsRow extends StatelessWidget {
               size: 42,
               color: isFilled
                   ? const Color(0xFFE8C840)
-                  : const Color(0xFFE8C840).withAlpha(55),
+                  : const Color(0xFFE8C840).withValues(alpha: 0.2),
               shadows: isFilled
                   ? [
                       const Shadow(
@@ -329,15 +337,13 @@ class _StarsRow extends StatelessWidget {
 // ── Dot connector ─────────────────────────────────────────────────────────────
 
 class _DotConnector extends StatefulWidget {
-  final Alignment from;
-  final Alignment to;
   final bool isUnlocked;
+  final bool isEvenRow;
   final int seed;
 
   const _DotConnector({
-    required this.from,
-    required this.to,
     required this.isUnlocked,
+    required this.isEvenRow,
     required this.seed,
   });
 
@@ -382,19 +388,16 @@ class _DotConnectorState extends State<_DotConnector>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      // --- CHANGE 2: reduced height for tighter vertical spacing ---
-      height: 36,
       width: double.infinity,
+      height: double.infinity,
       child: AnimatedBuilder(
         animation: _progress,
         builder: (_, __) => CustomPaint(
-          painter: _DotPainter(
-            from: widget.from,
-            to: widget.to,
+          painter: _GridDotPainter(
+            isEvenRow: widget.isEvenRow,
             baseColor: EnolaTheme.accent,
-            lockedColor: EnolaTheme.accent.withAlpha(55),
+            lockedColor: EnolaTheme.accent.withValues(alpha: 0.2),
             progress: _progress.value,
-            dotCount: 2,
             seed: widget.seed,
           ),
         ),
@@ -403,73 +406,60 @@ class _DotConnectorState extends State<_DotConnector>
   }
 }
 
-class _DotPainter extends CustomPainter {
-  final Alignment from;
-  final Alignment to;
+class _GridDotPainter extends CustomPainter {
+  final bool isEvenRow;
   final Color baseColor;
   final Color lockedColor;
   final double progress;
-  final int dotCount;
   final int seed;
 
-  const _DotPainter({
-    required this.from,
-    required this.to,
+  const _GridDotPainter({
+    required this.isEvenRow,
     required this.baseColor,
     required this.lockedColor,
     required this.progress,
-    required this.dotCount,
     required this.seed,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    // --- CHANGE 1 + 2: x positions derived from the ±0.45 alignment,
-    //     mapped into canvas space. With alignment ±0.45 the node center
-    //     sits at width * (0.45 + 1) / 2 = width * 0.725 / width * 0.275.
-    //     The node is 110 wide with 10px padding, so the box center is at
-    //     the alignment point ± half the node container (55px). ---
-    final double fromCenter = (from.x + 1) / 2 * size.width;
-    final double toCenter   = (to.x   + 1) / 2 * size.width;
+    final Offset dot1;
+    final Offset dot2;
 
-    // Dots start/end at the horizontal center of each node
-    final double startX = fromCenter;
-    final double endX   = toCenter;
-
-    final isFromLeft = from.x < 0;
-
-
-    final path = Path()
-      ..moveTo(startX, 0)
-      ..cubicTo(
-        startX + (isFromLeft ? 20 : -20), size.height * 0.25,
-        endX   + (to.x < 0  ? -10 :  10), size.height * 0.75,
-        endX, size.height,
-      );
-
-    final metrics = path.computeMetrics().first;
-    final totalLength = metrics.length;
-    final random = math.Random(seed);
-
-    for (int i = 1; i <= dotCount; i++) {
-      final t = i / (dotCount + 1);
-      final tangent = metrics.getTangentForOffset(totalLength * t);
-      if (tangent == null) continue;
-
-      final isLit = t <= progress;
-      final double randomOpacity = 0.6 + (random.nextDouble() * 0.4);
-
-      final paint = Paint()
-        ..color = isLit
-            ? baseColor.withValues(alpha: randomOpacity)
-            : lockedColor
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(tangent.position, 7, paint);
+    // Placed strictly within the inner bounding box, completely clear of edges
+    if (isEvenRow) {
+      // Row 1 & 3: Floating path from Node 1 (Left-ish) turning Downward
+      dot1 = Offset(size.width * 0.35, size.height * 0.50);
+      dot2 = Offset(size.width * 0.50, size.height * 0.65);
+    } else {
+      // Row 2: Floating path entering from top turning toward Node 2 (Right-ish)
+      dot1 = Offset(size.width * 0.50, size.height * 0.35);
+      dot2 = Offset(size.width * 0.65, size.height * 0.50);
     }
+
+    final random = math.Random(seed);
+    final double randomOpacity = 0.6 + (random.nextDouble() * 0.4);
+
+    // Dynamic state paint rules for Dot 1
+    final paint1 = Paint()
+      ..color = (progress >= 0.5) 
+          ? baseColor.withValues(alpha: randomOpacity) 
+          : lockedColor
+      ..style = PaintingStyle.fill;
+
+    // Dynamic state paint rules for Dot 2
+    final paint2 = Paint()
+      ..color = (progress >= 1.0) 
+          ? baseColor.withValues(alpha: randomOpacity) 
+          : lockedColor
+      ..style = PaintingStyle.fill;
+
+    const double dotRadius = 7.0;
+    canvas.drawCircle(dot1, dotRadius, paint1);
+    canvas.drawCircle(dot2, dotRadius, paint2);
   }
 
   @override
-  bool shouldRepaint(_DotPainter old) =>
-      old.progress != progress || old.from != from || old.to != to;
+  bool shouldRepaint(_GridDotPainter old) =>
+      old.progress != progress || old.isEvenRow != isEvenRow;
 }
