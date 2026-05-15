@@ -47,7 +47,7 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
       _riddles = riddles;
       _loading = false;
     });
-		print('_loadRiddles riddles loaded. Empty:' + _riddles.isEmpty);
+		print('_loadRiddles riddles loaded. Empty:${_riddles.isEmpty}');
     if (_riddles.isEmpty) {
       await _insertBlankRiddle(atIndex: 0, navigate: true);
     }
