@@ -345,6 +345,8 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
 
 		print('RiddleEditorPage init started');
 
+		try {
+
     _qCtrl = TextEditingController(text: widget.riddle.question);
 		print('RiddleEditorPage init 1');
     _itemCtrl = TextEditingController();
@@ -377,6 +379,10 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         _correctIndex = 0;
         _tfCorrectIndex = 0;
     }
+		
+		} catch(e) {
+			print('Error: $e');
+		}
 		print('RiddleEditorPage init end');
   }
 
