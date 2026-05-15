@@ -447,16 +447,16 @@ class _GridDotPainter extends CustomPainter {
     // Placed strictly within the inner bounding box, completely clear of edges
     if (isEvenRow) {
       // Row 1 & 3: Floating path from Node 1 (Left-ish) turning Downward
-      dot1 = Offset(size.width * 0, size.height * 0.70);
+      dot1 = Offset(size.width * 0, size.height * 0.80);
       dot2 = Offset(size.width * 0.20, size.height * 1);
     } else {
       // Row 2: Floating path entering from top turning toward Node 2 (Right-ish)
-      dot1 = Offset(size.width * 1, size.height * 0.70);
+      dot1 = Offset(size.width * 1, size.height * 0.80);
       dot2 = Offset(size.width * 0.80, size.height * 1);
     }
 
     final random = math.Random(seed);
-    final double randomOpacity = 0.4 + (random.nextDouble() * 0.4);
+    double randomOpacity = 0.4 + (random.nextDouble() * 0.4);
 
     // Dynamic state paint rules for Dot 1
     final paint1 = Paint()
@@ -465,6 +465,7 @@ class _GridDotPainter extends CustomPainter {
           : lockedColor
       ..style = PaintingStyle.fill;
 
+		randomOpacity = 0.4 + (random.nextDouble() * 0.4);
     // Dynamic state paint rules for Dot 2
     final paint2 = Paint()
       ..color = (progress >= 1.0) 
