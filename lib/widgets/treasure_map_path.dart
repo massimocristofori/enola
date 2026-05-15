@@ -258,9 +258,9 @@ class _RiddleNodeState extends State<_RiddleNode>
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.white,
-                      Colors.transparent,
+                      Colors.white.withValues(alpha: 0.8),
                     ],
-                    stops: [0.0, 0.8],
+                    stops: [0.0, 1.0],
                   ),
                 ),
               ),
