@@ -53,7 +53,7 @@ class TreasureMapPath extends ConsumerWidget {
 
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
-        // Build our side-by-side components
+                // Component assignments
         final nodeWidget = _RiddleNode(
           index: index + 1,
           status: status,
@@ -63,37 +63,55 @@ class TreasureMapPath extends ConsumerWidget {
         );
 
         final dotsWidget = isLast
-            ? const SizedBox.shrink() // Don't print trailing path dots after the final level
+            ? const SizedBox.shrink()
             : _DotConnector(
                 isUnlocked: isCompleted,
                 isEvenRow: isEvenRow,
                 seed: index,
               );
 
-        // Grid-Row Layout implementation
         return Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Left Column Block
-            Expanded(
-              child: SizedBox(
-                height: 110, // Match node bounding footprint to keep things uniform
-                child: Center(
-                  child: isEvenRow ? nodeWidget : dotsWidget,
-                ),
-              ),
-            ),
-            // Right Column Block
+            // ─── COLUMN 1 (Left Half - 50%) ───
             Expanded(
               child: SizedBox(
                 height: 110,
-                child: Center(
-                  child: isEvenRow ? dotsWidget : nodeWidget,
-                ),
+                child: isEvenRow
+                    ? Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 120.0), // Node 1: pushed 120px left from center line
+                          child: nodeWidget,
+                        ),
+                      )
+                    : Align(
+                        alignment: Alignment.centerRight, // Row 2 Dots: sits flush against center line
+                        child: dotsWidget,
+                      ),
+              ),
+            ),
+            // ─── COLUMN 2 (Right Half - 50%) ───
+            Expanded(
+              child: SizedBox(
+                height: 110,
+                child: isEvenRow
+                    ? Align(
+                        alignment: Alignment.centerLeft, // Row 1 Dots: sits flush against center line
+                        child: dotsWidget,
+                      )
+                    : Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 120.0), // Node 2: pushed 120px right from center line
+                          child: nodeWidget,
+                        ),
+                      ),
               ),
             ),
           ],
         );
+
       }),
     );
   }
