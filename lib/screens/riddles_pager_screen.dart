@@ -342,14 +342,20 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
   @override
   void initState() {
     super.initState();
+
 		print('RiddleEditorPage init started');
+
     _qCtrl = TextEditingController(text: widget.riddle.question);
+		print('RiddleEditorPage init 1');
     _itemCtrl = TextEditingController();
+		print('RiddleEditorPage init 2');
     _selectedType = RiddleType.values[widget.riddle.typeIndex];
+		print('RiddleEditorPage init 3');
 
     final mc = widget.riddle.asMultipleChoice;
+		print('RiddleEditorPage init 4');
     final ord = widget.riddle.asOrdering;
-		print('RiddleEditorPage init 1');
+		print('RiddleEditorPage init 5');
     switch (_selectedType) {
       case RiddleType.multipleChoice:
 
