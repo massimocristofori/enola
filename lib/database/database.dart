@@ -63,11 +63,13 @@ class MultipleChoicePayload extends RiddlePayload {
     required this.correctIndex,
   });
 
-  factory MultipleChoicePayload.fromJson(Map<String, dynamic> json) =>
-      MultipleChoicePayload(
-        choices: (json['choices'] as List).cast<String>(),
-        correctIndex: json['correctIndex'] as int,
-      );
+
+	factory MultipleChoicePayload.fromJson(Map<String, dynamic> json) =>
+    MultipleChoicePayload(
+      choices: (json['choices'] as List?)?.cast<String>() ?? [],
+      correctIndex: (json['correctIndex'] as int?) ?? 0,
+    );
+
 
   @override
   Map<String, dynamic> toJson() => {
@@ -86,10 +88,12 @@ class OrderingPayload extends RiddlePayload {
 
   const OrderingPayload({required this.items});
 
-  factory OrderingPayload.fromJson(Map<String, dynamic> json) =>
-      OrderingPayload(
-        items: (json['items'] as List).cast<String>(),
-      );
+
+	factory OrderingPayload.fromJson(Map<String, dynamic> json) =>
+    OrderingPayload(
+      items: (json['items'] as List?)?.cast<String>() ?? [],
+    );
+
 
   @override
   Map<String, dynamic> toJson() => {'items': items};
