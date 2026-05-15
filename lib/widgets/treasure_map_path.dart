@@ -82,11 +82,11 @@ class TreasureMapPath extends ConsumerWidget {
     );
   }
 
-  // --- CHANGE 1: was centerLeft/centerRight, now ±0.45 ---
+  // --- CHANGE 1: was centerLeft/centerRight, now ±0.5 ---
   Alignment _getAlignment(int index) {
     return (index % 2 == 0)
-        ? const Alignment(-0.45, 0)
-        : const Alignment(0.45, 0);
+        ? const Alignment(-0.5, 0)
+        : const Alignment(0.5, 0);
   }
 }
 
@@ -260,7 +260,7 @@ class _RiddleNodeState extends State<_RiddleNode>
                       Colors.white,
                       Colors.transparent,
                     ],
-                    stops: [0.0, 1.0],
+                    stops: [0.0, 0.8],
                   ),
                 ),
               ),
@@ -438,11 +438,12 @@ class _DotPainter extends CustomPainter {
 
     final isFromLeft = from.x < 0;
 
+
     final path = Path()
       ..moveTo(startX, 0)
       ..cubicTo(
-        startX + (isFromLeft ? 40 : -40), size.height * 0.1,
-        endX   + (to.x < 0  ? -20 :  20), size.height * 0.6,
+        startX + (isFromLeft ? 20 : -20), size.height * 0.25,
+        endX   + (to.x < 0  ? -10 :  10), size.height * 0.75,
         endX, size.height,
       );
 
