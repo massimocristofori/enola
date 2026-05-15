@@ -138,22 +138,6 @@ class _MapCard extends ConsumerWidget {
   final RiddleMap map;
   const _MapCard({required this.map});
 
-  /*static const List<List<Color>> _gradients = [
-    [Color(0xFFa78bfa), Color(0xFF7C3AED)],
-    [Color(0xFFf472b6), Color(0xFFEC4899)],
-    [Color(0xFF34d399), Color(0xFF059669)],
-    [Color(0xFFfbbf24), Color(0xFFd97706)],
-    [Color(0xFF60a5fa), Color(0xFF2563EB)],
-    [Color(0xFFf87171), Color(0xFFDC2626)],
-  ];
-
-  List<Color> _gradient() {
-    final idx = map.id.codeUnits.fold(0, (a, b) => a + b) % _gradients.length;
-    return _gradients[idx];
-  }*/
-
-  // ── Delete ──────────────────────────────────────────────────────────────────
-
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
@@ -181,11 +165,7 @@ class _MapCard extends ConsumerWidget {
   Future<void> _deleteMap(BuildContext context, WidgetRef ref) async {
     try {
       final db = DriftService.instance.db;
-      // CASCADE on PlaySessions and Riddles is set in the schema,
-      // so deleting the map row removes everything automatically.
-      await (db.delete(db.riddleMaps)
-            ..where((t) => t.id.equals(map.id)))
-          .go();
+      await (db.delete(db.riddleMaps)..where((t) => t.id.equals(map.id))).go();
       ref.invalidate(allMapsProvider);
     } catch (e) {
       if (context.mounted) {
@@ -201,13 +181,29 @@ class _MapCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    //final grad = [Color(0xFFffffff), Color(0xFFf3f6f4)];//_gradient();
-
     final Uint8List? imageBytes =
         map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
+    // --- Resolve completion state here so the card decoration can react ---
+    final countAsync = ref.watch(riddleCountProvider(map.id));
+    final sessionAsync = ref.watch(latestSessionProvider(map.id));
+
+    final count = countAsync.valueOrNull ?? 0;
+    final maxStars = count * 3;
+    final session = sessionAsync.valueOrNull;
+
+    int achievedStars = 0;
+    if (session != null && session.riddleStarsJson != null) {
+      try {
+        final list = jsonDecode(session.riddleStarsJson!) as List;
+        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+      } catch (_) {}
+    }
+
+    final hasBeenPlayed = session != null;
+    final isComplete = hasBeenPlayed && maxStars > 0 && achievedStars >= maxStars;
+
     return GestureDetector(
-      // ── Tap card → play ──
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => PlayScreen(mapId: map.id)),
@@ -221,13 +217,22 @@ class _MapCard extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              boxShadow: isComplete
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFf59e0b).withValues(alpha: 0.55),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
             ),
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -245,7 +250,7 @@ class _MapCard extends ConsumerWidget {
                               fit: BoxFit.cover,
                             )
                           : Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [Color(0xFFffffff), Color(0xFFf3f6f4)],
                                   begin: Alignment.topLeft,
@@ -272,7 +277,12 @@ class _MapCard extends ConsumerWidget {
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(
                           bottom: Radius.circular(10)),
-                      child: _CardInfoBar(mapId: map.id, title: map.title),
+                      child: _CardInfoBar(
+                        title: map.title,
+                        achievedStars: achievedStars,
+                        maxStars: maxStars,
+                        hasBeenPlayed: hasBeenPlayed,
+                      ),
                     ),
                   ),
                 ],
@@ -306,6 +316,40 @@ class _MapCard extends ConsumerWidget {
               onTap: () => _confirmDelete(context, ref),
             ),
           ),
+
+          // ── Top-center crown (only when complete) ──
+          if (isComplete)
+            Positioned(
+              top: -8,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFf59e0b),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFf59e0b).withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.workspace_premium_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ).animate().scale(
+                    begin: const Offset(0.5, 0.5),
+                    end: const Offset(1.0, 1.0),
+                    duration: 400.ms,
+                    curve: Curves.elasticOut,
+                  ),
+            ),
         ],
       ),
     );
@@ -314,34 +358,21 @@ class _MapCard extends ConsumerWidget {
 
 // ── Card Info Bar ─────────────────────────────────────────────────────────────
 
-class _CardInfoBar extends ConsumerWidget {
-  final String mapId;
+class _CardInfoBar extends StatelessWidget {
   final String title;
+  final int achievedStars;
+  final int maxStars;
+  final bool hasBeenPlayed;
 
-  const _CardInfoBar({required this.mapId, required this.title});
+  const _CardInfoBar({
+    required this.title,
+    required this.achievedStars,
+    required this.maxStars,
+    required this.hasBeenPlayed,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countAsync = ref.watch(riddleCountProvider(mapId));
-    final sessionAsync = ref.watch(latestSessionProvider(mapId));
-
-    final count = countAsync.valueOrNull ?? 0;
-    final maxStars = count * 3;
-
-    final session = sessionAsync.valueOrNull;
-
-    int achievedStars = 0;
-    if (session != null && session.riddleStarsJson != null) {
-      try {
-        final list = jsonDecode(session.riddleStarsJson!) as List;
-        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
-      } catch (_) {
-        achievedStars = 0;
-      }
-    }
-
-    final hasBeenPlayed = session != null;
-
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
       color: Colors.white,
@@ -364,62 +395,45 @@ class _CardInfoBar extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
 
-          // --- Not played: star icon + max stars ---
-          if (!hasBeenPlayed)
-            Row(
-              children: [
-                const Icon(Icons.star_rounded,
-                    size: 15, color: Color(0xFFf59e0b)),
-                const SizedBox(width: 4),
-                Text(
-                  '$maxStars',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF555555),
-                  ),
-                ),
-              ],
-            )
-
-          // --- Played: progress bar ---
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 15, color: Color(0xFFf59e0b)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$achievedStars / $maxStars',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF555555),
-                      ),
+          // --- Stars + progress bar (always visible) ---
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.star_rounded, size: 15, color: Color(0xFFf59e0b)),
+                  const SizedBox(width: 4),
+                  Text(
+                    hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF555555),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: maxStars > 0 ? achievedStars / maxStars : 0,
-                    minHeight: 5,
-                    backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFFf59e0b)),
                   ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: maxStars > 0 && hasBeenPlayed
+                      ? achievedStars / maxStars
+                      : 0,
+                  minHeight: 5,
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFFf59e0b)),
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
+
 
 // ── Ear Button ────────────────────────────────────────────────────────────────
 
