@@ -32,78 +32,74 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<void> _initSession() async {
-  try {
-
     try {
-      ref.read(playStateProvider.notifier).reset();
-    } catch (e) {
-      debugPrint("STEP 0 reset failed (ignored): $e");
-    }
-
-    await DriftService.instance.ensureReady();
-
-    final db = DriftService.instance.db;
-
-    final riddles = await db.getRiddlesForMap(widget.mapId);
-
-    final existing = await (db.select(db.playSessions)
-          ..where((t) => t.mapId.equals(widget.mapId))
-          ..orderBy([(t) => drift.OrderingTerm(
-                expression: t.startedAt,
-                mode: drift.OrderingMode.desc,
-              )])
-          ..limit(1))
-        .get();
-
-    final int sessionId;
-    final int lastCompleted;
-    final int correctAnswers;
-    final List<int> riddleStars;
-
-    if (existing.isNotEmpty && existing.first.completedAt == null) {
-      sessionId = existing.first.id;
-      lastCompleted = existing.first.lastCompletedIndex;
-      correctAnswers = existing.first.correctAnswers;
-      final raw = existing.first.riddleStarsJson;
-      List<int> tempStars = [];
       try {
-        if (raw != null) {
-          tempStars = (jsonDecode(raw) as List).cast<int>();
-        }
+        ref.read(playStateProvider.notifier).reset();
       } catch (e) {
-        debugPrint("JSON Decode error: $e");
+        debugPrint("STEP 0 reset failed (ignored): $e");
       }
-      riddleStars = tempStars;
-    } else {
-      sessionId = await DriftService.instance.startSession(
-        widget.mapId,
-        riddles.length,
-      );
-      lastCompleted = -1;
-      correctAnswers = 0;
-      riddleStars = [];
+
+      await DriftService.instance.ensureReady();
+
+      final db = DriftService.instance.db;
+      final riddles = await db.getRiddlesForMap(widget.mapId);
+
+      final existing = await (db.select(db.playSessions)
+            ..where((t) => t.mapId.equals(widget.mapId))
+            ..orderBy([(t) => drift.OrderingTerm(
+                  expression: t.startedAt,
+                  mode: drift.OrderingMode.desc,
+                )])
+            ..limit(1))
+          .get();
+
+      final int sessionId;
+      final int lastCompleted;
+      final int correctAnswers;
+      final List<int> riddleStars;
+
+      if (existing.isNotEmpty && existing.first.completedAt == null) {
+        sessionId = existing.first.id;
+        lastCompleted = existing.first.lastCompletedIndex;
+        correctAnswers = existing.first.correctAnswers;
+        final raw = existing.first.riddleStarsJson;
+        List<int> tempStars = [];
+        try {
+          if (raw != null) {
+            tempStars = (jsonDecode(raw) as List).cast<int>();
+          }
+        } catch (e) {
+          debugPrint("JSON Decode error: $e");
+        }
+        riddleStars = tempStars;
+      } else {
+        sessionId = await DriftService.instance.startSession(
+          widget.mapId,
+          riddles.length,
+        );
+        lastCompleted = -1;
+        correctAnswers = 0;
+        riddleStars = [];
+      }
+
+      ref.read(playStateProvider.notifier).init(
+            sessionId, lastCompleted, correctAnswers, riddleStars);
+    } catch (e, stackTrace) {
+      debugPrint("CAUGHT ERROR: $e");
+      debugPrint("$stackTrace");
+      if (mounted) {
+        setState(() {
+          _initError = 'CAUGHT: $e\n\n$stackTrace';
+          _initialising = false;
+        });
+        return;
+      }
     }
 
-    ref.read(playStateProvider.notifier).init(
-          sessionId, lastCompleted, correctAnswers, riddleStars);
-
-  } catch (e, stackTrace) {
-    debugPrint("CAUGHT ERROR: $e");
-    debugPrint("$stackTrace");
     if (mounted) {
-      setState(() {
-        _initError = 'CAUGHT: $e\n\n$stackTrace';
-        _initialising = false;
-      });
-      return; // skip finally setState
+      setState(() => _initialising = false);
     }
   }
-
-  if (mounted) {
-    setState(() => _initialising = false);
-  }
-}
-
 
   Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
@@ -113,8 +109,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final errorCount = await Navigator.push<int>(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            RiddleScreen(riddle: riddle, riddleIndex: riddleIndex),
+        builder: (_) => RiddleScreen(riddle: riddle, riddleIndex: riddleIndex),
       ),
     );
 
@@ -155,7 +150,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     final bool showingLoader = _initialising || playState == null;
 
-    // Show error on screen if init failed
     if (_initError != null) {
       return Scaffold(
         body: SafeArea(
@@ -171,68 +165,37 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
 
     return Scaffold(
-			backgroundColor: const Color(0xFFF1F4F8),
+      backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
-        child: SafeArea(
-          child: showingLoader
-              ? const Center(
-                  child: CircularProgressIndicator(color: EnolaTheme.accent))
-              : mapAsync.when(
+        child: showingLoader
+            ? const Center(
+                child: CircularProgressIndicator(color: EnolaTheme.accent))
+            : mapAsync.when(
+                loading: () => const Center(
+                    child: CircularProgressIndicator(color: EnolaTheme.accent)),
+                error: (e, _) => Center(child: Text('$e')),
+                data: (map) => riddlesAsync.when(
                   loading: () => const Center(
                       child: CircularProgressIndicator(color: EnolaTheme.accent)),
                   error: (e, _) => Center(child: Text('$e')),
-                  data: (map) => riddlesAsync.when(
-                    loading: () => const Center(
-                        child: CircularProgressIndicator(
-                            color: EnolaTheme.accent)),
-                    error: (e, _) => Center(child: Text('$e')),
-                    data: (riddles) => Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      map?.title ?? '',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                        color: EnolaTheme.textPrimary,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${playState.lastCompletedIndex + 1} / ${riddles.length} completed',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: EnolaTheme.textSecond,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              //_SessionStarBadge(playState: playState),
-                              Expanded(
-                                child: _StarProgressBar(
-                                  earned: playState.totalStars,
-                                  max: riddles.length * 3,
-                                ),
-                              ),
+                  data: (riddles) {
+                    final maxStars = riddles.length * 3;
+                    final achievedStars = playState.totalStars;
+                    final hasBeenPlayed = playState.lastCompletedIndex >= 0;
 
-                            ],
-                          ),
+                    return Column(
+                      children: [
+                        _PlayHeader(
+                          title: map?.title ?? '',
+                          achievedStars: achievedStars,
+                          maxStars: maxStars,
+                          hasBeenPlayed: hasBeenPlayed,
+                          onClose: () => Navigator.pop(context),
                         ),
 
                         if (playState.lastCompletedIndex < riddles.length - 1)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.only(top: 8, bottom: 4),
                             child: Text(
                               'Tap the glowing node to answer the next riddle',
                               style: TextStyle(
@@ -246,9 +209,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                         Expanded(
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                            child: Center( // 1. Center the map
+                            child: Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 400), // 2. Fix the max width
+                                constraints: const BoxConstraints(maxWidth: 400),
                                 child: TreasureMapPath(
                                   riddles: riddles,
                                   mapId: widget.mapId,
@@ -266,94 +229,103 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                             ),
                           ),
                         ),
-
                       ],
-                    ),
-                  ),
+                    );
+                  },
                 ),
-        ),
+              ),
       ),
     );
   }
 }
 
-class _StarProgressBar extends StatelessWidget {
-  final int earned;
-  final int max;
+// --- Card-peek header --------------------------------------------------------
 
-  const _StarProgressBar({required this.earned, required this.max});
+class _PlayHeader extends StatelessWidget {
+  final String title;
+  final int achievedStars;
+  final int maxStars;
+  final bool hasBeenPlayed;
+  final VoidCallback onClose;
+
+  const _PlayHeader({
+    required this.title,
+    required this.achievedStars,
+    required this.maxStars,
+    required this.hasBeenPlayed,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final progress = max == 0 ? 0.0 : (earned / max).clamp(0.0, 1.0);
-
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F4F4),
-        borderRadius: BorderRadius.circular(24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.fromLTRB(8, 10, 16, 14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            '$earned',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: Color(0xFFE8A020),
-            ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded),
+            color: EnolaTheme.textSecond,
+            onPressed: onClose,
           ),
-          const SizedBox(width: 10),
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const thumbSize = 28.0;
-                final trackWidth = constraints.maxWidth;
-                final thumbLeft = (progress * (trackWidth - thumbSize))
-                    .clamp(0.0, trackWidth - thumbSize);
-
-                return SizedBox(
-                  height: 28,
-                  child: Stack(
-                    alignment: Alignment.centerLeft,
-                    children: [
-                      Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0E0E0),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      Container(
-                        height: 6,
-                        width: thumbLeft + thumbSize / 2,
-                        decoration: BoxDecoration(
-                          color: EnolaTheme.accent.withAlpha(80),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      Positioned(
-                        left: thumbLeft,
-                        child: const Icon(
-                          Icons.star_rounded,
-                          color: Color(0xFFE8A020),
-                          size: thumbSize,
-                        ),
-                      ),
-                    ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: EnolaTheme.textPrimary,
+                    height: 1.3,
+                    letterSpacing: 0.1,
                   ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            '$max',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: EnolaTheme.accent,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        size: 17, color: Color(0xFFf59e0b)),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF555555),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: maxStars > 0 && hasBeenPlayed
+                        ? achievedStars / maxStars
+                        : 0,
+                    minHeight: 5,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFf59e0b)),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
