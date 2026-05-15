@@ -37,6 +37,7 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
   // ── LOAD ───────────────────────────────────────────────────────────────────
 
   Future<void> _loadRiddles() async {
+		print('_loadRiddles started');
     final db = DriftService.instance.db;
     final riddles = await (db.select(db.riddles)
           ..where((t) => t.mapId.equals(widget.mapId))
@@ -46,9 +47,11 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
       _riddles = riddles;
       _loading = false;
     });
+		print('_loadRiddles riddles loaded. Empty:' + _riddles.isEmpty);
     if (_riddles.isEmpty) {
       await _insertBlankRiddle(atIndex: 0, navigate: true);
     }
+		print('_loadRiddles end');
   }
 
   // ── MUTATIONS ──────────────────────────────────────────────────────────────
@@ -339,13 +342,14 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
   @override
   void initState() {
     super.initState();
+		print('RiddleEditorPage init started');
     _qCtrl = TextEditingController(text: widget.riddle.question);
     _itemCtrl = TextEditingController();
     _selectedType = RiddleType.values[widget.riddle.typeIndex];
 
     final mc = widget.riddle.asMultipleChoice;
     final ord = widget.riddle.asOrdering;
-
+		print('RiddleEditorPage init 1');
     switch (_selectedType) {
       case RiddleType.multipleChoice:
 
@@ -367,6 +371,7 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         _correctIndex = 0;
         _tfCorrectIndex = 0;
     }
+		print('RiddleEditorPage init end');
   }
 
   @override
