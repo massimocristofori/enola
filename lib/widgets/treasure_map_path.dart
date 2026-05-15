@@ -129,7 +129,7 @@ class _RiddleNodeState extends State<_RiddleNode>
   void initState() {
     super.initState();
     _pulse = AnimationController(
-      verticalSync: false, // Flutter Animate safe fallback
+      //verticalSync: false, // Flutter Animate safe fallback
       vsync: this,
       duration: const Duration(milliseconds: 900),
       lowerBound: 0.92,
