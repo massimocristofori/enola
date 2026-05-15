@@ -401,7 +401,7 @@ class _CardInfoBar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.star_rounded, size: 15, color: Color(0xFFf59e0b)),
+                  const Icon(Icons.star_rounded, size: 17, color: Color(0xFFf59e0b)),
                   const SizedBox(width: 4),
                   Text(
                     hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
