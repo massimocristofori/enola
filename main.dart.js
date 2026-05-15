@@ -53413,10 +53413,10 @@ o===$&&A.a()
 return A.jZ(s,s,s,new A.ZC(q,B.t,p,o.gA(),r.a.e,s),B.G)},
 $S:639}
 A.ZC.prototype={
-aK(a,b){var s,r,q,p,o,n,m=this,l=b.a,k=b.b,j=k*0.5,i=l*0.5
-if(m.b){s=new A.i(l*0.35,j)
-r=new A.i(i,k*0.65)}else{s=new A.i(i,k*0.35)
-r=new A.i(l*0.65,j)}q=new A.aBp()
+aK(a,b){var s,r,q,p,o,n,m=this,l=b.a,k=b.b,j=k*0.6
+if(m.b){s=new A.i(l*0,j)
+r=new A.i(l*0.3,k)}else{s=new A.i(l,j)
+r=new A.i(l*0.7,k)}q=new A.aBp()
 q.acp(m.f)
 p=0.6+q.aAK()*0.4
 $.a7()
