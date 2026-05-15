@@ -53408,7 +53408,7 @@ s===$&&A.a()
 s.bW()}},
 $S:11}
 A.awS.prototype={
-$2(a,b){var s=null,r=this.a,q=r.a.d,p=B.t.dH(0.2),o=r.e
+$2(a,b){var s=null,r=this.a,q=r.a.d,p=B.t.dH(0.1),o=r.e
 o===$&&A.a()
 return A.jZ(s,s,s,new A.ZC(q,B.t,p,o.gA(),r.a.e,s),B.G)},
 $S:639}
@@ -53418,7 +53418,7 @@ if(m.b){s=new A.i(l*0,j)
 r=new A.i(l*0.3,k)}else{s=new A.i(l,j)
 r=new A.i(l*0.7,k)}q=new A.aBp()
 q.acp(m.f)
-p=0.6+q.aAK()*0.4
+p=0.4+q.aAK()*0.4
 $.a7()
 o=A.ba()
 l=m.e
@@ -53427,8 +53427,8 @@ o.b=B.br
 n=A.ba()
 n.r=(l>=1?m.c.dH(p):m.d).gA()
 n.b=B.br
-a.lp(s,7,o)
-a.lp(r,7,n)},
+a.lp(s,8,o)
+a.lp(r,8,n)},
 eK(a){return a.e!==this.e||a.b!==this.b}}
 A.Mm.prototype={
 l(){var s=this,r=s.bk$
