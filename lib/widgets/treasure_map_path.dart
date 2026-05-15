@@ -41,6 +41,7 @@ class TreasureMapPath extends ConsumerWidget {
 
     return Column(
       children: List.generate(riddles.length, (index) {
+        // --- CHANGE 1: tighter alignments ---
         final alignment = _getAlignment(index);
         final isLast = index == riddles.length - 1;
         final isCompleted = index <= lastCompleted;
@@ -63,7 +64,6 @@ class TreasureMapPath extends ConsumerWidget {
                 status: status,
                 stars: stars,
                 imageBytes: imageBytes,
-                // Only allow tap if it's the current node
                 onTap: isCurrent && onCurrentNodeTap != null
                     ? onCurrentNodeTap
                     : null,
@@ -82,8 +82,11 @@ class TreasureMapPath extends ConsumerWidget {
     );
   }
 
+  // --- CHANGE 1: was centerLeft/centerRight, now ±0.45 ---
   Alignment _getAlignment(int index) {
-    return (index % 2 == 0) ? Alignment.centerLeft : Alignment.centerRight;
+    return (index % 2 == 0)
+        ? const Alignment(-0.45, 0)
+        : const Alignment(0.45, 0);
   }
 }
 
@@ -97,7 +100,6 @@ class _RiddleNode extends StatefulWidget {
   final VoidCallback? onTap;
 
   const _RiddleNode({
-    //super.key,
     required this.index,
     required this.status,
     required this.stars,
@@ -123,13 +125,11 @@ class _RiddleNodeState extends State<_RiddleNode>
       lowerBound: 0.92,
       upperBound: 1.08,
     );
-
     _checkActivation();
   }
 
   void _checkActivation() {
     if (widget.status == NodeStatus.current) {
-      // Delay the "activation" to match the dot connector animation (1200ms)
       Future.delayed(const Duration(milliseconds: 2000), () {
         if (mounted) {
           setState(() => _isReached = true);
@@ -157,9 +157,11 @@ class _RiddleNodeState extends State<_RiddleNode>
 
   @override
   Widget build(BuildContext context) {
-    final isLocked = widget.status == NodeStatus.locked || (widget.status == NodeStatus.current && !_isReached);
+    final isLocked = widget.status == NodeStatus.locked ||
+        (widget.status == NodeStatus.current && !_isReached);
     final isCompleted = widget.status == NodeStatus.completed;
-    final isCurrentReached = widget.status == NodeStatus.current && _isReached;
+    final isCurrentReached =
+        widget.status == NodeStatus.current && _isReached;
 
     return GestureDetector(
       onTap: isCurrentReached ? widget.onTap : null,
@@ -167,12 +169,14 @@ class _RiddleNodeState extends State<_RiddleNode>
         width: 110,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: ScaleTransition(
-          scale: isCurrentReached ? _pulse : const AlwaysStoppedAnimation(1.0),
+          scale: isCurrentReached
+              ? _pulse
+              : const AlwaysStoppedAnimation(1.0),
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 18.0), // Reduced from 25.0
+                padding: const EdgeInsets.only(top: 18.0),
                 child: _buildBox(isCompleted, isCurrentReached, isLocked),
               ),
               if (isCompleted)
@@ -196,10 +200,12 @@ class _RiddleNodeState extends State<_RiddleNode>
           color: EnolaTheme.accent,
           borderRadius: radius,
           boxShadow: [
-            BoxShadow(color: EnolaTheme.accent.withAlpha(100), blurRadius: 12)
+            BoxShadow(
+                color: EnolaTheme.accent.withAlpha(100), blurRadius: 12)
           ],
         ),
-        child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
+        child:
+            const Icon(Icons.star_rounded, color: Colors.white, size: 40),
       );
     }
 
@@ -210,31 +216,29 @@ class _RiddleNodeState extends State<_RiddleNode>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: radius,
-          border: Border.all(color: EnolaTheme.accent.withAlpha(80), width: 2),
+          border:
+              Border.all(color: EnolaTheme.accent.withAlpha(80), width: 2),
         ),
       );
     }
 
+    // --- CHANGE 3: gradient overlay instead of flat white ---
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: const Color(0xFFF8F4EC),
         borderRadius: radius,
-        // Outer Gold Border (4 pixels with opacity)
         border: Border.all(
-          color: const Color(0xFFE8C840).withValues(alpha: 0.6), // Adjust opacity as needed
+          color: const Color(0xFFE8C840).withValues(alpha: 0.6),
           width: 3.0,
         ),
       ),
-      // Inner container to create the White Border (2 pixels)
       child: Container(
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(15)), // Slightly smaller to fit inside
-          border: Border.all(
-            color: Colors.white,
-            width: 2.0,
-          ),
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(15)),
+          border: Border.fromBorderSide(
+              BorderSide(color: Colors.white, width: 2.0)),
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(13)),
@@ -245,14 +249,26 @@ class _RiddleNodeState extends State<_RiddleNode>
                 Image.memory(widget.imageBytes!, fit: BoxFit.cover)
               else
                 Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
-              // Light overlay for parchment feel
-              Container(color: Colors.white.withValues(alpha: 0.6)),
+
+              // --- CHANGE 3: top=white → bottom=transparent gradient ---
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white,
+                      Colors.transparent,
+                    ],
+                    stops: [0.0, 1.0],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
-
   }
 }
 
@@ -285,35 +301,30 @@ class _StarsRow extends StatelessWidget {
               shadows: isFilled
                   ? [
                       const Shadow(
-                          //color: Colors.black26,
                           color: Colors.white,
                           blurRadius: 4,
                           offset: Offset(0, 2))
                     ]
                   : null,
             )
-            .animate()
-            // 1. Scale Animation (The "Pop")
-            .scale(
-              begin: Offset.zero,
-              end: const Offset(1, 1),
-              duration: 800.ms,
-              // Delay: 1000ms (Wait for transition) + Stagger (Each star follows the other)
-              delay: (400 + (i * 100)).ms, 
-              curve: Curves.easeOutBack, // The bouncy curve
-            )
-            // 2. Fade Animation (Ensures they don't just 'snap' into existence)
-            .fadeIn(
-              duration: 200.ms, 
-              delay: (400 + (i * 100)).ms,
-            ),
+                .animate()
+                .scale(
+                  begin: Offset.zero,
+                  end: const Offset(1, 1),
+                  duration: 800.ms,
+                  delay: (400 + (i * 100)).ms,
+                  curve: Curves.easeOutBack,
+                )
+                .fadeIn(
+                  duration: 200.ms,
+                  delay: (400 + (i * 100)).ms,
+                ),
           );
         }),
       ),
     );
   }
 }
-
 
 // ── Dot connector ─────────────────────────────────────────────────────────────
 
@@ -324,7 +335,6 @@ class _DotConnector extends StatefulWidget {
   final int seed;
 
   const _DotConnector({
-    //super.key,
     required this.from,
     required this.to,
     required this.isUnlocked,
@@ -356,9 +366,7 @@ class _DotConnectorState extends State<_DotConnector>
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
       Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) {
-          _fill.forward();
-        }
+        if (mounted) _fill.forward();
       });
     } else if (!widget.isUnlocked) {
       _fill.value = 0.0;
@@ -374,7 +382,8 @@ class _DotConnectorState extends State<_DotConnector>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 60, // Reduced from 80 for tighter layout
+      // --- CHANGE 2: reduced height for tighter vertical spacing ---
+      height: 36,
       width: double.infinity,
       child: AnimatedBuilder(
         animation: _progress,
@@ -385,7 +394,7 @@ class _DotConnectorState extends State<_DotConnector>
             baseColor: EnolaTheme.accent,
             lockedColor: EnolaTheme.accent.withAlpha(55),
             progress: _progress.value,
-            dotCount: 2, // Reduced from 4
+            dotCount: 2,
             seed: widget.seed,
           ),
         ),
@@ -415,23 +424,25 @@ class _DotPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bool isFromLeft = from.x < 0;
-    
-    // Start from the side of current node
-    final double startX = isFromLeft 
-        ? (size.width * 0.15 + 35) 
-        : (size.width * 0.85 - 35);
-    
-    // End at the side of the next node
-    final double endX = (to.x < 0) 
-        ? size.width * 0.15 + 30
-        : size.width * 0.85 - 30;
+    // --- CHANGE 1 + 2: x positions derived from the ±0.45 alignment,
+    //     mapped into canvas space. With alignment ±0.45 the node center
+    //     sits at width * (0.45 + 1) / 2 = width * 0.725 / width * 0.275.
+    //     The node is 110 wide with 10px padding, so the box center is at
+    //     the alignment point ± half the node container (55px). ---
+    final double fromCenter = (from.x + 1) / 2 * size.width;
+    final double toCenter   = (to.x   + 1) / 2 * size.width;
+
+    // Dots start/end at the horizontal center of each node
+    final double startX = fromCenter;
+    final double endX   = toCenter;
+
+    final isFromLeft = from.x < 0;
 
     final path = Path()
       ..moveTo(startX, 0)
       ..cubicTo(
-        startX + (isFromLeft ? 60 : -60), size.height * 0.1,
-        endX + (to.x < 0 ? -20 : 20), size.height * 0.5,
+        startX + (isFromLeft ? 40 : -40), size.height * 0.1,
+        endX   + (to.x < 0  ? -20 :  20), size.height * 0.6,
         endX, size.height,
       );
 
@@ -446,10 +457,10 @@ class _DotPainter extends CustomPainter {
 
       final isLit = t <= progress;
       final double randomOpacity = 0.6 + (random.nextDouble() * 0.4);
-      
+
       final paint = Paint()
-        ..color = isLit 
-            ? baseColor.withValues(alpha: randomOpacity) 
+        ..color = isLit
+            ? baseColor.withValues(alpha: randomOpacity)
             : lockedColor
         ..style = PaintingStyle.fill;
 
