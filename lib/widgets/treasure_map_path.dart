@@ -429,12 +429,12 @@ class _GridDotPainter extends CustomPainter {
     // Placed strictly within the inner bounding box, completely clear of edges
     if (isEvenRow) {
       // Row 1 & 3: Floating path from Node 1 (Left-ish) turning Downward
-      dot1 = Offset(size.width * 0.35, size.height * 0.50);
-      dot2 = Offset(size.width * 0.50, size.height * 0.65);
+      dot1 = Offset(size.width * 0, size.height * 0.60);
+      dot2 = Offset(size.width * 0.30, size.height * 1);
     } else {
       // Row 2: Floating path entering from top turning toward Node 2 (Right-ish)
-      dot1 = Offset(size.width * 0.50, size.height * 0.35);
-      dot2 = Offset(size.width * 0.65, size.height * 0.50);
+      dot1 = Offset(size.width * 1, size.height * 0.60);
+      dot2 = Offset(size.width * 0.70, size.height * 1);
     }
 
     final random = math.Random(seed);
