@@ -85,8 +85,8 @@ class TreasureMapPath extends ConsumerWidget {
   // --- CHANGE 1: was centerLeft/centerRight, now ±0.5 ---
   Alignment _getAlignment(int index) {
     return (index % 2 == 0)
-        ? const Alignment(-0.5, 0)
-        : const Alignment(0.5, 0);
+        ? const Alignment(-0.6, 0)
+        : const Alignment(0.6, 0);
   }
 }
 
