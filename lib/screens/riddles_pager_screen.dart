@@ -380,8 +380,9 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         _tfCorrectIndex = 0;
     }
 		
-		} catch(e) {
+		} catch(e, stackTrace) {
 			print('Error: $e');
+			print('Error: $stackTrace');
 		}
 		print('RiddleEditorPage init end');
   }
