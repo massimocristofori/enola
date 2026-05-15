@@ -81,8 +81,7 @@ class TreasureMapPath extends ConsumerWidget {
                     ? Align(
                         alignment: Alignment.centerRight,
                         child: Padding(
-                          //padding: const EdgeInsets.only(right: 10.0), // Node 1: pushed 120px left from center line
-													alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 30.0), // Node 1: pushed 120px left from center line
                           child: nodeWidget,
                         ),
                       )
@@ -104,8 +103,7 @@ class TreasureMapPath extends ConsumerWidget {
                     : Align(
                         alignment: Alignment.centerLeft,
                         child: Padding(
-                          //padding: const EdgeInsets.only(left: 10.0), // Node 2: pushed 120px right from center line
-													alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.only(left: 30.0), // Node 2: pushed 120px right from center line
                           child: nodeWidget,
                         ),
                       ),
