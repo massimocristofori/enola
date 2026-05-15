@@ -252,7 +252,7 @@ class _RiddleNodeState extends State<_RiddleNode>
 
               // --- CHANGE 3: top=white → bottom=transparent gradient ---
               Container(
-                decoration: const BoxDecoration(
+                decoration:  BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
