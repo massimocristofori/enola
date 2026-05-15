@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/providers/map_providers.dart';
 import 'package:enola/theme/enola_theme.dart';
-import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/widgets/treasure_map_path.dart';
 import 'package:enola/screens/riddle_screen.dart';
 import 'package:enola/screens/result_screen.dart';
@@ -172,6 +171,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
 
     return Scaffold(
+			backgroundColor: const Color(0xFFF1F4F8),
       body: FantasyBackground(
         child: SafeArea(
           child: showingLoader
