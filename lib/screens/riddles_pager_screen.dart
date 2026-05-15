@@ -352,7 +352,11 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     _itemCtrl = TextEditingController();
 		print('RiddleEditorPage init 2');
     _selectedType = RiddleType.values[widget.riddle.typeIndex];
+
 		print('RiddleEditorPage init 3');
+		print('RiddleEditorPage init 3.1: $widget');
+		print('RiddleEditorPage init 3.2: $widget.riddle');
+		print('RiddleEditorPage init 3.3: $widget.riddle.asMultipleChoice');
 
     final mc = widget.riddle.asMultipleChoice;
 		print('RiddleEditorPage init 4');
