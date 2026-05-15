@@ -172,7 +172,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     return Scaffold(
 			backgroundColor: const Color(0xFFF1F4F8),
-      body: FantasyBackground(
+      body: SafeArea(
         child: SafeArea(
           child: showingLoader
               ? const Center(
