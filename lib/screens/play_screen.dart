@@ -184,30 +184,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                     final achievedStars = playState.totalStars;
                     final hasBeenPlayed = playState.lastCompletedIndex >= 0;
 
-                    // ---
-                    // imageBytes is extracted here so _PlayHeader can receive
-                    // it and wrap itself in the matching Hero tag.
-                    // ---
-                    final imageBytes = map?.imageBytes != null
-                        ? List<int>.from(map!.imageBytes!).cast<int>()
-                        : null;
-
                     return Column(
                       children: [
-                        // ---
-                        // _PlayHeader contains the Hero that matches the card.
-                        // It receives imageBytes so it can render the same
-                        // image the card shows, making the flight seamless.
-                        // ---
                         _PlayHeader(
                           mapId: widget.mapId,
                           title: map?.title ?? '',
                           achievedStars: achievedStars,
                           maxStars: maxStars,
                           hasBeenPlayed: hasBeenPlayed,
-                          imageBytes: imageBytes != null
-                              ? imageBytes as dynamic
-                              : null,
                           onClose: () => Navigator.pop(context),
                         ),
 
@@ -238,9 +222,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                   lastCompletedIndex:
                                       playState.lastCompletedIndex,
                                   riddleStars: playState.riddleStars,
-                                  imageBytes: map?.imageBytes != null
-                                      ? imageBytes as dynamic
-                                      : null,
+                                  imageBytes: map?.imageBytes,
                                   onCurrentNodeTap: playState
                                               .lastCompletedIndex <
                                           riddles.length - 1
@@ -266,11 +248,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
 // ── Play Header ───────────────────────────────────────────────────────────────
 // ---
-// This widget wraps its container in a Hero with tag 'map-card-<mapId>',
-// matching the Hero in _MapCard on HomeScreen.
-// The card image is shown behind the header content so the flight looks
-// like the card is physically moving up and morphing into the header.
-// Material(transparency) prevents ink/text glitches during the hero flight.
+// Plain white background, matching exactly the bottom info bar of the card
+// on HomeScreen. This makes the Hero flight seamless in both directions:
+// the card's white info bar morphs cleanly into this white header.
 // ---
 
 class _PlayHeader extends StatelessWidget {
@@ -279,7 +259,6 @@ class _PlayHeader extends StatelessWidget {
   final int achievedStars;
   final int maxStars;
   final bool hasBeenPlayed;
-  final dynamic imageBytes; // Uint8List? — kept as dynamic to avoid extra import
   final VoidCallback onClose;
 
   const _PlayHeader({
@@ -288,7 +267,6 @@ class _PlayHeader extends StatelessWidget {
     required this.achievedStars,
     required this.maxStars,
     required this.hasBeenPlayed,
-    required this.imageBytes,
     required this.onClose,
   });
 
@@ -301,8 +279,7 @@ class _PlayHeader extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(bottom: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
             boxShadow: [
               BoxShadow(
                 color: Color(0x18000000),
@@ -311,94 +288,61 @@ class _PlayHeader extends StatelessWidget {
               ),
             ],
           ),
-          // ---
-          // Stack lets the map image sit behind the info row,
-          // replicating the card's visual so the hero flight is seamless.
-          // ---
-          child: Stack(
+          padding: const EdgeInsets.fromLTRB(8, 10, 16, 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ── Background image (same as card) ──
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(20)),
-                  child: imageBytes != null
-                      ? Image.memory(
-                          imageBytes,
-                          fit: BoxFit.cover,
-                          color: Colors.white.withValues(alpha: 0.55),
-                          colorBlendMode: BlendMode.lighten,
-                        )
-                      : Image.asset(
-                          'assets/images/0.jpeg',
-                          fit: BoxFit.cover,
-                          color: Colors.white.withValues(alpha: 0.55),
-                          colorBlendMode: BlendMode.lighten,
-                        ),
-                ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                color: EnolaTheme.textSecond,
+                onPressed: onClose,
               ),
-
-              // ── Info row ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 10, 16, 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      color: EnolaTheme.textSecond,
-                      onPressed: onClose,
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        color: EnolaTheme.textPrimary,
+                        height: 1.3,
+                        letterSpacing: 0.1,
+                      ),
                     ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w400,
-                              color: EnolaTheme.textPrimary,
-                              height: 1.3,
-                              letterSpacing: 0.1,
-                            ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            size: 17, color: Color(0xFFf59e0b)),
+                        const SizedBox(width: 4),
+                        Text(
+                          hasBeenPlayed
+                              ? '$achievedStars / $maxStars'
+                              : '$maxStars',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF555555),
                           ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(Icons.star_rounded,
-                                  size: 17, color: Color(0xFFf59e0b)),
-                              const SizedBox(width: 4),
-                              Text(
-                                hasBeenPlayed
-                                    ? '$achievedStars / $maxStars'
-                                    : '$maxStars',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF555555),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: maxStars > 0 && hasBeenPlayed
-                                  ? achievedStars / maxStars
-                                  : 0,
-                              minHeight: 5,
-                              backgroundColor: const Color(0xFFE5E7EB),
-                              valueColor:
-                                  const AlwaysStoppedAnimation<Color>(
-                                      Color(0xFFf59e0b)),
-                            ),
-                          ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: maxStars > 0 && hasBeenPlayed
+                            ? achievedStars / maxStars
+                            : 0,
+                        minHeight: 5,
+                        backgroundColor: const Color(0xFFE5E7EB),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFf59e0b)),
                       ),
                     ),
                   ],
