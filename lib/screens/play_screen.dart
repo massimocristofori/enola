@@ -173,10 +173,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
-      // ---
-      // iOS-style pill FAB at the bottom center.
-      // floatingActionButtonLocation centers it horizontally.
-      // ---
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
@@ -239,6 +235,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                             playState.lastCompletedIndex,
                                         riddleStars: playState.riddleStars,
                                         imageBytes: map?.imageBytes,
+                                        // Immediate if fresh open from home.
+                                        // Keeps delay when advancing node-to-node.
+                                        immediateActivation:
+                                            playState.lastCompletedIndex == -1,
                                         onCurrentNodeTap: playState
                                                     .lastCompletedIndex <
                                                 riddles.length - 1
@@ -267,7 +267,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 }
 
 // ── Play Header ───────────────────────────────────────────────────────────────
-// No close button — identical in content to the card's bottom info bar.
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
@@ -285,20 +284,19 @@ class _PlayHeader extends StatelessWidget {
   });
 
   @override
-Widget build(BuildContext context) {
-  return GestureDetector(
-    onTap: () => Navigator.pop(context),
-    child: Hero(
-      tag: 'map-card-$mapId',
-      child: Material(
-        type: MaterialType.transparency,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Hero(
+        tag: 'map-card-$mapId',
+        child: Material(
+          type: MaterialType.transparency,
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              borderRadius:
+                  BorderRadius.vertical(bottom: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
                   color: Color(0x18000000),
@@ -307,7 +305,7 @@ Widget build(BuildContext context) {
                 ),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -331,7 +329,9 @@ Widget build(BuildContext context) {
                         size: 17, color: Color(0xFFf59e0b)),
                     const SizedBox(width: 4),
                     Text(
-                      hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
+                      hasBeenPlayed
+                          ? '$achievedStars / $maxStars'
+                          : '$maxStars',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -358,17 +358,11 @@ Widget build(BuildContext context) {
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
-}  // ← closes _PlayHeader class
-
 
 // ── Back FAB ──────────────────────────────────────────────────────────────────
-// ---
-// iOS 26-style pill button: rounded, white, subtle shadow, chevron + label.
-// Sits at the bottom center via floatingActionButtonLocation.
-// ---
 
 class _BackFab extends StatelessWidget {
   final VoidCallback onTap;
@@ -394,8 +388,8 @@ class _BackFab extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: const [
-            Icon(Icons.chevron_left_rounded, size: 22,
-                color: EnolaTheme.textPrimary),
+            Icon(Icons.chevron_left_rounded,
+                size: 22, color: EnolaTheme.textPrimary),
             SizedBox(width: 4),
             Text(
               'My Maps',
