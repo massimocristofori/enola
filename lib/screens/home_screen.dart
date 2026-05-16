@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/providers/map_providers.dart';
 import 'package:enola/theme/enola_theme.dart';
-import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
 import 'package:enola/services/drift_service.dart';
@@ -179,12 +178,36 @@ class _MapCard extends ConsumerWidget {
     }
   }
 
+  // ---
+  // Opens PlayScreen with a Hero-compatible page route.
+  // The card container is the Hero source; the PlayScreen header is the target.
+  // A FadeTransition fades in the rest of the PlayScreen behind the flying hero.
+  // ---
+  void _openPlay(BuildContext context) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        reverseTransitionDuration: const Duration(milliseconds: 400),
+        pageBuilder: (_, __, ___) => PlayScreen(mapId: map.id),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+            ),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final Uint8List? imageBytes =
         map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
-    // --- Resolve completion state here so the card decoration can react ---
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final sessionAsync = ref.watch(latestSessionProvider(map.id));
 
@@ -201,156 +224,213 @@ class _MapCard extends ConsumerWidget {
     }
 
     final hasBeenPlayed = session != null;
-    final isComplete = hasBeenPlayed && maxStars > 0 && achievedStars >= maxStars;
+    final isComplete =
+        hasBeenPlayed && maxStars > 0 && achievedStars >= maxStars;
 
+    // ---
+    // The Hero tag is 'map-card-<id>'. The matching Hero lives in _PlayHeader
+    // inside play_screen.dart. Material(transparency) prevents text/icon
+    // render glitches while the widget morphs mid-flight.
+    // ---
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => PlayScreen(mapId: map.id)),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-
-          // ── The card itself ──
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: isComplete
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFf59e0b).withValues(alpha: 0.55),
-                        blurRadius: 16,
-                        spreadRadius: 1,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+      onTap: () => _openPlay(context),
+      child: Hero(
+        tag: 'map-card-${map.id}',
+        flightShuttleBuilder: (_, animation, __, ___, ____) {
+          // Keep the card's own look during the flight (no morph glitch).
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              return Material(
+                type: MaterialType.transparency,
+                child: _CardShell(
+                  imageBytes: imageBytes,
+                  isComplete: isComplete,
+                  title: map.title,
+                  achievedStars: achievedStars,
+                  maxStars: maxStars,
+                  hasBeenPlayed: hasBeenPlayed,
+                ),
+              );
+            },
+          );
+        },
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // ── The card shell ──
+            _CardShell(
+              imageBytes: imageBytes,
+              isComplete: isComplete,
+              title: map.title,
+              achievedStars: achievedStars,
+              maxStars: maxStars,
+              hasBeenPlayed: hasBeenPlayed,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Stack(
-                children: [
-                  // ── Full card image / gradient ──
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: imageBytes != null
-                          ? Image.memory(
-                              imageBytes,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [Color(0xFFffffff), Color(0xFFf3f6f4)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: Center(
-                                child: Image.asset(
-                                  'assets/images/0.jpeg',
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
 
-                  // ── Bottom info bar ──
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                          bottom: Radius.circular(10)),
-                      child: _CardInfoBar(
-                        title: map.title,
-                        achievedStars: achievedStars,
-                        maxStars: maxStars,
-                        hasBeenPlayed: hasBeenPlayed,
-                      ),
-                    ),
+            // ── Top-left ear (Edit) ──
+            Positioned(
+              top: -6,
+              left: -6,
+              child: _EarButton(
+                icon: Icons.edit_rounded,
+                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.5),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateMapScreen(existingMapId: map.id),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Top-left ear (Edit) ──
-          Positioned(
-            top: -6,
-            left: -6,
-            child: _EarButton(
-              icon: Icons.edit_rounded,
-              iconColor: EnolaTheme.textSecond.withValues(alpha: 0.5),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CreateMapScreen(existingMapId: map.id),
                 ),
               ),
             ),
-          ),
 
-          // ── Top-right ear (Delete) ──
-          Positioned(
-            top: -6,
-            right: -6,
-            child: _EarButton(
-              icon: Icons.delete_forever_rounded,
-              iconColor: Colors.redAccent.withValues(alpha: 0.5),
-              onTap: () => _confirmDelete(context, ref),
-            ),
-          ),
-
-          // ── Top-center crown (only when complete) ──
-          if (isComplete)
+            // ── Top-right ear (Delete) ──
             Positioned(
-              top: -8,
+              top: -6,
+              right: -6,
+              child: _EarButton(
+                icon: Icons.delete_forever_rounded,
+                iconColor: Colors.redAccent.withValues(alpha: 0.5),
+                onTap: () => _confirmDelete(context, ref),
+              ),
+            ),
+
+            // ── Top-center crown (only when complete) ──
+            if (isComplete)
+              Positioned(
+                top: -8,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFf59e0b),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFf59e0b).withValues(alpha: 0.5),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.workspace_premium_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ).animate().scale(
+                      begin: const Offset(0.5, 0.5),
+                      end: const Offset(1.0, 1.0),
+                      duration: 400.ms,
+                      curve: Curves.elasticOut,
+                    ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Card Shell ────────────────────────────────────────────────────────────────
+// Extracted so the Hero flightShuttleBuilder can reuse the exact same visuals.
+
+class _CardShell extends StatelessWidget {
+  final Uint8List? imageBytes;
+  final bool isComplete;
+  final String title;
+  final int achievedStars;
+  final int maxStars;
+  final bool hasBeenPlayed;
+
+  const _CardShell({
+    required this.imageBytes,
+    required this.isComplete,
+    required this.title,
+    required this.achievedStars,
+    required this.maxStars,
+    required this.hasBeenPlayed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: isComplete
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFf59e0b).withValues(alpha: 0.55),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Stack(
+          children: [
+            // ── Full card image / gradient ──
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: imageBytes != null
+                    ? Image.memory(
+                        imageBytes!,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFffffff), Color(0xFFf3f6f4)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/0.jpeg',
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+
+            // ── Bottom info bar ──
+            Positioned(
               left: 0,
               right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFf59e0b),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFf59e0b).withValues(alpha: 0.5),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.workspace_premium_rounded,
-                    size: 18,
-                    color: Colors.white,
-                  ),
+              bottom: 0,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(10)),
+                child: _CardInfoBar(
+                  title: title,
+                  achievedStars: achievedStars,
+                  maxStars: maxStars,
+                  hasBeenPlayed: hasBeenPlayed,
                 ),
-              ).animate().scale(
-                    begin: const Offset(0.5, 0.5),
-                    end: const Offset(1.0, 1.0),
-                    duration: 400.ms,
-                    curve: Curves.elasticOut,
-                  ),
+              ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -380,7 +460,6 @@ class _CardInfoBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // --- Title ---
           Text(
             title,
             maxLines: 2,
@@ -394,14 +473,13 @@ class _CardInfoBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-
-          // --- Stars + progress bar (always visible) ---
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.star_rounded, size: 17, color: Color(0xFFf59e0b)),
+                  const Icon(Icons.star_rounded,
+                      size: 17, color: Color(0xFFf59e0b)),
                   const SizedBox(width: 4),
                   Text(
                     hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
@@ -433,7 +511,6 @@ class _CardInfoBar extends StatelessWidget {
     );
   }
 }
-
 
 // ── Ear Button ────────────────────────────────────────────────────────────────
 
@@ -478,13 +555,6 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const TorchFlame(size: 48)
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .scale(
-                  begin: const Offset(0.95, 0.95),
-                  end: const Offset(1.05, 1.05),
-                  duration: 1200.ms,
-                ),
             const SizedBox(height: 24),
             Text(
               'No quest maps yet',
