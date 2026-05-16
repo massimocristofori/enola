@@ -285,11 +285,13 @@ class _PlayHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Hero(
-      tag: 'map-card-$mapId',
-      child: Material(
-        type: MaterialType.transparency,
+Widget build(BuildContext context) {
+  return Hero(
+    tag: 'map-card-$mapId',
+    child: Material(
+      type: MaterialType.transparency,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
         child: Container(
           width: double.infinity,
           decoration: const BoxDecoration(
@@ -303,9 +305,6 @@ class _PlayHeader extends StatelessWidget {
               ),
             ],
           ),
-          // ---
-          // Padding mirrors _CardInfoBar: fromLTRB(10, 12, 10, 10).
-          // ---
           padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,9 +355,10 @@ class _PlayHeader extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
+
 
 // ── Back FAB ──────────────────────────────────────────────────────────────────
 // ---
