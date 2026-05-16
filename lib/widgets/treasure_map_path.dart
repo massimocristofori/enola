@@ -17,6 +17,7 @@ class TreasureMapPath extends ConsumerWidget {
   final int? lastCompletedIndex;
   final List<int> riddleStars;
   final Uint8List? imageBytes;
+  final bool immediateActivation; // ← new
 
   const TreasureMapPath({
     super.key,
@@ -26,6 +27,7 @@ class TreasureMapPath extends ConsumerWidget {
     this.lastCompletedIndex,
     this.riddleStars = const [],
     this.imageBytes,
+    this.immediateActivation = false, // ← default false = existing behaviour unchanged
   });
 
   @override
@@ -53,12 +55,13 @@ class TreasureMapPath extends ConsumerWidget {
 
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
-                // Component assignments
+        // Component assignments
         final nodeWidget = _RiddleNode(
           index: index + 1,
           status: status,
           stars: stars,
           imageBytes: imageBytes,
+          immediateActivation: immediateActivation, // ← passed down
           onTap: isCurrent && onCurrentNodeTap != null ? onCurrentNodeTap : null,
         );
 
@@ -81,12 +84,12 @@ class TreasureMapPath extends ConsumerWidget {
                     ? Align(
                         alignment: Alignment.centerRight,
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 30.0), // Node 1: pushed 120px left from center line
+                          padding: const EdgeInsets.only(right: 30.0),
                           child: nodeWidget,
                         ),
                       )
                     : Align(
-                        alignment: Alignment.centerRight, // Row 2 Dots: sits flush against center line
+                        alignment: Alignment.centerRight,
                         child: dotsWidget,
                       ),
               ),
@@ -97,13 +100,13 @@ class TreasureMapPath extends ConsumerWidget {
                 height: 110,
                 child: isEvenRow
                     ? Align(
-                        alignment: Alignment.centerLeft, // Row 1 Dots: sits flush against center line
+                        alignment: Alignment.centerLeft,
                         child: dotsWidget,
                       )
                     : Align(
                         alignment: Alignment.centerLeft,
                         child: Padding(
-                          padding: const EdgeInsets.only(left: 30.0), // Node 2: pushed 120px right from center line
+                          padding: const EdgeInsets.only(left: 30.0),
                           child: nodeWidget,
                         ),
                       ),
@@ -111,7 +114,6 @@ class TreasureMapPath extends ConsumerWidget {
             ),
           ],
         );
-
       }),
     );
   }
@@ -125,6 +127,7 @@ class _RiddleNode extends StatefulWidget {
   final int stars;
   final Uint8List? imageBytes;
   final VoidCallback? onTap;
+  final bool immediateActivation; // ← new
 
   const _RiddleNode({
     required this.index,
@@ -132,6 +135,7 @@ class _RiddleNode extends StatefulWidget {
     required this.stars,
     this.imageBytes,
     this.onTap,
+    this.immediateActivation = false, // ← default false
   });
 
   @override
@@ -147,7 +151,6 @@ class _RiddleNodeState extends State<_RiddleNode>
   void initState() {
     super.initState();
     _pulse = AnimationController(
-      //verticalSync: false, // Flutter Animate safe fallback
       vsync: this,
       duration: const Duration(milliseconds: 900),
       lowerBound: 0.92,
@@ -158,12 +161,21 @@ class _RiddleNodeState extends State<_RiddleNode>
 
   void _checkActivation() {
     if (widget.status == NodeStatus.current) {
-      Future.delayed(const Duration(milliseconds: 2000), () {
+      if (widget.immediateActivation) {
+        // Coming from home: activate immediately with no delay.
         if (mounted) {
           setState(() => _isReached = true);
           _pulse.repeat(reverse: true);
         }
-      });
+      } else {
+        // Mid-play: keep the existing 2000ms delay.
+        Future.delayed(const Duration(milliseconds: 2000), () {
+          if (mounted) {
+            setState(() => _isReached = true);
+            _pulse.repeat(reverse: true);
+          }
+        });
+      }
     } else if (widget.status == NodeStatus.completed) {
       _isReached = true;
     }
@@ -229,11 +241,11 @@ class _RiddleNodeState extends State<_RiddleNode>
           borderRadius: radius,
           boxShadow: [
             BoxShadow(
-                color: EnolaTheme.accent.withValues(alpha: 0.4), blurRadius: 12)
+                color: EnolaTheme.accent.withValues(alpha: 0.4),
+                blurRadius: 12)
           ],
         ),
-        child:
-            const Icon(Icons.star_rounded, color: Colors.white, size: 40),
+        child: const Icon(Icons.star_rounded, color: Colors.white, size: 40),
       );
     }
 
@@ -244,8 +256,8 @@ class _RiddleNodeState extends State<_RiddleNode>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: radius,
-          border:
-              Border.all(color: EnolaTheme.accent.withValues(alpha: 0.3), width: 2),
+          border: Border.all(
+              color: EnolaTheme.accent.withValues(alpha: 0.3), width: 2),
         ),
       );
     }
@@ -276,7 +288,6 @@ class _RiddleNodeState extends State<_RiddleNode>
                 Image.memory(widget.imageBytes!, fit: BoxFit.cover)
               else
                 Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
-
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -444,13 +455,10 @@ class _GridDotPainter extends CustomPainter {
     final Offset dot1;
     final Offset dot2;
 
-    // Placed strictly within the inner bounding box, completely clear of edges
     if (isEvenRow) {
-      // Row 1 & 3: Floating path from Node 1 (Left-ish) turning Downward
       dot1 = Offset(size.width * 0, size.height * 0.80);
       dot2 = Offset(size.width * 0.20, size.height * 1);
     } else {
-      // Row 2: Floating path entering from top turning toward Node 2 (Right-ish)
       dot1 = Offset(size.width * 1, size.height * 0.80);
       dot2 = Offset(size.width * 0.80, size.height * 1);
     }
@@ -458,18 +466,16 @@ class _GridDotPainter extends CustomPainter {
     final random = math.Random(seed);
     double randomOpacity = 0.4 + (random.nextDouble() * 0.4);
 
-    // Dynamic state paint rules for Dot 1
     final paint1 = Paint()
-      ..color = (progress >= 0.5) 
-          ? baseColor.withValues(alpha: randomOpacity) 
+      ..color = (progress >= 0.5)
+          ? baseColor.withValues(alpha: randomOpacity)
           : lockedColor
       ..style = PaintingStyle.fill;
 
-		randomOpacity = 0.4 + (random.nextDouble() * 0.4);
-    // Dynamic state paint rules for Dot 2
+    randomOpacity = 0.4 + (random.nextDouble() * 0.4);
     final paint2 = Paint()
-      ..color = (progress >= 1.0) 
-          ? baseColor.withValues(alpha: randomOpacity) 
+      ..color = (progress >= 1.0)
+          ? baseColor.withValues(alpha: randomOpacity)
           : lockedColor
       ..style = PaintingStyle.fill;
 
