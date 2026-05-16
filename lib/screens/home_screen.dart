@@ -178,11 +178,6 @@ class _MapCard extends ConsumerWidget {
     }
   }
 
-  // ---
-  // Opens PlayScreen with a Hero-compatible page route.
-  // The card container is the Hero source; the PlayScreen header is the target.
-  // A FadeTransition fades in the rest of the PlayScreen behind the flying hero.
-  // ---
   void _openPlay(BuildContext context) {
     Navigator.push(
       context,
@@ -227,17 +222,11 @@ class _MapCard extends ConsumerWidget {
     final isComplete =
         hasBeenPlayed && maxStars > 0 && achievedStars >= maxStars;
 
-    // ---
-    // The Hero tag is 'map-card-<id>'. The matching Hero lives in _PlayHeader
-    // inside play_screen.dart. Material(transparency) prevents text/icon
-    // render glitches while the widget morphs mid-flight.
-    // ---
     return GestureDetector(
       onTap: () => _openPlay(context),
       child: Hero(
         tag: 'map-card-${map.id}',
         flightShuttleBuilder: (_, animation, __, ___, ____) {
-          // Keep the card's own look during the flight (no morph glitch).
           return AnimatedBuilder(
             animation: animation,
             builder: (context, _) {
@@ -258,7 +247,6 @@ class _MapCard extends ConsumerWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // ── The card shell ──
             _CardShell(
               imageBytes: imageBytes,
               isComplete: isComplete,
@@ -294,40 +282,6 @@ class _MapCard extends ConsumerWidget {
                 onTap: () => _confirmDelete(context, ref),
               ),
             ),
-
-            // ── Top-center crown (only when complete) ──
-            if (isComplete)
-              Positioned(
-                top: -8,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFf59e0b),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFf59e0b).withValues(alpha: 0.5),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.workspace_premium_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                  ),
-                ).animate().scale(
-                      begin: const Offset(0.5, 0.5),
-                      end: const Offset(1.0, 1.0),
-                      duration: 400.ms,
-                      curve: Curves.elasticOut,
-                    ),
-              ),
           ],
         ),
       ),
@@ -336,7 +290,6 @@ class _MapCard extends ConsumerWidget {
 }
 
 // ── Card Shell ────────────────────────────────────────────────────────────────
-// Extracted so the Hero flightShuttleBuilder can reuse the exact same visuals.
 
 class _CardShell extends StatelessWidget {
   final Uint8List? imageBytes;
@@ -361,22 +314,14 @@ class _CardShell extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: isComplete
-            ? [
-                BoxShadow(
-                  color: const Color(0xFFf59e0b).withValues(alpha: 0.55),
-                  blurRadius: 16,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withAlpha(15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+        // ── Always normal shadow, no golden glow ──
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(8),
@@ -426,6 +371,7 @@ class _CardShell extends StatelessWidget {
                   achievedStars: achievedStars,
                   maxStars: maxStars,
                   hasBeenPlayed: hasBeenPlayed,
+                  isComplete: isComplete,
                 ),
               ),
             ),
@@ -443,12 +389,14 @@ class _CardInfoBar extends StatelessWidget {
   final int achievedStars;
   final int maxStars;
   final bool hasBeenPlayed;
+  final bool isComplete;
 
   const _CardInfoBar({
     required this.title,
     required this.achievedStars,
     required this.maxStars,
     required this.hasBeenPlayed,
+    required this.isComplete,
   });
 
   @override
@@ -492,17 +440,36 @@ class _CardInfoBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: maxStars > 0 && hasBeenPlayed
-                      ? achievedStars / maxStars
-                      : 0,
-                  minHeight: 5,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFFf59e0b)),
-                ),
+              // ── Progress bar + overlapping crown ──
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: maxStars > 0 && hasBeenPlayed
+                          ? achievedStars / maxStars
+                          : 0,
+                      minHeight: 5,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFf59e0b)),
+                    ),
+                  ),
+                  if (isComplete)
+                    Positioned(
+                      right: -2,
+                      top: -7,
+                      child: Transform.rotate(
+                        angle: 0.4, // ~23 degrees clockwise
+                        child: const Icon(
+                          Icons.workspace_premium_rounded,
+                          size: 14,
+                          color: Color(0xFFf59e0b),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
