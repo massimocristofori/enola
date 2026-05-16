@@ -148,8 +148,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final riddlesAsync = ref.watch(riddlesForMapProvider(widget.mapId));
     final playState = ref.watch(playStateProvider);
 
-    final bool showingLoader = _initialising || playState == null;
-
     if (_initError != null) {
       return Scaffold(
         body: SafeArea(
@@ -164,94 +162,119 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       );
     }
 
+    // ---
+    // We always resolve title/stars from mapAsync if available, so the header
+    // can render immediately with real data (or empty strings while loading).
+    // This ensures the Hero target exists in the tree from frame 1.
+    // ---
+    final map = mapAsync.valueOrNull;
+    final riddles = riddlesAsync.valueOrNull;
+    final title = map?.title ?? '';
+    final maxStars = (riddles?.length ?? 0) * 3;
+    final achievedStars = playState?.totalStars ?? 0;
+    final hasBeenPlayed = (playState?.lastCompletedIndex ?? -1) >= 0;
+
+    final bool showingLoader = _initialising || playState == null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
-        child: showingLoader
-            ? const Center(
-                child: CircularProgressIndicator(color: EnolaTheme.accent))
-            : mapAsync.when(
-                loading: () => const Center(
-                    child: CircularProgressIndicator(color: EnolaTheme.accent)),
-                error: (e, _) => Center(child: Text('$e')),
-                data: (map) => riddlesAsync.when(
-                  loading: () => const Center(
+        child: Column(
+          children: [
+            // ---
+            // _PlayHeader is ALWAYS in the tree from the first frame.
+            // This is the key fix: the Hero target must exist immediately
+            // when PlayScreen is pushed so Flutter can animate toward it.
+            // ---
+            _PlayHeader(
+              mapId: widget.mapId,
+              title: title,
+              achievedStars: achievedStars,
+              maxStars: maxStars,
+              hasBeenPlayed: hasBeenPlayed,
+              onClose: () => Navigator.pop(context),
+            ),
+
+            // ---
+            // Everything below the header shows a spinner while loading,
+            // then switches to the real content once ready.
+            // ---
+            Expanded(
+              child: showingLoader
+                  ? const Center(
                       child:
-                          CircularProgressIndicator(color: EnolaTheme.accent)),
-                  error: (e, _) => Center(child: Text('$e')),
-                  data: (riddles) {
-                    final maxStars = riddles.length * 3;
-                    final achievedStars = playState.totalStars;
-                    final hasBeenPlayed = playState.lastCompletedIndex >= 0;
-
-                    return Column(
-                      children: [
-                        _PlayHeader(
-                          mapId: widget.mapId,
-                          title: map?.title ?? '',
-                          achievedStars: achievedStars,
-                          maxStars: maxStars,
-                          hasBeenPlayed: hasBeenPlayed,
-                          onClose: () => Navigator.pop(context),
-                        ),
-
-                        if (playState.lastCompletedIndex < riddles.length - 1)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8, bottom: 4),
-                            child: Text(
-                              'Tap the glowing node to answer the next riddle',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                                color: EnolaTheme.textSecond.withAlpha(180),
-                              ),
-                            ).animate().fadeIn(delay: 400.ms),
-                          ),
-
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding:
-                                const EdgeInsets.fromLTRB(24, 16, 24, 40),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 400),
-                                child: TreasureMapPath(
-                                  riddles: riddles,
-                                  mapId: widget.mapId,
-                                  lastCompletedIndex:
-                                      playState.lastCompletedIndex,
-                                  riddleStars: playState.riddleStars,
-                                  imageBytes: map?.imageBytes,
-                                  onCurrentNodeTap: playState
-                                              .lastCompletedIndex <
-                                          riddles.length - 1
-                                      ? () => _onNodeTap(
-                                            riddles,
-                                            playState.lastCompletedIndex + 1,
-                                          )
-                                      : null,
+                          CircularProgressIndicator(color: EnolaTheme.accent))
+                  : mapAsync.when(
+                      loading: () => const Center(
+                          child: CircularProgressIndicator(
+                              color: EnolaTheme.accent)),
+                      error: (e, _) => Center(child: Text('$e')),
+                      data: (map) => riddlesAsync.when(
+                        loading: () => const Center(
+                            child: CircularProgressIndicator(
+                                color: EnolaTheme.accent)),
+                        error: (e, _) => Center(child: Text('$e')),
+                        data: (riddles) {
+                          return Column(
+                            children: [
+                              if (playState.lastCompletedIndex <
+                                  riddles.length - 1)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      top: 8, bottom: 4),
+                                  child: Text(
+                                    'Tap the glowing node to answer the next riddle',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color:
+                                          EnolaTheme.textSecond.withAlpha(180),
+                                    ),
+                                  ).animate().fadeIn(delay: 400.ms),
+                                ),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                      24, 16, 24, 40),
+                                  child: Center(
+                                    child: ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 400),
+                                      child: TreasureMapPath(
+                                        riddles: riddles,
+                                        mapId: widget.mapId,
+                                        lastCompletedIndex:
+                                            playState.lastCompletedIndex,
+                                        riddleStars: playState.riddleStars,
+                                        imageBytes: map?.imageBytes,
+                                        onCurrentNodeTap: playState
+                                                    .lastCompletedIndex <
+                                                riddles.length - 1
+                                            ? () => _onNodeTap(
+                                                  riddles,
+                                                  playState.lastCompletedIndex +
+                                                      1,
+                                                )
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ── Play Header ───────────────────────────────────────────────────────────────
-// ---
-// Plain white background, matching exactly the bottom info bar of the card
-// on HomeScreen. This makes the Hero flight seamless in both directions:
-// the card's white info bar morphs cleanly into this white header.
-// ---
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
