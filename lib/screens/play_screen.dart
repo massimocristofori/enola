@@ -162,11 +162,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       );
     }
 
-    // ---
-    // We always resolve title/stars from mapAsync if available, so the header
-    // can render immediately with real data (or empty strings while loading).
-    // This ensures the Hero target exists in the tree from frame 1.
-    // ---
     final map = mapAsync.valueOrNull;
     final riddles = riddlesAsync.valueOrNull;
     final title = map?.title ?? '';
@@ -178,27 +173,24 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
+      // ---
+      // iOS-style pill FAB at the bottom center.
+      // floatingActionButtonLocation centers it horizontally.
+      // ---
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
         child: Column(
           children: [
-            // ---
-            // _PlayHeader is ALWAYS in the tree from the first frame.
-            // This is the key fix: the Hero target must exist immediately
-            // when PlayScreen is pushed so Flutter can animate toward it.
-            // ---
+            // Header — always in tree from frame 1 for the Hero to work.
             _PlayHeader(
               mapId: widget.mapId,
               title: title,
               achievedStars: achievedStars,
               maxStars: maxStars,
               hasBeenPlayed: hasBeenPlayed,
-              onClose: () => Navigator.pop(context),
             ),
 
-            // ---
-            // Everything below the header shows a spinner while loading,
-            // then switches to the real content once ready.
-            // ---
             Expanded(
               child: showingLoader
                   ? const Center(
@@ -235,7 +227,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                               Expanded(
                                 child: SingleChildScrollView(
                                   padding: const EdgeInsets.fromLTRB(
-                                      24, 16, 24, 40),
+                                      24, 16, 24, 100),
                                   child: Center(
                                     child: ConstrainedBox(
                                       constraints:
@@ -275,6 +267,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 }
 
 // ── Play Header ───────────────────────────────────────────────────────────────
+// No close button — identical in content to the card's bottom info bar.
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
@@ -282,7 +275,6 @@ class _PlayHeader extends StatelessWidget {
   final int achievedStars;
   final int maxStars;
   final bool hasBeenPlayed;
-  final VoidCallback onClose;
 
   const _PlayHeader({
     required this.mapId,
@@ -290,7 +282,6 @@ class _PlayHeader extends StatelessWidget {
     required this.achievedStars,
     required this.maxStars,
     required this.hasBeenPlayed,
-    required this.onClose,
   });
 
   @override
@@ -300,6 +291,7 @@ class _PlayHeader extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: Container(
+          width: double.infinity,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
@@ -311,68 +303,105 @@ class _PlayHeader extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.fromLTRB(8, 10, 16, 14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          // ---
+          // Padding mirrors _CardInfoBar: fromLTRB(10, 12, 10, 10).
+          // ---
+          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: const Icon(Icons.close_rounded),
-                color: EnolaTheme.textSecond,
-                onPressed: onClose,
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: EnolaTheme.textPrimary,
+                  height: 1.3,
+                  letterSpacing: 0.1,
+                ),
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                        color: EnolaTheme.textPrimary,
-                        height: 1.3,
-                        letterSpacing: 0.1,
-                      ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.star_rounded,
+                      size: 17, color: Color(0xFFf59e0b)),
+                  const SizedBox(width: 4),
+                  Text(
+                    hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF555555),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded,
-                            size: 17, color: Color(0xFFf59e0b)),
-                        const SizedBox(width: 4),
-                        Text(
-                          hasBeenPlayed
-                              ? '$achievedStars / $maxStars'
-                              : '$maxStars',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF555555),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: maxStars > 0 && hasBeenPlayed
-                            ? achievedStars / maxStars
-                            : 0,
-                        minHeight: 5,
-                        backgroundColor: const Color(0xFFE5E7EB),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFFf59e0b)),
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: maxStars > 0 && hasBeenPlayed
+                      ? achievedStars / maxStars
+                      : 0,
+                  minHeight: 5,
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFFf59e0b)),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Back FAB ──────────────────────────────────────────────────────────────────
+// ---
+// iOS 26-style pill button: rounded, white, subtle shadow, chevron + label.
+// Sits at the bottom center via floatingActionButtonLocation.
+// ---
+
+class _BackFab extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackFab({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.chevron_left_rounded, size: 22,
+                color: EnolaTheme.textPrimary),
+            SizedBox(width: 4),
+            Text(
+              'My Maps',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: EnolaTheme.textPrimary,
+              ),
+            ),
+          ],
         ),
       ),
     );
