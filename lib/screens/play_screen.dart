@@ -286,78 +286,82 @@ class _PlayHeader extends StatelessWidget {
 
   @override
 Widget build(BuildContext context) {
-  return Hero(
-    tag: 'map-card-$mapId',
-    child: Material(
-      type: MaterialType.transparency,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Container(
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x18000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: EnolaTheme.textPrimary,
-                  height: 1.3,
-                  letterSpacing: 0.1,
+  return GestureDetector(
+    onTap: () => Navigator.pop(context),
+    child: Hero(
+      tag: 'map-card-$mapId',
+      child: Material(
+        type: MaterialType.transparency,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x18000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.star_rounded,
-                      size: 17, color: Color(0xFFf59e0b)),
-                  const SizedBox(width: 4),
-                  Text(
-                    hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF555555),
-                    ),
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: EnolaTheme.textPrimary,
+                    height: 1.3,
+                    letterSpacing: 0.1,
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: maxStars > 0 && hasBeenPlayed
-                      ? achievedStars / maxStars
-                      : 0,
-                  minHeight: 5,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFFf59e0b)),
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        size: 17, color: Color(0xFFf59e0b)),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF555555),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: maxStars > 0 && hasBeenPlayed
+                        ? achievedStars / maxStars
+                        : 0,
+                    minHeight: 5,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFf59e0b)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     ),
   );
 }
+}  // ← closes _PlayHeader class
 
 
 // ── Back FAB ──────────────────────────────────────────────────────────────────
