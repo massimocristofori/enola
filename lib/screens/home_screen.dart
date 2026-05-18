@@ -71,7 +71,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Enola - My Maps',
+                'Ready for a Riddle?',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
@@ -377,72 +377,50 @@ class _CardShell extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Stack(
-          children: [
-            // ── Full card image / gradient ──
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: imageBytes != null
-                    ? Image.memory(
-                        imageBytes!,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFFffffff), Color(0xFFf3f6f4)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Center(
-                          child: Image.asset(
+      // ── Column layout: image on top, info bar below ──
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Image area (fills remaining space above info bar) ──
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Image / fallback
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: imageBytes != null
+                        ? Image.memory(
+                            imageBytes!,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.asset(
                             'assets/images/0.jpeg',
-                            width: double.infinity,
-                            height: double.infinity,
                             fit: BoxFit.cover,
                           ),
-                        ),
-                      ),
+                  ),
+
+                  // Rank overlay centered over the image
+                  if (isComplete)
+                    Center(
+                      child: _RankOverlay(starRatio: starRatio),
+                    ),
+                ],
               ),
             ),
+          ),
 
-            // ── Rank overlay — centered in the image area above the info bar ──
-            if (isComplete)
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 70, // leaves room for the info bar
-                child: Center(
-                  child: _RankOverlay(starRatio: starRatio),
-                ),
-              ),
-
-            // ── Bottom info bar ──
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(10)),
-                child: _CardInfoBar(
-                  title: title,
-                  achievedStars: achievedStars,
-                  maxStars: maxStars,
-                  hasBeenPlayed: hasBeenPlayed,
-                  isComplete: isComplete,
-                ),
-              ),
-            ),
-          ],
-        ),
+          // ── Info bar below the image ──
+          _CardInfoBar(
+            title: title,
+            achievedStars: achievedStars,
+            maxStars: maxStars,
+            hasBeenPlayed: hasBeenPlayed,
+            isComplete: isComplete,
+          ),
+        ],
       ),
     );
   }
@@ -468,8 +446,11 @@ class _CardInfoBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -487,39 +468,35 @@ class _CardInfoBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // ── Star count: always show achieved / max ──
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.star_rounded,
-                      size: 17, color: Color(0xFFf59e0b)),
-                  const SizedBox(width: 4),
-                  Text(
-                    hasBeenPlayed ? '$achievedStars / $maxStars' : '$maxStars',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF555555),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              // ── Progress bar — crown icon REMOVED ──
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: maxStars > 0 && hasBeenPlayed
-                      ? achievedStars / maxStars
-                      : 0,
-                  minHeight: 5,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFFf59e0b)),
+              const Icon(Icons.star_rounded,
+                  size: 17, color: Color(0xFFf59e0b)),
+              const SizedBox(width: 4),
+              Text(
+                '$achievedStars / $maxStars',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF555555),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          // ── Progress bar ──
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: maxStars > 0 && hasBeenPlayed
+                  ? achievedStars / maxStars
+                  : 0,
+              minHeight: 5,
+              backgroundColor: const Color(0xFFE5E7EB),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFFf59e0b)),
+            ),
           ),
         ],
       ),
