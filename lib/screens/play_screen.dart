@@ -361,6 +361,7 @@ class _PlayHeader extends StatelessWidget {
         tag: 'map-card-$mapId',
         child: Material(
           type: MaterialType.transparency,
+					padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
