@@ -289,6 +289,59 @@ class _MapCard extends ConsumerWidget {
   }
 }
 
+// ── Rank helpers (mirrors ResultScreen thresholds exactly) ────────────────────
+
+String _rankEmoji(double starRatio) {
+  if (starRatio >= 0.9) return '👑';
+  if (starRatio >= 0.7) return '🏆';
+  if (starRatio >= 0.5) return '⚔️';
+  return '📜';
+}
+
+String _rankName(double starRatio) {
+  if (starRatio >= 0.9) return 'Grand Sage';
+  if (starRatio >= 0.7) return 'Scholar';
+  if (starRatio >= 0.5) return 'Apprentice';
+  return 'Novice';
+}
+
+// ── Rank Overlay ──────────────────────────────────────────────────────────────
+
+class _RankOverlay extends StatelessWidget {
+  final double starRatio;
+  const _RankOverlay({required this.starRatio});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _rankEmoji(starRatio),
+          style: const TextStyle(fontSize: 48),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            _rankName(starRatio),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Card Shell ────────────────────────────────────────────────────────────────
 
 class _CardShell extends StatelessWidget {
@@ -310,11 +363,12 @@ class _CardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        // ── Always normal shadow, no golden glow ──
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(15),
@@ -357,6 +411,18 @@ class _CardShell extends StatelessWidget {
                       ),
               ),
             ),
+
+            // ── Rank overlay — centered in the image area above the info bar ──
+            if (isComplete)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 70, // leaves room for the info bar
+                child: Center(
+                  child: _RankOverlay(starRatio: starRatio),
+                ),
+              ),
 
             // ── Bottom info bar ──
             Positioned(
@@ -440,36 +506,18 @@ class _CardInfoBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              // ── Progress bar + overlapping crown ──
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: maxStars > 0 && hasBeenPlayed
-                          ? achievedStars / maxStars
-                          : 0,
-                      minHeight: 5,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFFf59e0b)),
-                    ),
-                  ),
-                  if (isComplete)
-                    Positioned(
-                      right: -2,
-                      top: -7,
-                      child: Transform.rotate(
-                        angle: 0.4, // ~23 degrees clockwise
-                        child: const Icon(
-                          Icons.workspace_premium_rounded,
-                          size: 14,
-                          color: Color(0xFFf59e0b),
-                        ),
-                      ),
-                    ),
-                ],
+              // ── Progress bar — crown icon REMOVED ──
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: maxStars > 0 && hasBeenPlayed
+                      ? achievedStars / maxStars
+                      : 0,
+                  minHeight: 5,
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFFf59e0b)),
+                ),
               ),
             ],
           ),
