@@ -359,9 +359,10 @@ class _PlayHeader extends StatelessWidget {
       onTap: () => Navigator.pop(context),
       child: Hero(
         tag: 'map-card-$mapId',
+				child: Padding(
+				padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
         child: Material(
           type: MaterialType.transparency,
-					padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -428,6 +429,7 @@ class _PlayHeader extends StatelessWidget {
             ),
           ),
         ),
+				),
       ),
     );
   }
