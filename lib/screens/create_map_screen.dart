@@ -138,9 +138,9 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
           .getSingleOrNull();
 
       ref.invalidate(allMapsProvider);
-      // ADDED: also invalidate the single-map provider so PlayScreen
-      // reflects title/image changes immediately when popped back to.
       ref.invalidate(mapProvider(mapId));
+      // Invalidate riddle count so HomeScreen card reflects latest star total
+      ref.invalidate(riddleCountProvider(mapId));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -173,12 +173,16 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         builder: (_) => RiddlesPagerScreen(mapId: _savedMap!.id),
       ),
     );
-    // refresh riddle count on return
+    // Refresh riddle count on return and invalidate the provider
+    // so HomeScreen card picks up the new maxStars immediately
     final db = DriftService.instance.db;
     final riddles = await (db.select(db.riddles)
           ..where((t) => t.mapId.equals(_savedMap!.id)))
         .get();
-    if (mounted) setState(() => _riddleCount = riddles.length);
+    if (mounted) {
+      setState(() => _riddleCount = riddles.length);
+      ref.invalidate(riddleCountProvider(_savedMap!.id));
+    }
   }
 
   Future<void> _openScan() async {
@@ -203,7 +207,11 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       final updated = await (db.select(db.riddles)
             ..where((t) => t.mapId.equals(_savedMap!.id)))
           .get();
-      if (mounted) setState(() => _riddleCount = updated.length);
+      if (mounted) {
+        setState(() => _riddleCount = updated.length);
+        // Also invalidate provider so HomeScreen reflects the new count
+        ref.invalidate(riddleCountProvider(_savedMap!.id));
+      }
     }
   }
 
