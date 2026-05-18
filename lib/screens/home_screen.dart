@@ -211,43 +211,130 @@ class _MapCard extends ConsumerWidget {
     final session = sessionAsync.valueOrNull;
 
     int achievedStars = 0;
-
-
-    int completedRiddlesCount = 0; // Track how many riddles were played
+    int completedRiddlesCount = 0;
 
     if (session != null && session.riddleStarsJson != null) {
       try {
         final list = jsonDecode(session.riddleStarsJson!) as List;
-        completedRiddlesCount = list.length; // Number of riddles played
+        completedRiddlesCount = list.length;
         achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
       } catch (_) {}
     }
 
     final hasBeenPlayed = session != null;
-    
-    // FIX: Map is complete only when the number of played riddles 
-    // matches the total number of riddles in the map (and count > 0)
-    final isComplete = hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
-
-
+    final isComplete =
+        hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
 
     return GestureDetector(
       onTap: () => _openPlay(context),
       child: Hero(
         tag: 'map-card-${map.id}',
+        // ── ONLY CHANGE: flightShuttleBuilder now collapses the image
+        //    so the final shuttle frame matches _PlayHeader (no image).
         flightShuttleBuilder: (_, animation, __, ___, ____) {
           return AnimatedBuilder(
             animation: animation,
             builder: (context, _) {
+              // 0.0 = home card (full image), 1.0 = play header (no image)
+              final imageHeightFactor =
+                  (1.0 - animation.value).clamp(0.0, 1.0);
+
               return Material(
                 type: MaterialType.transparency,
-                child: _CardShell(
-                  imageBytes: imageBytes,
-                  isComplete: isComplete,
-                  title: map.title,
-                  achievedStars: achievedStars,
-                  maxStars: maxStars,
-                  hasBeenPlayed: hasBeenPlayed,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Image collapses to zero height as animation reaches 1
+                      ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: imageHeightFactor,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: imageBytes != null
+                                  ? Image.memory(imageBytes,
+                                      fit: BoxFit.cover)
+                                  : Image.asset('assets/images/0.jpeg',
+                                      fit: BoxFit.cover),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Info bar — always fully visible
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                              bottom: Radius.circular(16)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              map.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
+                                color: EnolaTheme.textPrimary,
+                                height: 1.3,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.star_rounded,
+                                    size: 17, color: Color(0xFFf59e0b)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  hasBeenPlayed
+                                      ? '$achievedStars / $maxStars'
+                                      : '$maxStars',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF555555),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: maxStars > 0 && hasBeenPlayed
+                                    ? achievedStars / maxStars
+                                    : 0,
+                                minHeight: 5,
+                                backgroundColor: const Color(0xFFE5E7EB),
+                                valueColor:
+                                    const AlwaysStoppedAnimation<Color>(
+                                        Color(0xFFf59e0b)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -386,18 +473,15 @@ class _CardShell extends StatelessWidget {
           ),
         ],
       ),
-      // ── Column layout: image on top, info bar below ──
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Image area (fills remaining space above info bar) ──
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Image / fallback
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: imageBytes != null
@@ -410,8 +494,6 @@ class _CardShell extends StatelessWidget {
                             fit: BoxFit.cover,
                           ),
                   ),
-
-                  // Rank overlay centered over the image
                   if (isComplete)
                     Center(
                       child: _RankOverlay(starRatio: starRatio),
@@ -420,8 +502,6 @@ class _CardShell extends StatelessWidget {
               ),
             ),
           ),
-
-          // ── Info bar below the image ──
           _CardInfoBar(
             title: title,
             achievedStars: achievedStars,
@@ -477,7 +557,6 @@ class _CardInfoBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // ── Star count: always show achieved / max ──
           Row(
             children: [
               const Icon(Icons.star_rounded,
@@ -494,7 +573,6 @@ class _CardInfoBar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          // ── Progress bar ──
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
