@@ -24,6 +24,7 @@ class PlayScreen extends ConsumerStatefulWidget {
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
   String? _initError;
+  bool _isCompleted = false; // NEW
 
   @override
   void initState() {
@@ -32,6 +33,19 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<void> _initSession() async {
+    await _loadSession();
+  }
+
+  // NEW: extracted so both _initSession and _playAgain can call it
+  Future<void> _loadSession() async {
+    if (mounted) {
+      setState(() {
+        _initialising = true;
+        _initError = null;
+        _isCompleted = false;
+      });
+    }
+
     try {
       try {
         ref.read(playStateProvider.notifier).reset();
@@ -57,8 +71,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       final int lastCompleted;
       final int correctAnswers;
       final List<int> riddleStars;
+      bool isCompleted = false; // local flag, applied to state at the end
 
       if (existing.isNotEmpty && existing.first.completedAt == null) {
+        // ── In-progress session ──────────────────────────────────────────────
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
         correctAnswers = existing.first.correctAnswers;
@@ -72,7 +88,26 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           debugPrint("JSON Decode error: $e");
         }
         riddleStars = tempStars;
+
+      } else if (existing.isNotEmpty && existing.first.completedAt != null) {
+        // ── Completed session — load read-only, show Play Again ──────────────
+        isCompleted = true;
+        sessionId = existing.first.id;
+        lastCompleted = existing.first.lastCompletedIndex;
+        correctAnswers = existing.first.correctAnswers;
+        final raw = existing.first.riddleStarsJson;
+        List<int> tempStars = [];
+        try {
+          if (raw != null) {
+            tempStars = (jsonDecode(raw) as List).cast<int>();
+          }
+        } catch (e) {
+          debugPrint("JSON Decode error: $e");
+        }
+        riddleStars = tempStars;
+
       } else {
+        // ── No session yet ───────────────────────────────────────────────────
         sessionId = await DriftService.instance.startSession(
           widget.mapId,
           riddles.length,
@@ -84,6 +119,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
       ref.read(playStateProvider.notifier).init(
             sessionId, lastCompleted, correctAnswers, riddleStars);
+
+      if (mounted) setState(() => _isCompleted = isCompleted);
+
     } catch (e, stackTrace) {
       debugPrint("CAUGHT ERROR: $e");
       debugPrint("$stackTrace");
@@ -142,6 +180,16 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
   }
 
+  // NEW: delete all sessions for this map and restart fresh
+  Future<void> _playAgain() async {
+    final db = DriftService.instance.db;
+    await (db.delete(db.playSessions)
+          ..where((t) => t.mapId.equals(widget.mapId)))
+        .go();
+    ref.invalidate(latestSessionProvider(widget.mapId));
+    await _loadSession();
+  }
+
   @override
   Widget build(BuildContext context) {
     final mapAsync = ref.watch(mapProvider(widget.mapId));
@@ -174,7 +222,13 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _BackFab(onTap: () => Navigator.pop(context)),
+      // CHANGED: show Play Again FAB when completed, Back FAB otherwise
+      floatingActionButton: _isCompleted
+          ? _PlayAgainFab(
+              onPlayAgain: _playAgain,
+              onBack: () => Navigator.pop(context),
+            )
+          : _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
         child: Column(
           children: [
@@ -205,7 +259,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                         data: (riddles) {
                           return Column(
                             children: [
-                              if (playState.lastCompletedIndex <
+                              // CHANGED: hint text logic
+                              if (_isCompleted)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      top: 8, bottom: 4),
+                                  child: Text(
+                                    'Quest complete! All riddles solved.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: EnolaTheme.accent.withAlpha(200),
+                                    ),
+                                  ).animate().fadeIn(delay: 400.ms),
+                                )
+                              else if (playState.lastCompletedIndex <
                                   riddles.length - 1)
                                 Padding(
                                   padding: const EdgeInsets.only(
@@ -235,19 +303,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                             playState.lastCompletedIndex,
                                         riddleStars: playState.riddleStars,
                                         imageBytes: map?.imageBytes,
-                                        // Immediate if fresh open from home.
-                                        // Keeps delay when advancing node-to-node.
                                         immediateActivation:
                                             playState.lastCompletedIndex == -1,
-                                        onCurrentNodeTap: playState
-                                                    .lastCompletedIndex <
-                                                riddles.length - 1
-                                            ? () => _onNodeTap(
-                                                  riddles,
-                                                  playState.lastCompletedIndex +
-                                                      1,
-                                                )
-                                            : null,
+                                        // CHANGED: no tap when completed
+                                        onCurrentNodeTap: _isCompleted
+                                            ? null
+                                            : playState.lastCompletedIndex <
+                                                    riddles.length - 1
+                                                ? () => _onNodeTap(
+                                                      riddles,
+                                                      playState
+                                                              .lastCompletedIndex +
+                                                          1,
+                                                    )
+                                                : null,
                                       ),
                                     ),
                                   ),
@@ -267,6 +336,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 }
 
 // ── Play Header ───────────────────────────────────────────────────────────────
+// UNCHANGED
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
@@ -363,6 +433,7 @@ class _PlayHeader extends StatelessWidget {
 }
 
 // ── Back FAB ──────────────────────────────────────────────────────────────────
+// UNCHANGED
 
 class _BackFab extends StatelessWidget {
   final VoidCallback onTap;
@@ -402,6 +473,90 @@ class _BackFab extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Play Again FAB ────────────────────────────────────────────────────────────
+// NEW
+
+class _PlayAgainFab extends StatelessWidget {
+  final VoidCallback onPlayAgain;
+  final VoidCallback onBack;
+  const _PlayAgainFab({required this.onPlayAgain, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onBack,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.chevron_left_rounded,
+                    size: 22, color: EnolaTheme.textPrimary),
+                SizedBox(width: 4),
+                Text(
+                  'My Maps',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: EnolaTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: onPlayAgain,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              color: EnolaTheme.accent,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: EnolaTheme.accent.withValues(alpha: 0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.replay_rounded, size: 20, color: Colors.white),
+                SizedBox(width: 6),
+                Text(
+                  'Play Again',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
