@@ -243,7 +243,9 @@ class _MapCard extends ConsumerWidget {
               // 0.0 = home card (full image), 1.0 = play header (no image)
               final imageHeightFactor =
                   (1.0 - animation.value).clamp(0.0, 1.0);
-
+							return Center(                                          // ← add
+			        child: ConstrainedBox(                               // ← add
+   			       constraints: const BoxConstraints(maxWidth: 600),  // ← add
               return Material(
                 type: MaterialType.transparency,
                 child: Container(
@@ -341,6 +343,8 @@ class _MapCard extends ConsumerWidget {
                     ],
                   ),
                 ),
+							),
+							);
               );
             },
           );
