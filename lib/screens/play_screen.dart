@@ -360,7 +360,7 @@ class _PlayHeader extends StatelessWidget {
       child: Hero(
         tag: 'map-card-$mapId',
 				child: Padding(
-				padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+				padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
         child: Material(
           type: MaterialType.transparency,
           child: Container(
