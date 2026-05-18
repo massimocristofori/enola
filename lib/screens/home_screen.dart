@@ -211,16 +211,25 @@ class _MapCard extends ConsumerWidget {
     final session = sessionAsync.valueOrNull;
 
     int achievedStars = 0;
+
+
+    int completedRiddlesCount = 0; // Track how many riddles were played
+
     if (session != null && session.riddleStarsJson != null) {
       try {
         final list = jsonDecode(session.riddleStarsJson!) as List;
+        completedRiddlesCount = list.length; // Number of riddles played
         achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
       } catch (_) {}
     }
 
     final hasBeenPlayed = session != null;
-    final isComplete =
-        hasBeenPlayed && maxStars > 0 && achievedStars >= maxStars;
+    
+    // FIX: Map is complete only when the number of played riddles 
+    // matches the total number of riddles in the map (and count > 0)
+    final isComplete = hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
+
+
 
     return GestureDetector(
       onTap: () => _openPlay(context),
