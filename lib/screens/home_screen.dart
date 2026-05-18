@@ -22,29 +22,35 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
-        child: Column(
-          children: [
-            _Header(),
-            Expanded(
-              child: mapsAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: EnolaTheme.accent),
-                ),
-                error: (e, _) => Center(
-                  child: Text('Error: $e',
-                      style: const TextStyle(color: EnolaTheme.wrong)),
-                ),
-                data: (maps) => maps.isEmpty
-                    ? _EmptyState(onCreate: () => _openCreate(context))
-                    : _MapGrid(
-                        maps: maps,
-                        onCreate: () => _openCreate(context),
-                      ),
+  child: Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 600),
+      child: Column(
+        children: [
+          _Header(),
+          Expanded(
+            child: mapsAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: EnolaTheme.accent),
               ),
+              error: (e, _) => Center(
+                child: Text('Error: $e',
+                    style: const TextStyle(color: EnolaTheme.wrong)),
+              ),
+              data: (maps) => maps.isEmpty
+                  ? _EmptyState(onCreate: () => _openCreate(context))
+                  : _MapGrid(
+                      maps: maps,
+                      onCreate: () => _openCreate(context),
+                    ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    ),
+  ),
+),
+
       floatingActionButton: _CreateFab(onTap: () => _openCreate(context)),
     );
   }
@@ -102,8 +108,7 @@ class _MapGrid extends ConsumerWidget {
   const _MapGrid({required this.maps, required this.onCreate});
 
   int _crossAxisCount(double width) {
-    if (width >= 1200) return 4;
-    if (width >= 700) return 3;
+		if (width >= 500) return 3;
     return 2;
   }
 
