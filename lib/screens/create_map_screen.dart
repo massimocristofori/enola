@@ -138,6 +138,10 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
           .getSingleOrNull();
 
       ref.invalidate(allMapsProvider);
+      // ADDED: also invalidate the single-map provider so PlayScreen
+      // reflects title/image changes immediately when popped back to.
+      ref.invalidate(mapProvider(mapId));
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Map saved!'),
