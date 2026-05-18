@@ -230,6 +230,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             )
           : _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
+				child: ConstrainedBox(
+	      constraints: const BoxConstraints(maxWidth: 600),
         child: Column(
           children: [
             // Header — always in tree from frame 1 for the Hero to work.
@@ -331,6 +333,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           ],
         ),
       ),
+			),
     );
   }
 }
