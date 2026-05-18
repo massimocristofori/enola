@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/database/schema_utils.dart';
 import 'package:enola/theme/enola_theme.dart';
-import 'package:enola/widgets/fantasy_widgets.dart';
 
 class RiddleScreen extends StatefulWidget {
   final Riddle riddle;
@@ -45,8 +44,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
     return 0;
   }
 
-  // ── Multiple choice ──────────────────────────────────────────────────────
-
   void _onMultipleChoiceAnswer(int index, int correctIndex) {
     if (_solvedCorrectly || _showingFeedback) return;
     final correct = index == correctIndex;
@@ -78,8 +75,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
     }
   }
 
-  // ── Ordering ─────────────────────────────────────────────────────────────
-
   void _onOrderingSubmit(List<String> correctOrder) {
     if (_solvedCorrectly || _showingFeedback) return;
     final correct = _orderedItems.join('|') == correctOrder.join('|');
@@ -94,91 +89,106 @@ class _RiddleScreenState extends State<RiddleScreen> {
     });
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final riddle = widget.riddle;
 
     return Scaffold(
-      body: FantasyBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              // ── Header ──
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: EnolaTheme.textSecond),
-                      onPressed: () => Navigator.pop(context, null),
-                    ),
-                    Text(
-                      'Riddle #${widget.riddleIndex + 1}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: EnolaTheme.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    // ── Live star counter ──
-                    _StarBadge(stars: _currentStars),
-                  ],
-                ),
-              ),
-
-              // ── Content ──
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
+      backgroundColor: EnolaTheme.background,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              children: [
+                // ── Header ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
                     children: [
-                      ParchmentCard(
-                        glowing: _solvedCorrectly,
-                        child: Column(
-                          children: [
-                            Text('Riddle #${widget.riddleIndex + 1}',
-                                style: EnolaTheme.sectionHeader),
-                            const SizedBox(height: 16),
-                            Text(
-                              riddle.question,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                          ],
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: EnolaTheme.textSecond),
+                        onPressed: () => Navigator.pop(context, null),
+                      ),
+                      Text(
+                        'Riddle #${widget.riddleIndex + 1}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: EnolaTheme.textPrimary,
                         ),
-                      ).animate().fadeIn().scale(delay: 100.ms),
-                      const SizedBox(height: 32),
-
-                      if (riddle.type == RiddleType.multipleChoice ||
-                          riddle.type == RiddleType.trueFalse)
-                        _buildMultipleChoice(riddle)
-                      else
-                        _buildOrdering(riddle),
+                      ),
+                      const Spacer(),
+                      _StarBadge(stars: _currentStars),
                     ],
                   ),
                 ),
-              ),
 
-              // ── Feedback bar ──
-              if (_showingFeedback)
-                _AnswerFeedback(
-                  isCorrect: _lastAnswerCorrect ?? false,
-                  onContinue: (_lastAnswerCorrect ?? false)
-                      ? _confirm
-                      : _retryAfterWrong,
-                ).animate().slideY(begin: 1, end: 0).fadeIn(),
-            ],
+                // ── Content ──
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // ParchmentCard inlined
+                        Card(
+                          elevation: _solvedCorrectly ? 4 : 0,
+                          shadowColor: _solvedCorrectly
+                              ? EnolaTheme.accent.withValues(alpha: 0.3)
+                              : null,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: _solvedCorrectly
+                                  ? EnolaTheme.accent
+                                  : EnolaTheme.border,
+                              width: _solvedCorrectly ? 2 : 1,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                Text('Riddle #${widget.riddleIndex + 1}',
+                                    style: EnolaTheme.sectionHeader),
+                                const SizedBox(height: 16),
+                                Text(
+                                  riddle.question,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).animate().fadeIn().scale(delay: 100.ms),
+                        const SizedBox(height: 32),
+
+                        if (riddle.type == RiddleType.multipleChoice ||
+                            riddle.type == RiddleType.trueFalse)
+                          _buildMultipleChoice(riddle)
+                        else
+                          _buildOrdering(riddle),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Feedback bar ──
+                if (_showingFeedback)
+                  _AnswerFeedback(
+                    isCorrect: _lastAnswerCorrect ?? false,
+                    onContinue: (_lastAnswerCorrect ?? false)
+                        ? _confirm
+                        : _retryAfterWrong,
+                  ).animate().slideY(begin: 1, end: 0).fadeIn(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  // ── Multiple choice ────────────────────────────────────────────────────────
 
   Widget _buildMultipleChoice(Riddle riddle) {
     final choices = [
@@ -222,7 +232,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,
-                  width: isSelected || (_showingFeedback && isCorrectChoice && _solvedCorrectly)
+                  width: isSelected ||
+                          (_showingFeedback && isCorrectChoice && _solvedCorrectly)
                       ? 2
                       : 1,
                 ),
@@ -238,8 +249,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
                       String.fromCharCode(65 + i),
                       style: TextStyle(
                         fontSize: 12,
-                        color:
-                            isSelected ? Colors.white : EnolaTheme.textSecond,
+                        color: isSelected ? Colors.white : EnolaTheme.textSecond,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -264,8 +274,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
       }),
     );
   }
-
-  // ── Ordering ───────────────────────────────────────────────────────────────
 
   Widget _buildOrdering(Riddle riddle) {
     final correctOrder = riddle.asOrdering?.items ?? riddle.choices;
@@ -316,8 +324,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
           ),
         if (_showingFeedback && !_solvedCorrectly)
           const Padding(
-            padding:  EdgeInsets.only(top: 8),
-            child:  Text(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
               'Not quite — try reordering again!',
               style: TextStyle(
                 color: EnolaTheme.wrong,
@@ -334,8 +342,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
 // ── Star badge ────────────────────────────────────────────────────────────────
 
 class _StarBadge extends StatelessWidget {
-  final int stars; // 0–3
-
+  final int stars;
   const _StarBadge({required this.stars});
 
   @override
