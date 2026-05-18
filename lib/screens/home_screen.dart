@@ -22,35 +22,34 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
-  child: Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 600),
-      child: Column(
-        children: [
-          _Header(),
-          Expanded(
-            child: mapsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: EnolaTheme.accent),
-              ),
-              error: (e, _) => Center(
-                child: Text('Error: $e',
-                    style: const TextStyle(color: EnolaTheme.wrong)),
-              ),
-              data: (maps) => maps.isEmpty
-                  ? _EmptyState(onCreate: () => _openCreate(context))
-                  : _MapGrid(
-                      maps: maps,
-                      onCreate: () => _openCreate(context),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              children: [
+                _Header(),
+                Expanded(
+                  child: mapsAsync.when(
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: EnolaTheme.accent),
                     ),
+                    error: (e, _) => Center(
+                      child: Text('Error: $e',
+                          style: const TextStyle(color: EnolaTheme.wrong)),
+                    ),
+                    data: (maps) => maps.isEmpty
+                        ? _EmptyState(onCreate: () => _openCreate(context))
+                        : _MapGrid(
+                            maps: maps,
+                            onCreate: () => _openCreate(context),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
-    ),
-  ),
-),
-
       floatingActionButton: _CreateFab(onTap: () => _openCreate(context)),
     );
   }
@@ -108,7 +107,7 @@ class _MapGrid extends ConsumerWidget {
   const _MapGrid({required this.maps, required this.onCreate});
 
   int _crossAxisCount(double width) {
-		if (width >= 500) return 3;
+    if (width >= 500) return 3;
     return 2;
   }
 
@@ -204,198 +203,202 @@ class _MapCard extends ConsumerWidget {
   }
 
   @override
-Widget build(BuildContext context, WidgetRef ref) {
-  final Uint8List? imageBytes =
-      map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Uint8List? imageBytes =
+        map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
 
-  final countAsync = ref.watch(riddleCountProvider(map.id));
-  final sessionAsync = ref.watch(latestSessionProvider(map.id));
+    final countAsync = ref.watch(riddleCountProvider(map.id));
+    final sessionAsync = ref.watch(latestSessionProvider(map.id));
 
-  final count = countAsync.valueOrNull ?? 0;
-  final maxStars = count * 3;
-  final session = sessionAsync.valueOrNull;
+    final count = countAsync.valueOrNull ?? 0;
+    final maxStars = count * 3;
+    final session = sessionAsync.valueOrNull;
 
-  int achievedStars = 0;
-  int completedRiddlesCount = 0;
+    int achievedStars = 0;
+    int completedRiddlesCount = 0;
 
-  if (session != null && session.riddleStarsJson != null) {
-    try {
-      final list = jsonDecode(session.riddleStarsJson!) as List;
-      completedRiddlesCount = list.length;
-      achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
-    } catch (_) {}
-  }
+    if (session != null && session.riddleStarsJson != null) {
+      try {
+        final list = jsonDecode(session.riddleStarsJson!) as List;
+        completedRiddlesCount = list.length;
+        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+      } catch (_) {}
+    }
 
-  final hasBeenPlayed = session != null;
-  final isComplete =
-      hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
+    final hasBeenPlayed = session != null;
+    final isComplete =
+        hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
 
-  return GestureDetector(
-    onTap: () => _openPlay(context),
-    child: Hero(
-      tag: 'map-card-${map.id}',
-      flightShuttleBuilder: (_, animation, __, ___, ____) {
-        return AnimatedBuilder(
-          animation: animation,
-          builder: (context, _) {
-            final imageHeightFactor =
-                (1.0 - animation.value).clamp(0.0, 1.0);
+    return GestureDetector(
+      onTap: () => _openPlay(context),
+      child: Hero(
+        tag: 'map-card-${map.id}',
+        flightShuttleBuilder: (_, animation, __, ___, ____) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final imageHeightFactor =
+                  (1.0 - animation.value).clamp(0.0, 1.0);
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(15),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ClipRect(
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            heightFactor: imageHeightFactor,
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: imageBytes != null
-                                    ? Image.memory(imageBytes,
-                                        fit: BoxFit.cover)
-                                    : Image.asset('assets/images/0.jpeg',
-                                        fit: BoxFit.cover),
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(15),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ClipRect(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              heightFactor: imageHeightFactor,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: imageBytes != null
+                                      ? Image.memory(imageBytes,
+                                          fit: BoxFit.cover)
+                                      : Image.asset('assets/images/0.jpeg',
+                                          fit: BoxFit.cover),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.vertical(
-                                bottom: Radius.circular(16)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                map.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w400,
-                                  color: EnolaTheme.textPrimary,
-                                  height: 1.3,
-                                  letterSpacing: 0.1,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Icon(Icons.star_rounded,
-                                      size: 17, color: Color(0xFFf59e0b)),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    hasBeenPlayed
-                                        ? '$achievedStars / $maxStars'
-                                        : '$maxStars',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF555555),
-                                    ),
+                          Container(
+                            padding:
+                                const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                  bottom: Radius.circular(16)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  map.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w400,
+                                    color: EnolaTheme.textPrimary,
+                                    height: 1.3,
+                                    letterSpacing: 0.1,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: maxStars > 0 && hasBeenPlayed
-                                      ? achievedStars / maxStars
-                                      : 0,
-                                  minHeight: 5,
-                                  backgroundColor: const Color(0xFFE5E7EB),
-                                  valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                          Color(0xFFf59e0b)),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star_rounded,
+                                        size: 17,
+                                        color: Color(0xFFf59e0b)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      hasBeenPlayed
+                                          ? '$achievedStars / $maxStars'
+                                          : '$maxStars',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF555555),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: maxStars > 0 && hasBeenPlayed
+                                        ? achievedStars / maxStars
+                                        : 0,
+                                    minHeight: 5,
+                                    backgroundColor:
+                                        const Color(0xFFE5E7EB),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                            Color(0xFFf59e0b)),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          _CardShell(
-            imageBytes: imageBytes,
-            isComplete: isComplete,
-            title: map.title,
-            achievedStars: achievedStars,
-            maxStars: maxStars,
-            hasBeenPlayed: hasBeenPlayed,
-          ),
+              );
+            },
+          );
+        },
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _CardShell(
+              imageBytes: imageBytes,
+              isComplete: isComplete,
+              title: map.title,
+              achievedStars: achievedStars,
+              maxStars: maxStars,
+              hasBeenPlayed: hasBeenPlayed,
+            ),
 
-          // ── Top-left ear (Edit) ──
-          Positioned(
-            top: -6,
-            left: -6,
-            child: _EarButton(
-              icon: Icons.edit_rounded,
-              iconColor: EnolaTheme.textSecond.withValues(alpha: 0.5),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CreateMapScreen(existingMapId: map.id),
+            // ── Top-left ear (Edit) ──
+            Positioned(
+              top: -6,
+              left: -6,
+              child: _EarButton(
+                icon: Icons.edit_rounded,
+                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.5),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CreateMapScreen(existingMapId: map.id),
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ── Top-right ear (Delete) ──
-          Positioned(
-            top: -6,
-            right: -6,
-            child: _EarButton(
-              icon: Icons.delete_forever_rounded,
-              iconColor: Colors.redAccent.withValues(alpha: 0.5),
-              onTap: () => _confirmDelete(context, ref),
+            // ── Top-right ear (Delete) ──
+            Positioned(
+              top: -6,
+              right: -6,
+              child: _EarButton(
+                icon: Icons.delete_forever_rounded,
+                iconColor: Colors.redAccent.withValues(alpha: 0.5),
+                onTap: () => _confirmDelete(context, ref),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-
-// ── Rank helpers (mirrors ResultScreen thresholds exactly) ────────────────────
+// ── Rank helpers ──────────────────────────────────────────────────────────────
 
 String _rankEmoji(double starRatio) {
   if (starRatio >= 0.9) return '👑';
   if (starRatio >= 0.7) return '🏆';
-  if (starRatio >= 0.5) return '⚔️';
+  if (starRatio >= 0.5) return '⚔';
   return '📜';
 }
 
@@ -490,19 +493,12 @@ class _CardShell extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: imageBytes != null
-                        ? Image.memory(
-                            imageBytes!,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.asset(
-                            'assets/images/0.jpeg',
-                            fit: BoxFit.cover,
-                          ),
+                        ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                        : Image.asset('assets/images/0.jpeg',
+                            fit: BoxFit.cover),
                   ),
                   if (isComplete)
-                    Center(
-                      child: _RankOverlay(starRatio: starRatio),
-                    ),
+                    Center(child: _RankOverlay(starRatio: starRatio)),
                 ],
               ),
             ),
@@ -586,8 +582,8 @@ class _CardInfoBar extends StatelessWidget {
                   : 0,
               minHeight: 5,
               backgroundColor: const Color(0xFFE5E7EB),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFFf59e0b)),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFFf59e0b)),
             ),
           ),
         ],
