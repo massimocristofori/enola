@@ -63,8 +63,6 @@ class ResultScreen extends StatelessWidget {
                 const Spacer(),
                 _buildCrest(),
                 const SizedBox(height: 28),
-                _buildStarSummary(),
-                const SizedBox(height: 28),
                 const RuneDivider(),
                 const SizedBox(height: 24),
                 _buildStats(),
