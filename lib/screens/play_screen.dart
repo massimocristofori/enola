@@ -369,7 +369,7 @@ class _PlayHeader extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: Container(
-            width: double.infinity,
+            //width: double.infinity,
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius:
