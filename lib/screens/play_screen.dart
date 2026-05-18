@@ -230,6 +230,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             )
           : _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
+				child: Center(
 				child: ConstrainedBox(
 	      constraints: const BoxConstraints(maxWidth: 600),
         child: Column(
@@ -333,6 +334,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           ],
         ),
       ),
+			),
 			),
     );
   }
