@@ -176,6 +176,7 @@ class DriftService {
       payloadJson: Value(riddle.payloadJson),
       choicesJson: Value(riddle.choicesJson),
       correctIndex: Value(riddle.correctIndex),
+			sourceExcerpt: Value(riddle.sourceExcerpt), // ← add this
     );
     await db.into(db.riddles).insert(companion);
   }
