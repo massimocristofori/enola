@@ -164,8 +164,11 @@ late final GeneratedColumn<String> choicesJson = GeneratedColumn<String>('choice
 static const VerificationMeta _correctIndexMeta = const VerificationMeta('correctIndex');
 @override
 late final GeneratedColumn<int> correctIndex = GeneratedColumn<int>('correct_index', aliasedName, true, type: DriftSqlType.int, requiredDuringInsert: false);
+static const VerificationMeta _sourceExcerptMeta = const VerificationMeta('sourceExcerpt');
 @override
-List<GeneratedColumn> get $columns => [id, mapId, question, typeIndex, orderInMap, payloadJson, choicesJson, correctIndex];
+late final GeneratedColumn<String> sourceExcerpt = GeneratedColumn<String>('source_excerpt', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+@override
+List<GeneratedColumn> get $columns => [id, mapId, question, typeIndex, orderInMap, payloadJson, choicesJson, correctIndex, sourceExcerpt];
 @override
 String get aliasedName => _alias ?? actualTableName;
 @override
@@ -195,12 +198,13 @@ context.missing(_orderInMapMeta);
 if (data.containsKey('payload_json')) {
 context.handle(_payloadJsonMeta, payloadJson.isAcceptableOrUnknown(data['payload_json']!, _payloadJsonMeta));}if (data.containsKey('choices_json')) {
 context.handle(_choicesJsonMeta, choicesJson.isAcceptableOrUnknown(data['choices_json']!, _choicesJsonMeta));}if (data.containsKey('correct_index')) {
-context.handle(_correctIndexMeta, correctIndex.isAcceptableOrUnknown(data['correct_index']!, _correctIndexMeta));}return context;
+context.handle(_correctIndexMeta, correctIndex.isAcceptableOrUnknown(data['correct_index']!, _correctIndexMeta));}if (data.containsKey('source_excerpt')) {
+context.handle(_sourceExcerptMeta, sourceExcerpt.isAcceptableOrUnknown(data['source_excerpt']!, _sourceExcerptMeta));}return context;
 }
 @override
 Set<GeneratedColumn> get $primaryKey => {id};
 @override Riddle map(Map<String, dynamic> data, {String? tablePrefix})  {
-final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return Riddle(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, mapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}map_id'])!, question: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}question'])!, typeIndex: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}type_index'])!, orderInMap: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}order_in_map'])!, payloadJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}payload_json']), choicesJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}choices_json']), correctIndex: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}correct_index']), );
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return Riddle(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, mapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}map_id'])!, question: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}question'])!, typeIndex: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}type_index'])!, orderInMap: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}order_in_map'])!, payloadJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}payload_json']), choicesJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}choices_json']), correctIndex: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}correct_index']), sourceExcerpt: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_excerpt']), );
 }
 @override
 $RiddlesTable createAlias(String alias) {
@@ -214,7 +218,8 @@ final int orderInMap;
 final String? payloadJson;
 final String? choicesJson;
 final int? correctIndex;
-const Riddle({required this.id, required this.mapId, required this.question, required this.typeIndex, required this.orderInMap, this.payloadJson, this.choicesJson, this.correctIndex});@override
+final String? sourceExcerpt;
+const Riddle({required this.id, required this.mapId, required this.question, required this.typeIndex, required this.orderInMap, this.payloadJson, this.choicesJson, this.correctIndex, this.sourceExcerpt});@override
 Map<String, Expression> toColumns(bool nullToAbsent) {
 final map = <String, Expression> {};map['id'] = Variable<int>(id);
 map['map_id'] = Variable<String>(mapId);
@@ -224,26 +229,27 @@ map['order_in_map'] = Variable<int>(orderInMap);
 if (!nullToAbsent || payloadJson != null){map['payload_json'] = Variable<String>(payloadJson);
 }if (!nullToAbsent || choicesJson != null){map['choices_json'] = Variable<String>(choicesJson);
 }if (!nullToAbsent || correctIndex != null){map['correct_index'] = Variable<int>(correctIndex);
+}if (!nullToAbsent || sourceExcerpt != null){map['source_excerpt'] = Variable<String>(sourceExcerpt);
 }return map; 
 }
 RiddlesCompanion toCompanion(bool nullToAbsent) {
-return RiddlesCompanion(id: Value(id),mapId: Value(mapId),question: Value(question),typeIndex: Value(typeIndex),orderInMap: Value(orderInMap),payloadJson: payloadJson == null && nullToAbsent ? const Value.absent() : Value(payloadJson),choicesJson: choicesJson == null && nullToAbsent ? const Value.absent() : Value(choicesJson),correctIndex: correctIndex == null && nullToAbsent ? const Value.absent() : Value(correctIndex),);
+return RiddlesCompanion(id: Value(id),mapId: Value(mapId),question: Value(question),typeIndex: Value(typeIndex),orderInMap: Value(orderInMap),payloadJson: payloadJson == null && nullToAbsent ? const Value.absent() : Value(payloadJson),choicesJson: choicesJson == null && nullToAbsent ? const Value.absent() : Value(choicesJson),correctIndex: correctIndex == null && nullToAbsent ? const Value.absent() : Value(correctIndex),sourceExcerpt: sourceExcerpt == null && nullToAbsent ? const Value.absent() : Value(sourceExcerpt),);
 }
 factory Riddle.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
-return Riddle(id: serializer.fromJson<int>(json['id']),mapId: serializer.fromJson<String>(json['mapId']),question: serializer.fromJson<String>(json['question']),typeIndex: serializer.fromJson<int>(json['typeIndex']),orderInMap: serializer.fromJson<int>(json['orderInMap']),payloadJson: serializer.fromJson<String?>(json['payloadJson']),choicesJson: serializer.fromJson<String?>(json['choicesJson']),correctIndex: serializer.fromJson<int?>(json['correctIndex']),);}
+return Riddle(id: serializer.fromJson<int>(json['id']),mapId: serializer.fromJson<String>(json['mapId']),question: serializer.fromJson<String>(json['question']),typeIndex: serializer.fromJson<int>(json['typeIndex']),orderInMap: serializer.fromJson<int>(json['orderInMap']),payloadJson: serializer.fromJson<String?>(json['payloadJson']),choicesJson: serializer.fromJson<String?>(json['choicesJson']),correctIndex: serializer.fromJson<int?>(json['correctIndex']),sourceExcerpt: serializer.fromJson<String?>(json['sourceExcerpt']),);}
 @override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
 return <String, dynamic>{
-'id': serializer.toJson<int>(id),'mapId': serializer.toJson<String>(mapId),'question': serializer.toJson<String>(question),'typeIndex': serializer.toJson<int>(typeIndex),'orderInMap': serializer.toJson<int>(orderInMap),'payloadJson': serializer.toJson<String?>(payloadJson),'choicesJson': serializer.toJson<String?>(choicesJson),'correctIndex': serializer.toJson<int?>(correctIndex),};}Riddle copyWith({int? id,String? mapId,String? question,int? typeIndex,int? orderInMap,Value<String?> payloadJson = const Value.absent(),Value<String?> choicesJson = const Value.absent(),Value<int?> correctIndex = const Value.absent()}) => Riddle(id: id ?? this.id,mapId: mapId ?? this.mapId,question: question ?? this.question,typeIndex: typeIndex ?? this.typeIndex,orderInMap: orderInMap ?? this.orderInMap,payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,choicesJson: choicesJson.present ? choicesJson.value : this.choicesJson,correctIndex: correctIndex.present ? correctIndex.value : this.correctIndex,);Riddle copyWithCompanion(RiddlesCompanion data) {
+'id': serializer.toJson<int>(id),'mapId': serializer.toJson<String>(mapId),'question': serializer.toJson<String>(question),'typeIndex': serializer.toJson<int>(typeIndex),'orderInMap': serializer.toJson<int>(orderInMap),'payloadJson': serializer.toJson<String?>(payloadJson),'choicesJson': serializer.toJson<String?>(choicesJson),'correctIndex': serializer.toJson<int?>(correctIndex),'sourceExcerpt': serializer.toJson<String?>(sourceExcerpt),};}Riddle copyWith({int? id,String? mapId,String? question,int? typeIndex,int? orderInMap,Value<String?> payloadJson = const Value.absent(),Value<String?> choicesJson = const Value.absent(),Value<int?> correctIndex = const Value.absent(),Value<String?> sourceExcerpt = const Value.absent()}) => Riddle(id: id ?? this.id,mapId: mapId ?? this.mapId,question: question ?? this.question,typeIndex: typeIndex ?? this.typeIndex,orderInMap: orderInMap ?? this.orderInMap,payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,choicesJson: choicesJson.present ? choicesJson.value : this.choicesJson,correctIndex: correctIndex.present ? correctIndex.value : this.correctIndex,sourceExcerpt: sourceExcerpt.present ? sourceExcerpt.value : this.sourceExcerpt,);Riddle copyWithCompanion(RiddlesCompanion data) {
 return Riddle(
-id: data.id.present ? data.id.value : this.id,mapId: data.mapId.present ? data.mapId.value : this.mapId,question: data.question.present ? data.question.value : this.question,typeIndex: data.typeIndex.present ? data.typeIndex.value : this.typeIndex,orderInMap: data.orderInMap.present ? data.orderInMap.value : this.orderInMap,payloadJson: data.payloadJson.present ? data.payloadJson.value : this.payloadJson,choicesJson: data.choicesJson.present ? data.choicesJson.value : this.choicesJson,correctIndex: data.correctIndex.present ? data.correctIndex.value : this.correctIndex,);
+id: data.id.present ? data.id.value : this.id,mapId: data.mapId.present ? data.mapId.value : this.mapId,question: data.question.present ? data.question.value : this.question,typeIndex: data.typeIndex.present ? data.typeIndex.value : this.typeIndex,orderInMap: data.orderInMap.present ? data.orderInMap.value : this.orderInMap,payloadJson: data.payloadJson.present ? data.payloadJson.value : this.payloadJson,choicesJson: data.choicesJson.present ? data.choicesJson.value : this.choicesJson,correctIndex: data.correctIndex.present ? data.correctIndex.value : this.correctIndex,sourceExcerpt: data.sourceExcerpt.present ? data.sourceExcerpt.value : this.sourceExcerpt,);
 }
 @override
-String toString() {return (StringBuffer('Riddle(')..write('id: $id, ')..write('mapId: $mapId, ')..write('question: $question, ')..write('typeIndex: $typeIndex, ')..write('orderInMap: $orderInMap, ')..write('payloadJson: $payloadJson, ')..write('choicesJson: $choicesJson, ')..write('correctIndex: $correctIndex')..write(')')).toString();}
+String toString() {return (StringBuffer('Riddle(')..write('id: $id, ')..write('mapId: $mapId, ')..write('question: $question, ')..write('typeIndex: $typeIndex, ')..write('orderInMap: $orderInMap, ')..write('payloadJson: $payloadJson, ')..write('choicesJson: $choicesJson, ')..write('correctIndex: $correctIndex, ')..write('sourceExcerpt: $sourceExcerpt')..write(')')).toString();}
 @override
- int get hashCode => Object.hash(id, mapId, question, typeIndex, orderInMap, payloadJson, choicesJson, correctIndex);@override
-bool operator ==(Object other) => identical(this, other) || (other is Riddle && other.id == this.id && other.mapId == this.mapId && other.question == this.question && other.typeIndex == this.typeIndex && other.orderInMap == this.orderInMap && other.payloadJson == this.payloadJson && other.choicesJson == this.choicesJson && other.correctIndex == this.correctIndex);
+ int get hashCode => Object.hash(id, mapId, question, typeIndex, orderInMap, payloadJson, choicesJson, correctIndex, sourceExcerpt);@override
+bool operator ==(Object other) => identical(this, other) || (other is Riddle && other.id == this.id && other.mapId == this.mapId && other.question == this.question && other.typeIndex == this.typeIndex && other.orderInMap == this.orderInMap && other.payloadJson == this.payloadJson && other.choicesJson == this.choicesJson && other.correctIndex == this.correctIndex && other.sourceExcerpt == this.sourceExcerpt);
 }class RiddlesCompanion extends UpdateCompanion<Riddle> {
 final Value<int> id;
 final Value<String> mapId;
@@ -253,8 +259,9 @@ final Value<int> orderInMap;
 final Value<String?> payloadJson;
 final Value<String?> choicesJson;
 final Value<int?> correctIndex;
-const RiddlesCompanion({this.id = const Value.absent(),this.mapId = const Value.absent(),this.question = const Value.absent(),this.typeIndex = const Value.absent(),this.orderInMap = const Value.absent(),this.payloadJson = const Value.absent(),this.choicesJson = const Value.absent(),this.correctIndex = const Value.absent(),});
-RiddlesCompanion.insert({this.id = const Value.absent(),required String mapId,required String question,required int typeIndex,required int orderInMap,this.payloadJson = const Value.absent(),this.choicesJson = const Value.absent(),this.correctIndex = const Value.absent(),}): mapId = Value(mapId), question = Value(question), typeIndex = Value(typeIndex), orderInMap = Value(orderInMap);
+final Value<String?> sourceExcerpt;
+const RiddlesCompanion({this.id = const Value.absent(),this.mapId = const Value.absent(),this.question = const Value.absent(),this.typeIndex = const Value.absent(),this.orderInMap = const Value.absent(),this.payloadJson = const Value.absent(),this.choicesJson = const Value.absent(),this.correctIndex = const Value.absent(),this.sourceExcerpt = const Value.absent(),});
+RiddlesCompanion.insert({this.id = const Value.absent(),required String mapId,required String question,required int typeIndex,required int orderInMap,this.payloadJson = const Value.absent(),this.choicesJson = const Value.absent(),this.correctIndex = const Value.absent(),this.sourceExcerpt = const Value.absent(),}): mapId = Value(mapId), question = Value(question), typeIndex = Value(typeIndex), orderInMap = Value(orderInMap);
 static Insertable<Riddle> custom({Expression<int>? id, 
 Expression<String>? mapId, 
 Expression<String>? question, 
@@ -263,10 +270,11 @@ Expression<int>? orderInMap,
 Expression<String>? payloadJson, 
 Expression<String>? choicesJson, 
 Expression<int>? correctIndex, 
+Expression<String>? sourceExcerpt, 
 }) {
-return RawValuesInsertable({if (id != null)'id': id,if (mapId != null)'map_id': mapId,if (question != null)'question': question,if (typeIndex != null)'type_index': typeIndex,if (orderInMap != null)'order_in_map': orderInMap,if (payloadJson != null)'payload_json': payloadJson,if (choicesJson != null)'choices_json': choicesJson,if (correctIndex != null)'correct_index': correctIndex,});
-}RiddlesCompanion copyWith({Value<int>? id, Value<String>? mapId, Value<String>? question, Value<int>? typeIndex, Value<int>? orderInMap, Value<String?>? payloadJson, Value<String?>? choicesJson, Value<int?>? correctIndex}) {
-return RiddlesCompanion(id: id ?? this.id,mapId: mapId ?? this.mapId,question: question ?? this.question,typeIndex: typeIndex ?? this.typeIndex,orderInMap: orderInMap ?? this.orderInMap,payloadJson: payloadJson ?? this.payloadJson,choicesJson: choicesJson ?? this.choicesJson,correctIndex: correctIndex ?? this.correctIndex,);
+return RawValuesInsertable({if (id != null)'id': id,if (mapId != null)'map_id': mapId,if (question != null)'question': question,if (typeIndex != null)'type_index': typeIndex,if (orderInMap != null)'order_in_map': orderInMap,if (payloadJson != null)'payload_json': payloadJson,if (choicesJson != null)'choices_json': choicesJson,if (correctIndex != null)'correct_index': correctIndex,if (sourceExcerpt != null)'source_excerpt': sourceExcerpt,});
+}RiddlesCompanion copyWith({Value<int>? id, Value<String>? mapId, Value<String>? question, Value<int>? typeIndex, Value<int>? orderInMap, Value<String?>? payloadJson, Value<String?>? choicesJson, Value<int?>? correctIndex, Value<String?>? sourceExcerpt}) {
+return RiddlesCompanion(id: id ?? this.id,mapId: mapId ?? this.mapId,question: question ?? this.question,typeIndex: typeIndex ?? this.typeIndex,orderInMap: orderInMap ?? this.orderInMap,payloadJson: payloadJson ?? this.payloadJson,choicesJson: choicesJson ?? this.choicesJson,correctIndex: correctIndex ?? this.correctIndex,sourceExcerpt: sourceExcerpt ?? this.sourceExcerpt,);
 }
 @override
 Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -286,10 +294,12 @@ if (choicesJson.present) {
 map['choices_json'] = Variable<String>(choicesJson.value);}
 if (correctIndex.present) {
 map['correct_index'] = Variable<int>(correctIndex.value);}
+if (sourceExcerpt.present) {
+map['source_excerpt'] = Variable<String>(sourceExcerpt.value);}
 return map; 
 }
 @override
-String toString() {return (StringBuffer('RiddlesCompanion(')..write('id: $id, ')..write('mapId: $mapId, ')..write('question: $question, ')..write('typeIndex: $typeIndex, ')..write('orderInMap: $orderInMap, ')..write('payloadJson: $payloadJson, ')..write('choicesJson: $choicesJson, ')..write('correctIndex: $correctIndex')..write(')')).toString();}
+String toString() {return (StringBuffer('RiddlesCompanion(')..write('id: $id, ')..write('mapId: $mapId, ')..write('question: $question, ')..write('typeIndex: $typeIndex, ')..write('orderInMap: $orderInMap, ')..write('payloadJson: $payloadJson, ')..write('choicesJson: $choicesJson, ')..write('correctIndex: $correctIndex, ')..write('sourceExcerpt: $sourceExcerpt')..write(')')).toString();}
 }
 class $PlaySessionsTable extends PlaySessions with TableInfo<$PlaySessionsTable, PlaySession>{
 @override final GeneratedDatabase attachedDatabase;
@@ -793,8 +803,8 @@ GeneratedColumn<DateTime> get createdAt => $composableBuilder(
     (RiddleMap,$$RiddleMapsTableReferences),
     RiddleMap,
     PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs})
-    >;typedef $$RiddlesTableCreateCompanionBuilder = RiddlesCompanion Function({Value<int> id,required String mapId,required String question,required int typeIndex,required int orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,});
-typedef $$RiddlesTableUpdateCompanionBuilder = RiddlesCompanion Function({Value<int> id,Value<String> mapId,Value<String> question,Value<int> typeIndex,Value<int> orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,});
+    >;typedef $$RiddlesTableCreateCompanionBuilder = RiddlesCompanion Function({Value<int> id,required String mapId,required String question,required int typeIndex,required int orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,Value<String?> sourceExcerpt,});
+typedef $$RiddlesTableUpdateCompanionBuilder = RiddlesCompanion Function({Value<int> id,Value<String> mapId,Value<String> question,Value<int> typeIndex,Value<int> orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,Value<String?> sourceExcerpt,});
       final class $$RiddlesTableReferences extends BaseReferences<
         _$AppDatabase,
         $RiddlesTable,
@@ -861,6 +871,11 @@ ColumnFilters<int> get correctIndex => $composableBuilder(
       builder: (column) => 
       ColumnFilters(column));
       
+ColumnFilters<String> get sourceExcerpt => $composableBuilder(
+      column: $table.sourceExcerpt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
         $$RiddleMapsTableFilterComposer get mapId {
                 final $$RiddleMapsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -924,6 +939,11 @@ ColumnOrderings<int> get correctIndex => $composableBuilder(
       builder: (column) => 
       ColumnOrderings(column));
       
+ColumnOrderings<String> get sourceExcerpt => $composableBuilder(
+      column: $table.sourceExcerpt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
         $$RiddleMapsTableOrderingComposer get mapId {
                 final $$RiddleMapsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -980,6 +1000,10 @@ GeneratedColumn<int> get correctIndex => $composableBuilder(
       column: $table.correctIndex,
       builder: (column) => column);
       
+GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
+      column: $table.sourceExcerpt,
+      builder: (column) => column);
+      
         $$RiddleMapsTableAnnotationComposer get mapId {
                 final $$RiddleMapsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -1017,8 +1041,8 @@ GeneratedColumn<int> get correctIndex => $composableBuilder(
         createFilteringComposer: () => $$RiddlesTableFilterComposer($db: db,$table:table),
         createOrderingComposer: () => $$RiddlesTableOrderingComposer($db: db,$table:table),
         createComputedFieldComposer: () => $$RiddlesTableAnnotationComposer($db: db,$table:table),
-        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> mapId = const Value.absent(),Value<String> question = const Value.absent(),Value<int> typeIndex = const Value.absent(),Value<int> orderInMap = const Value.absent(),Value<String?> payloadJson = const Value.absent(),Value<String?> choicesJson = const Value.absent(),Value<int?> correctIndex = const Value.absent(),})=> RiddlesCompanion(id: id,mapId: mapId,question: question,typeIndex: typeIndex,orderInMap: orderInMap,payloadJson: payloadJson,choicesJson: choicesJson,correctIndex: correctIndex,),
-        createCompanionCallback: ({Value<int> id = const Value.absent(),required String mapId,required String question,required int typeIndex,required int orderInMap,Value<String?> payloadJson = const Value.absent(),Value<String?> choicesJson = const Value.absent(),Value<int?> correctIndex = const Value.absent(),})=> RiddlesCompanion.insert(id: id,mapId: mapId,question: question,typeIndex: typeIndex,orderInMap: orderInMap,payloadJson: payloadJson,choicesJson: choicesJson,correctIndex: correctIndex,),
+        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> mapId = const Value.absent(),Value<String> question = const Value.absent(),Value<int> typeIndex = const Value.absent(),Value<int> orderInMap = const Value.absent(),Value<String?> payloadJson = const Value.absent(),Value<String?> choicesJson = const Value.absent(),Value<int?> correctIndex = const Value.absent(),Value<String?> sourceExcerpt = const Value.absent(),})=> RiddlesCompanion(id: id,mapId: mapId,question: question,typeIndex: typeIndex,orderInMap: orderInMap,payloadJson: payloadJson,choicesJson: choicesJson,correctIndex: correctIndex,sourceExcerpt: sourceExcerpt,),
+        createCompanionCallback: ({Value<int> id = const Value.absent(),required String mapId,required String question,required int typeIndex,required int orderInMap,Value<String?> payloadJson = const Value.absent(),Value<String?> choicesJson = const Value.absent(),Value<int?> correctIndex = const Value.absent(),Value<String?> sourceExcerpt = const Value.absent(),})=> RiddlesCompanion.insert(id: id,mapId: mapId,question: question,typeIndex: typeIndex,orderInMap: orderInMap,payloadJson: payloadJson,choicesJson: choicesJson,correctIndex: correctIndex,sourceExcerpt: sourceExcerpt,),
         withReferenceMapper: (p0) => p0
               .map(
                   (e) =>
