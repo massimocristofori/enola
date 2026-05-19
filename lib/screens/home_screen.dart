@@ -427,14 +427,24 @@ class _RankOverlay extends StatelessWidget {
             fontSize: 48,
             shadows: [
               Shadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                blurRadius: 18,
-                offset: Offset(0, 2),
+                color: Colors.black.withValues(alpha: 0.9),
+                blurRadius: 4,
+                offset: const Offset(0, 0),
               ),
               Shadow(
-                color: Colors.black.withValues(alpha: 0.30),
-                blurRadius: 32,
-                offset: Offset(0, 0),
+                color: Colors.black.withValues(alpha: 0.7),
+                blurRadius: 12,
+                offset: const Offset(0, 0),
+              ),
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 24,
+                offset: const Offset(0, 0),
+              ),
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 40,
+                offset: const Offset(0, 0),
               ),
             ],
           ),
@@ -460,6 +470,7 @@ class _RankOverlay extends StatelessWidget {
     );
   }
 }
+
 
 // ── Card Shell ────────────────────────────────────────────────────────────────
 
