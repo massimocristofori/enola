@@ -7,8 +7,29 @@ import '../services/drift_service.dart';
 // Provides all maps for the HomeScreen
 final allMapsProvider = FutureProvider<List<RiddleMap>>((ref) async {
   final db = DriftService.instance.db;
-  return db.getAllMaps();
+  final maps = await db.getAllMaps();
+
+  // For each map, find the most recent activity timestamp:
+  // latest session startedAt, falling back to map createdAt
+  final List<(RiddleMap, DateTime)> withTimestamp = await Future.wait(
+    maps.map((m) async {
+      final sessions = await (db.select(db.playSessions)
+            ..where((t) => t.mapId.equals(m.id))
+            ..orderBy([(t) => drift.OrderingTerm(
+                  expression: t.startedAt,
+                  mode: drift.OrderingMode.desc,
+                )])
+            ..limit(1))
+          .get();
+      final ts = sessions.isNotEmpty ? sessions.first.startedAt : m.createdAt;
+      return (m, ts);
+    }),
+  );
+
+  withTimestamp.sort((a, b) => b.$2.compareTo(a.$2));
+  return withTimestamp.map((e) => e.$1).toList();
 });
+
 
 // Provides a single map by its ID
 final mapProvider = FutureProvider.family<RiddleMap?, String>((ref, id) async {
