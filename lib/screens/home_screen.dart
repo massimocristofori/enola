@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -420,9 +421,22 @@ class _RankOverlay extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          _rankEmoji(starRatio),
-          style: const TextStyle(fontSize: 48),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                _rankEmoji(starRatio),
+                style: const TextStyle(fontSize: 48),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 4),
         Container(
