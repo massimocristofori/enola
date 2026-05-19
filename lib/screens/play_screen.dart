@@ -25,6 +25,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
   String? _initError;
   bool _isCompleted = false; // NEW
+	int? _knownRiddleCount;
 
   @override
   void initState() {
@@ -212,6 +213,33 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     final map = mapAsync.valueOrNull;
     final riddles = riddlesAsync.valueOrNull;
+		// Auto-reset if riddle list changed while screen is open
+if (riddles != null && !_initialising) {
+  final newCount = riddles.length;
+  if (_knownRiddleCount != null && _knownRiddleCount != newCount) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final db = DriftService.instance.db;
+      await (db.delete(db.playSessions)
+            ..where((t) => t.mapId.equals(widget.mapId)))
+          .go();
+      ref.invalidate(latestSessionProvider(widget.mapId));
+      await _loadSession();
+    });
+  }
+  if (_knownRiddleCount != newCount) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _knownRiddleCount = newCount);
+    });
+  }
+}
+
+
+
+
+
+
+
     final title = map?.title ?? '';
     final maxStars = (riddles?.length ?? 0) * 3;
     final achievedStars = playState?.totalStars ?? 0;
