@@ -25,7 +25,17 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
   String? _initError;
   bool _isCompleted = false; // NEW
-	int? _knownRiddleCount;
+
+
+	Future<void> _resetAndReload() async {
+  final db = DriftService.instance.db;
+  await (db.delete(db.playSessions)
+        ..where((t) => t.mapId.equals(widget.mapId)))
+      .go();
+  ref.invalidate(latestSessionProvider(widget.mapId));
+  await _loadSession();
+}
+
 
   @override
   void initState() {
@@ -213,26 +223,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     final map = mapAsync.valueOrNull;
     final riddles = riddlesAsync.valueOrNull;
-		// Auto-reset if riddle list changed while screen is open
-if (riddles != null && !_initialising) {
-  final newCount = riddles.length;
-  if (_knownRiddleCount != null && _knownRiddleCount != newCount) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      final db = DriftService.instance.db;
-      await (db.delete(db.playSessions)
-            ..where((t) => t.mapId.equals(widget.mapId)))
-          .go();
-      ref.invalidate(latestSessionProvider(widget.mapId));
-      await _loadSession();
-    });
-  }
-  if (_knownRiddleCount != newCount) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _knownRiddleCount = newCount);
-    });
-  }
-}
 
 
 
@@ -246,6 +236,19 @@ if (riddles != null && !_initialising) {
     final hasBeenPlayed = (playState?.lastCompletedIndex ?? -1) >= 0;
 
     final bool showingLoader = _initialising || playState == null;
+
+		ref.listen<AsyncValue<List<Riddle>>>(
+  riddlesForMapProvider(widget.mapId),
+  (previous, next) {
+    final prevCount = previous?.valueOrNull?.length;
+    final nextCount = next.valueOrNull?.length;
+    if (prevCount == null || nextCount == null) return;
+    if (prevCount != nextCount && !_initialising) {
+      _resetAndReload();
+    }
+  },
+);
+
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
