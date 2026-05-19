@@ -427,25 +427,30 @@ class _RankOverlay extends StatelessWidget {
             fontSize: 48,
             shadows: [
               Shadow(
-                color: Colors.black.withValues(alpha: 0.9),
-                blurRadius: 4,
+                color: Colors.black.withValues(alpha: 0.95),
+                blurRadius: 2,
                 offset: const Offset(0, 0),
               ),
               Shadow(
-                color: Colors.black.withValues(alpha: 0.7),
-                blurRadius: 12,
+                color: Colors.black.withValues(alpha: 0.85),
+                blurRadius: 8,
                 offset: const Offset(0, 0),
               ),
               Shadow(
-                color: Colors.black.withValues(alpha: 0.5),
-                blurRadius: 24,
+                color: Colors.black.withValues(alpha: 0.65),
+                blurRadius: 20,
                 offset: const Offset(0, 0),
               ),
               Shadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withValues(alpha: 0.45),
                 blurRadius: 40,
                 offset: const Offset(0, 0),
               ),
+							Shadow(
+     color: Colors.black.withValues(alpha: 0.25),
+     blurRadius: 60,
+     offset: const Offset(0, 0),
+   ),
             ],
           ),
         ),
