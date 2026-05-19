@@ -106,15 +106,24 @@ class OrderingPayload extends RiddlePayload {
 class AppDatabase extends _$AppDatabase {
  AppDatabase(super.e);
 
- @override
- int get schemaVersion => 5;
 
- @override
- MigrationStrategy get migration => MigrationStrategy(
-   beforeOpen: (details) async {
-     await customStatement('PRAGMA foreign_keys = ON');
-   },
- );
+@override
+int get schemaVersion => 5;
+
+@override
+MigrationStrategy get migration => MigrationStrategy(
+  onUpgrade: (m, from, to) async {
+    // Dev only: recreate everything from scratch on any schema change
+    for (final table in allTables) {
+      await m.deleteTable(table.actualTableName);
+      await m.createTable(table);
+    }
+  },
+  beforeOpen: (details) async {
+    await customStatement('PRAGMA foreign_keys = ON');
+  },
+);
+
 
  // ---
 
