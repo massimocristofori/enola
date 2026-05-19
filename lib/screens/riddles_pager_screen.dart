@@ -1,4 +1,3 @@
-
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
@@ -37,7 +36,6 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
   // ── LOAD ───────────────────────────────────────────────────────────────────
 
   Future<void> _loadRiddles() async {
-		print('_loadRiddles started');
     final db = DriftService.instance.db;
     final riddles = await (db.select(db.riddles)
           ..where((t) => t.mapId.equals(widget.mapId))
@@ -47,22 +45,15 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
       _riddles = riddles;
       _loading = false;
     });
-		print('_loadRiddles riddles loaded');
     if (_riddles.isEmpty) {
       await _insertBlankRiddle(atIndex: 0, navigate: true);
     }
-		print('_loadRiddles end');
   }
 
   // ── MUTATIONS ──────────────────────────────────────────────────────────────
 
   Future<void> _insertBlankRiddle(
       {required int atIndex, bool navigate = false}) async {
-
-
-		print('insertBlankRiddle started');
-
-    // shift orderInMap of riddles at and after insertion point
     final db = DriftService.instance.db;
     for (int i = atIndex; i < _riddles.length; i++) {
       await (db.update(db.riddles)
@@ -70,19 +61,14 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
           .write(RiddlesCompanion(orderInMap: drift.Value(i + 1)));
     }
 
-		print('insertBlankRiddle 1');
-
     final newId = await DriftService.instance.insertBlankRiddle(
       mapId: widget.mapId,
       orderInMap: atIndex,
     );
-		print('insertBlankRiddle 2');
     final inserted = await (db.select(db.riddles)
           ..where((t) => t.id.equals(newId)))
         .getSingle();
-		print('insertBlankRiddle 3');
     setState(() => _riddles.insert(atIndex, inserted));
-		print('insertBlankRiddle 4');
     if (navigate) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _pageCtrl.animateToPage(
@@ -92,7 +78,6 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
         );
       });
     }
-		print('insertBlankRiddle end');
   }
 
   Future<void> _deleteRiddle(int riddleIndex) async {
@@ -216,8 +201,7 @@ class _RiddlesPagerScreenState extends State<RiddlesPagerScreen> {
           const Spacer(),
           GestureDetector(
             onTap: () => _insertBlankRiddle(
-              atIndex:
-                  _riddles.isEmpty ? 0 : _currentPage + 1,
+              atIndex: _riddles.isEmpty ? 0 : _currentPage + 1,
               navigate: true,
             ),
             child: Container(
@@ -342,31 +326,16 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
   @override
   void initState() {
     super.initState();
-
-		print('RiddleEditorPage init started');
-
-		try {
-
     _qCtrl = TextEditingController(text: widget.riddle.question);
-		print('RiddleEditorPage init 1');
     _itemCtrl = TextEditingController();
-		print('RiddleEditorPage init 2');
     _selectedType = RiddleType.values[widget.riddle.typeIndex];
 
-		print('RiddleEditorPage init 3');
-		print('RiddleEditorPage init 3.1: $widget');
-		print('RiddleEditorPage init 3.2: $widget.riddle');
-		print('RiddleEditorPage init 3.3: $widget.riddle.asMultipleChoice');
-
     final mc = widget.riddle.asMultipleChoice;
-		print('RiddleEditorPage init 4');
     final ord = widget.riddle.asOrdering;
-		print('RiddleEditorPage init 5');
     switch (_selectedType) {
       case RiddleType.multipleChoice:
-
-				_choices = List<String>.from(mc?.choices ?? (widget.riddle.choices as List<String>?) ?? []);
-
+        _choices = List<String>.from(
+            mc?.choices ?? (widget.riddle.choices as List<String>?) ?? []);
         _correctIndex =
             mc?.correctIndex ?? widget.riddle.correctIndex ?? 0;
         _tfCorrectIndex = 0;
@@ -378,17 +347,12 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         _correctIndex = 0;
         _orderItems = [];
       case RiddleType.ordering:
-				_orderItems = List<String>.from(ord?.items ?? (widget.riddle.choices as List<String>?) ?? []);
+        _orderItems = List<String>.from(
+            ord?.items ?? (widget.riddle.choices as List<String>?) ?? []);
         _choices = [];
         _correctIndex = 0;
         _tfCorrectIndex = 0;
     }
-		
-		} catch(e, stackTrace) {
-			print('Error: $e');
-			print('Error: $stackTrace');
-		}
-		print('RiddleEditorPage init end');
   }
 
   @override
@@ -461,6 +425,142 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
     });
   }
 
+  // ── SOURCE EXCERPT BOTTOM SHEET ────────────────────────────────────────────
+
+  void _showSourceExcerptSheet() {
+    final ctrl = TextEditingController(
+      text: widget.riddle.sourceExcerpt ?? '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: EnolaTheme.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: EnolaTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Title row
+            Row(
+              children: [
+                const Icon(Icons.format_quote_rounded,
+                    color: EnolaTheme.accent, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Source Excerpt',
+                  style: TextStyle(
+                    color: EnolaTheme.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'The original passage this riddle was generated from. Edit if Gemini got it wrong.',
+              style: TextStyle(
+                color: EnolaTheme.textSecond,
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Editable field
+            TextField(
+              controller: ctrl,
+              maxLines: 6,
+              minLines: 3,
+              style: const TextStyle(
+                color: EnolaTheme.textPrimary,
+                fontSize: 14,
+                height: 1.6,
+              ),
+              decoration: InputDecoration(
+                hintText: 'No source excerpt available.',
+                hintStyle: TextStyle(
+                    color: EnolaTheme.textSecond.withAlpha(120),
+                    fontSize: 14),
+                filled: true,
+                fillColor: EnolaTheme.surface,
+                contentPadding: const EdgeInsets.all(14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: EnolaTheme.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: EnolaTheme.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: EnolaTheme.accent, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Save button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: EnolaTheme.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                onPressed: () async {
+                  final newExcerpt = ctrl.text.trim();
+                  final db = DriftService.instance.db;
+                  await (db.update(db.riddles)
+                        ..where((t) => t.id.equals(widget.riddle.id)))
+                      .write(RiddlesCompanion(
+                    sourceExcerpt: drift.Value(
+                        newExcerpt.isEmpty ? null : newExcerpt),
+                  ));
+                  // Fetch updated riddle and bubble it up
+                  final updated = await (db.select(db.riddles)
+                        ..where((t) => t.id.equals(widget.riddle.id)))
+                      .getSingle();
+                  widget.onSaved(updated);
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Save Excerpt',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── BUILD ──────────────────────────────────────────────────────────────────
 
   @override
@@ -492,6 +592,9 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
   // ── HEADER ─────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
+    final hasExcerpt = widget.riddle.sourceExcerpt != null &&
+        widget.riddle.sourceExcerpt!.isNotEmpty;
+
     return Row(
       children: [
         Text(
@@ -499,6 +602,12 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
           style: EnolaTheme.sectionHeader,
         ),
         const Spacer(),
+        // Source excerpt icon — filled accent if excerpt exists, muted if not
+        _iconBtn(
+          icon: Icons.info_outline_rounded,
+          color: hasExcerpt ? EnolaTheme.accent : EnolaTheme.textSecond,
+          onTap: _showSourceExcerptSheet,
+        ),
         _iconBtn(
           icon: Icons.chevron_left_rounded,
           color: widget.onMoveLeft != null
@@ -761,9 +870,8 @@ class _RiddleEditorPageState extends State<_RiddleEditorPage> {
         child: Column(
           children: [
             Icon(icon,
-                color: selected
-                    ? EnolaTheme.correct
-                    : EnolaTheme.textSecond,
+                color:
+                    selected ? EnolaTheme.correct : EnolaTheme.textSecond,
                 size: 26),
             const SizedBox(height: 6),
             Text(
