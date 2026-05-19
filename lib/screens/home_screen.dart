@@ -421,21 +421,22 @@ class _RankOverlay extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(16),
+        Text(
+          _rankEmoji(starRatio),
+          style: TextStyle(
+            fontSize: 48,
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.55),
+                blurRadius: 18,
+                offset: Offset(0, 2),
               ),
-              child: Text(
-                _rankEmoji(starRatio),
-                style: const TextStyle(fontSize: 48),
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.30),
+                blurRadius: 32,
+                offset: Offset(0, 0),
               ),
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 4),
