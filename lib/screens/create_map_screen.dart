@@ -182,6 +182,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     if (mounted) {
       setState(() => _riddleCount = riddles.length);
       ref.invalidate(riddleCountProvider(_savedMap!.id));
+			ref.invalidate(riddlesForMapProvider(_savedMap!.id));
     }
   }
 
@@ -211,6 +212,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         setState(() => _riddleCount = updated.length);
         // Also invalidate provider so HomeScreen reflects the new count
         ref.invalidate(riddleCountProvider(_savedMap!.id));
+				ref.invalidate(riddlesForMapProvider(_savedMap!.id));
       }
     }
   }
