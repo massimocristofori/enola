@@ -10,34 +10,33 @@ class GeminiParseException implements Exception {
   String toString() => 'GeminiParseException: $message';
 }
 
+// ---
+
 class GeminiService {
   GeminiService._();
   static final GeminiService instance = GeminiService._();
 
   /// Must be set before calling any method.
-  /// In production, load this from a secure config / env, never hard-code.
   String? apiKey;
-  
 
-	GenerativeModel get _model {
-		assert(apiKey != null && apiKey!.isNotEmpty, 'GeminiService: apiKey not set');
+  GenerativeModel get _model {
+    assert(apiKey != null && apiKey!.isNotEmpty, 'GeminiService: apiKey not set');
 
-		return GenerativeModel(
-			// 2.5 Flash is the current "reliable" workhorse
-			model: 'gemini-2.5-flash', 
-			apiKey: apiKey!,
-			generationConfig: GenerationConfig(
-				responseMimeType: 'application/json',
-			),
-		);
-	}
+    return GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey!,
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+      ),
+    );
+  }
 
-  // ── 2. Generate riddles from text ─────────────────────────────────────────
+  // ---
 
   /// Asks Gemini to generate [count] riddles from [sourceText].
   ///
   /// Returns a list of raw riddle maps ready to be parsed into Riddle objects.
-  /// Each map has at minimum: { "type", "question", ... type-specific fields }
+  /// Each map has at minimum: { "type", "question", "sourceExcerpt", ... type-specific fields }
   Future<List<Map<String, dynamic>>> generateRiddles(
     String sourceText, {
     int count = 5,
@@ -59,13 +58,15 @@ Each element must be one of:
   "type": "multipleChoice",
   "question": "...",
   "choices": ["A", "B", "C", "D"],
-  "correctIndex": 0
+  "correctIndex": 0,
+  "sourceExcerpt": "copy here the exact sentence(s) from the text above that this riddle is based on, word for word, no paraphrasing"
 }
 or
 {
   "type": "ordering",
   "question": "...",
-  "items": ["first", "second", "third", "fourth"]
+  "items": ["first", "second", "third", "fourth"],
+  "sourceExcerpt": "copy here the exact sentence(s) from the text above that this riddle is based on, word for word, no paraphrasing"
 }
 
 Text:
@@ -79,7 +80,6 @@ $sourceText
     ]);
 
     final raw = response.text ?? '';
-    // Strip possible ```json fences
     final cleaned = raw
         .replaceAll(RegExp(r'```json\s*'), '')
         .replaceAll(RegExp(r'```\s*'), '')
