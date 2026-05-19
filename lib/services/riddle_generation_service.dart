@@ -5,6 +5,8 @@ import 'package:enola/services/gemini_service.dart';
 import 'package:enola/services/ocr_service.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:enola/database/schema_utils.dart';
+
 
 // ---
 
