@@ -317,7 +317,7 @@ if (_showingFeedback)
   _AnswerFeedback(
     isCorrect: _lastAnswerCorrect ?? false,
     errorCount: _errorCount,
-    onSkip: () => Navigator.pop(context, 0),
+    onSkip: () => Navigator.pop(context, 3),
     onContinue: (_lastAnswerCorrect ?? false)
         ? _confirm
         : _retryAfterWrong,
