@@ -14,20 +14,23 @@ class TreasureMapPath extends ConsumerWidget {
   final List<Riddle> riddles;
   final String mapId;
   final VoidCallback? onCurrentNodeTap;
+  // ── NEW: callback for tapping an already-completed node ───────────────────
+  final void Function(int riddleIndex)? onCompletedNodeTap;
   final int? lastCompletedIndex;
   final List<int> riddleStars;
   final Uint8List? imageBytes;
-  final bool immediateActivation; // ← new
+  final bool immediateActivation;
 
   const TreasureMapPath({
     super.key,
     required this.riddles,
     required this.mapId,
     this.onCurrentNodeTap,
+    this.onCompletedNodeTap,
     this.lastCompletedIndex,
     this.riddleStars = const [],
     this.imageBytes,
-    this.immediateActivation = false, // ← default false = existing behaviour unchanged
+    this.immediateActivation = false,
   });
 
   @override
@@ -55,14 +58,19 @@ class TreasureMapPath extends ConsumerWidget {
 
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
-        // Component assignments
         final nodeWidget = _RiddleNode(
           index: index + 1,
           status: status,
           stars: stars,
           imageBytes: imageBytes,
-          immediateActivation: immediateActivation, // ← passed down
-          onTap: isCurrent && onCurrentNodeTap != null ? onCurrentNodeTap : null,
+          immediateActivation: immediateActivation,
+          onTap: isCurrent && onCurrentNodeTap != null
+              ? onCurrentNodeTap
+              : null,
+          // ── NEW: wire up completed-node tap ───────────────────────────────
+          onCompletedTap: isCompleted && onCompletedNodeTap != null
+              ? () => onCompletedNodeTap!(index)
+              : null,
         );
 
         final dotsWidget = isLast
@@ -127,7 +135,9 @@ class _RiddleNode extends StatefulWidget {
   final int stars;
   final Uint8List? imageBytes;
   final VoidCallback? onTap;
-  final bool immediateActivation; // ← new
+  // ── NEW ───────────────────────────────────────────────────────────────────
+  final VoidCallback? onCompletedTap;
+  final bool immediateActivation;
 
   const _RiddleNode({
     required this.index,
@@ -135,7 +145,8 @@ class _RiddleNode extends StatefulWidget {
     required this.stars,
     this.imageBytes,
     this.onTap,
-    this.immediateActivation = false, // ← default false
+    this.onCompletedTap,
+    this.immediateActivation = false,
   });
 
   @override
@@ -162,13 +173,11 @@ class _RiddleNodeState extends State<_RiddleNode>
   void _checkActivation() {
     if (widget.status == NodeStatus.current) {
       if (widget.immediateActivation) {
-        // Coming from home: activate immediately with no delay.
         if (mounted) {
           setState(() => _isReached = true);
           _pulse.repeat(reverse: true);
         }
       } else {
-        // Mid-play: keep the existing 2000ms delay.
         Future.delayed(const Duration(milliseconds: 2000), () {
           if (mounted) {
             setState(() => _isReached = true);
@@ -204,7 +213,12 @@ class _RiddleNodeState extends State<_RiddleNode>
         widget.status == NodeStatus.current && _isReached;
 
     return GestureDetector(
-      onTap: isCurrentReached ? widget.onTap : null,
+      // ── Current node: play normally; completed node: open read-only ───────
+      onTap: isCurrentReached
+          ? widget.onTap
+          : isCompleted
+              ? widget.onCompletedTap
+              : null,
       child: Container(
         width: 110,
         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -262,6 +276,7 @@ class _RiddleNodeState extends State<_RiddleNode>
       );
     }
 
+    // ── Completed: same visuals as before, tap is now handled by GestureDetector
     return Container(
       width: size,
       height: size,
