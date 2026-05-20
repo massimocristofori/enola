@@ -79,7 +79,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
               ..where((t) => t.mapId.equals(widget.mapId)))
             .go();
         ref.invalidate(latestSessionProvider(widget.mapId));
-        existing = []; // treat as no session
+        existing = [];
       }
 
       final int sessionId;
@@ -154,6 +154,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
   }
 
+  // ── Active node: plays the riddle normally ────────────────────────────────
   Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
     if (playState == null) return;
@@ -193,6 +194,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         );
       }
     }
+  }
+
+  // ── Completed node: opens riddle in read-only review mode ─────────────────
+  void _onCompletedNodeTap(List<Riddle> riddles, int riddleIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RiddleScreen(
+          riddle: riddles[riddleIndex],
+          riddleIndex: riddleIndex,
+          readOnly: true,
+        ),
+      ),
+    );
   }
 
   Future<void> _playAgain() async {
@@ -333,6 +348,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                                               1,
                                                         )
                                                     : null,
+                                            // ── NEW ──────────────────────
+                                            onCompletedNodeTap: (index) =>
+                                                _onCompletedNodeTap(
+                                                    riddles, index),
                                           ),
                                         ),
                                       ),
