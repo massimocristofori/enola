@@ -139,7 +139,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
 
       ref.invalidate(allMapsProvider);
       ref.invalidate(mapProvider(mapId));
-      // Invalidate riddle count so HomeScreen card reflects latest star total
       ref.invalidate(riddleCountProvider(mapId));
 
       if (mounted) {
@@ -173,8 +172,6 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         builder: (_) => RiddlesPagerScreen(mapId: _savedMap!.id),
       ),
     );
-    // Refresh riddle count on return and invalidate the provider
-    // so HomeScreen card picks up the new maxStars immediately
     final db = DriftService.instance.db;
     final riddles = await (db.select(db.riddles)
           ..where((t) => t.mapId.equals(_savedMap!.id)))
@@ -182,7 +179,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
     if (mounted) {
       setState(() => _riddleCount = riddles.length);
       ref.invalidate(riddleCountProvider(_savedMap!.id));
-			ref.invalidate(riddlesForMapProvider(_savedMap!.id));
+      ref.invalidate(riddlesForMapProvider(_savedMap!.id));
     }
   }
 
@@ -210,9 +207,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
           .get();
       if (mounted) {
         setState(() => _riddleCount = updated.length);
-        // Also invalidate provider so HomeScreen reflects the new count
         ref.invalidate(riddleCountProvider(_savedMap!.id));
-				ref.invalidate(riddlesForMapProvider(_savedMap!.id));
+        ref.invalidate(riddlesForMapProvider(_savedMap!.id));
       }
     }
   }
@@ -538,8 +534,7 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                     Text(
                       'AI Riddle Generator',
                       style: TextStyle(
-                        color:
-                            locked ? EnolaTheme.textPrimary : Colors.white,
+                        color: locked ? EnolaTheme.textPrimary : Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
