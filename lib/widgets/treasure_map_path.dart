@@ -14,7 +14,6 @@ class TreasureMapPath extends ConsumerWidget {
   final List<Riddle> riddles;
   final String mapId;
   final VoidCallback? onCurrentNodeTap;
-  // ── NEW: callback for tapping an already-completed node ───────────────────
   final void Function(int riddleIndex)? onCompletedNodeTap;
   final int? lastCompletedIndex;
   final List<int> riddleStars;
@@ -59,6 +58,8 @@ class TreasureMapPath extends ConsumerWidget {
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
         final nodeWidget = _RiddleNode(
+          // --- NEW: pass the zero-based riddle index for the Hero tag ---
+          riddleIndex: index,
           index: index + 1,
           status: status,
           stars: stars,
@@ -67,7 +68,6 @@ class TreasureMapPath extends ConsumerWidget {
           onTap: isCurrent && onCurrentNodeTap != null
               ? onCurrentNodeTap
               : null,
-          // ── NEW: wire up completed-node tap ───────────────────────────────
           onCompletedTap: isCompleted && onCompletedNodeTap != null
               ? () => onCompletedNodeTap!(index)
               : null,
@@ -84,7 +84,6 @@ class TreasureMapPath extends ConsumerWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ─── COLUMN 1 (Left Half - 50%) ───
             Expanded(
               child: SizedBox(
                 height: 110,
@@ -102,7 +101,6 @@ class TreasureMapPath extends ConsumerWidget {
                       ),
               ),
             ),
-            // ─── COLUMN 2 (Right Half - 50%) ───
             Expanded(
               child: SizedBox(
                 height: 110,
@@ -130,16 +128,18 @@ class TreasureMapPath extends ConsumerWidget {
 // ── Node ──────────────────────────────────────────────────────────────────────
 
 class _RiddleNode extends StatefulWidget {
+  // --- NEW ---
+  final int riddleIndex;
   final int index;
   final NodeStatus status;
   final int stars;
   final Uint8List? imageBytes;
   final VoidCallback? onTap;
-  // ── NEW ───────────────────────────────────────────────────────────────────
   final VoidCallback? onCompletedTap;
   final bool immediateActivation;
 
   const _RiddleNode({
+    required this.riddleIndex,
     required this.index,
     required this.status,
     required this.stars,
@@ -213,7 +213,6 @@ class _RiddleNodeState extends State<_RiddleNode>
         widget.status == NodeStatus.current && _isReached;
 
     return GestureDetector(
-      // ── Current node: play normally; completed node: open read-only ───────
       onTap: isCurrentReached
           ? widget.onTap
           : isCompleted
@@ -231,7 +230,21 @@ class _RiddleNodeState extends State<_RiddleNode>
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
-                child: _buildBox(isCompleted, isCurrentReached, isLocked),
+                // --- NEW: Hero wraps only the 60×60 box ---
+                child: Hero(
+                  tag: 'riddle-node-${widget.riddleIndex}',
+                  // Keep the flight widget identical in shape/color to avoid
+                  // Flutter's default grey rectangle during the animation.
+                  flightShuttleBuilder: (_, animation, direction, fromCtx, toCtx) {
+                    return AnimatedBuilder(
+                      animation: animation,
+                      builder: (_, __) {
+                        return _buildBox(isCompleted, isCurrentReached, isLocked);
+                      },
+                    );
+                  },
+                  child: _buildBox(isCompleted, isCurrentReached, isLocked),
+                ),
               ),
               if (isCompleted)
                 Positioned(top: 0, child: _StarsRow(stars: widget.stars)),
@@ -276,7 +289,7 @@ class _RiddleNodeState extends State<_RiddleNode>
       );
     }
 
-    // ── Completed: same visuals as before, tap is now handled by GestureDetector
+    // completed
     return Container(
       width: size,
       height: size,
