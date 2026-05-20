@@ -9,11 +9,14 @@ import 'package:enola/theme/enola_theme.dart';
 class RiddleScreen extends StatefulWidget {
   final Riddle riddle;
   final int riddleIndex;
+  // ── NEW: when true the screen is a review, no interaction ─────────────────
+  final bool readOnly;
 
   const RiddleScreen({
     super.key,
     required this.riddle,
     required this.riddleIndex,
+    this.readOnly = false,
   });
 
   @override
@@ -33,20 +36,29 @@ class _RiddleScreenState extends State<RiddleScreen> {
     super.initState();
     if (widget.riddle.type == RiddleType.ordering) {
       final items = widget.riddle.asOrdering?.items ?? widget.riddle.choices;
-      _orderedItems = List.from(items)..shuffle(math.Random());
+      // ── In read-only mode show the correct order, not a shuffled one ───────
+      if (widget.readOnly) {
+        _orderedItems = List.from(items);
+      } else {
+        _orderedItems = List.from(items)..shuffle(math.Random());
+      }
     }
   }
 
+  // ── In read-only mode the hint is always accessible ───────────────────────
   bool get _canShowHint =>
-      widget.riddle.sourceExcerpt != null &&
-      widget.riddle.sourceExcerpt!.isNotEmpty &&
-      (_solvedCorrectly || _errorCount >= 3);
+      widget.readOnly
+          ? _hasHint
+          : widget.riddle.sourceExcerpt != null &&
+              widget.riddle.sourceExcerpt!.isNotEmpty &&
+              (_solvedCorrectly || _errorCount >= 3);
 
   bool get _hasHint =>
       widget.riddle.sourceExcerpt != null &&
       widget.riddle.sourceExcerpt!.isNotEmpty;
 
   void _onMultipleChoiceAnswer(int index, int correctIndex) {
+    if (widget.readOnly) return; // no-op in read-only
     if (_solvedCorrectly || _showingFeedback) return;
     final correct = index == correctIndex;
     setState(() {
@@ -78,6 +90,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
   }
 
   void _onOrderingSubmit(List<String> correctOrder) {
+    if (widget.readOnly) return; // no-op in read-only
     if (_solvedCorrectly || _showingFeedback) return;
     final correct = _orderedItems.join('|') == correctOrder.join('|');
     setState(() {
@@ -189,7 +202,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
               children: [
                 // ── Header ──
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 8),
                   child: Row(
                     children: [
                       IconButton(
@@ -205,6 +219,28 @@ class _RiddleScreenState extends State<RiddleScreen> {
                           color: EnolaTheme.textPrimary,
                         ),
                       ),
+                      // ── NEW: "Review" badge when read-only ─────────────────
+                      if (widget.readOnly) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: EnolaTheme.accent.withAlpha(20),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: EnolaTheme.accent.withAlpha(80)),
+                          ),
+                          child: Text(
+                            'Review',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: EnolaTheme.accent.withAlpha(200),
+                            ),
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       if (_hasHint)
                         Padding(
@@ -271,17 +307,20 @@ class _RiddleScreenState extends State<RiddleScreen> {
                     child: Column(
                       children: [
                         Card(
-                          elevation: _solvedCorrectly ? 4 : 0,
-                          shadowColor: _solvedCorrectly
+                          // ── In read-only always use the "solved" accent style
+                          elevation: widget.readOnly ? 4 : (_solvedCorrectly ? 4 : 0),
+                          shadowColor: (widget.readOnly || _solvedCorrectly)
                               ? EnolaTheme.accent.withValues(alpha: 0.3)
                               : null,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
-                              color: _solvedCorrectly
+                              color: (widget.readOnly || _solvedCorrectly)
                                   ? EnolaTheme.accent
                                   : EnolaTheme.border,
-                              width: _solvedCorrectly ? 2 : 1,
+                              width: (widget.readOnly || _solvedCorrectly)
+                                  ? 2
+                                  : 1,
                             ),
                           ),
                           child: Padding(
@@ -294,7 +333,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
                                 Text(
                                   riddle.question,
                                   textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.titleLarge,
+                                  style:
+                                      Theme.of(context).textTheme.titleLarge,
                                 ),
                               ],
                             ),
@@ -312,17 +352,16 @@ class _RiddleScreenState extends State<RiddleScreen> {
                   ),
                 ),
 
-                // ── Feedback bar ──
-if (_showingFeedback)
-  _AnswerFeedback(
-    isCorrect: _lastAnswerCorrect ?? false,
-    errorCount: _errorCount,
-    onSkip: () => Navigator.pop(context, 3),
-    onContinue: (_lastAnswerCorrect ?? false)
-        ? _confirm
-        : _retryAfterWrong,
-  ).animate().slideY(begin: 1, end: 0).fadeIn(),
-
+                // ── Feedback bar: hidden in read-only ──────────────────────
+                if (!widget.readOnly && _showingFeedback)
+                  _AnswerFeedback(
+                    isCorrect: _lastAnswerCorrect ?? false,
+                    errorCount: _errorCount,
+                    onSkip: () => Navigator.pop(context, 3),
+                    onContinue: (_lastAnswerCorrect ?? false)
+                        ? _confirm
+                        : _retryAfterWrong,
+                  ).animate().slideY(begin: 1, end: 0).fadeIn(),
               ],
             ),
           ),
@@ -343,13 +382,20 @@ if (_showingFeedback)
 
     return Column(
       children: List.generate(choices.length, (i) {
-        final isSelected = _selectedAnswer == i;
         final isCorrectChoice = i == riddle.correctChoiceIndex;
+
+        // ── In read-only: highlight correct answer immediately ─────────────
+        final bool forceCorrect = widget.readOnly && isCorrectChoice;
+
+        final isSelected = _selectedAnswer == i;
 
         Color borderColor = EnolaTheme.border;
         Color bgColor = Colors.white;
 
-        if (_showingFeedback) {
+        if (forceCorrect) {
+          borderColor = EnolaTheme.correct;
+          bgColor = EnolaTheme.correct.withAlpha(25);
+        } else if (_showingFeedback) {
           if (isCorrectChoice && _solvedCorrectly) {
             borderColor = EnolaTheme.correct;
             bgColor = EnolaTheme.correct.withAlpha(25);
@@ -364,8 +410,11 @@ if (_showingFeedback)
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: InkWell(
-            onTap: () =>
-                _onMultipleChoiceAnswer(i, riddle.correctChoiceIndex ?? 0),
+            // ── Tapping is a no-op in read-only ───────────────────────────
+            onTap: widget.readOnly
+                ? null
+                : () => _onMultipleChoiceAnswer(
+                    i, riddle.correctChoiceIndex ?? 0),
             borderRadius: BorderRadius.circular(12),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
@@ -375,10 +424,10 @@ if (_showingFeedback)
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: borderColor,
-                  width: isSelected ||
+                  width: (forceCorrect || isSelected ||
                           (_showingFeedback &&
                               isCorrectChoice &&
-                              _solvedCorrectly)
+                              _solvedCorrectly))
                       ? 2
                       : 1,
                 ),
@@ -387,15 +436,18 @@ if (_showingFeedback)
                 children: [
                   CircleAvatar(
                     radius: 14,
-                    backgroundColor: isSelected
-                        ? EnolaTheme.accent
-                        : EnolaTheme.surfaceHigh,
+                    backgroundColor: forceCorrect
+                        ? EnolaTheme.correct
+                        : isSelected
+                            ? EnolaTheme.accent
+                            : EnolaTheme.surfaceHigh,
                     child: Text(
                       String.fromCharCode(65 + i),
                       style: TextStyle(
                         fontSize: 12,
-                        color:
-                            isSelected ? Colors.white : EnolaTheme.textSecond,
+                        color: (forceCorrect || isSelected)
+                            ? Colors.white
+                            : EnolaTheme.textSecond,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -406,9 +458,17 @@ if (_showingFeedback)
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w500)),
                   ),
-                  if (_showingFeedback && isCorrectChoice && _solvedCorrectly)
-                    const Icon(Icons.check_circle, color: EnolaTheme.correct),
-                  if (_showingFeedback &&
+                  if (forceCorrect)
+                    const Icon(Icons.check_circle,
+                        color: EnolaTheme.correct),
+                  if (!widget.readOnly &&
+                      _showingFeedback &&
+                      isCorrectChoice &&
+                      _solvedCorrectly)
+                    const Icon(Icons.check_circle,
+                        color: EnolaTheme.correct),
+                  if (!widget.readOnly &&
+                      _showingFeedback &&
                       isSelected &&
                       !(_lastAnswerCorrect ?? false))
                     const Icon(Icons.cancel, color: EnolaTheme.wrong),
@@ -428,49 +488,88 @@ if (_showingFeedback)
 
     return Column(
       children: [
-        const Text(
-          'Drag to reorder the items correctly',
-          style: TextStyle(
+        Text(
+          widget.readOnly
+              ? 'Correct order'
+              : 'Drag to reorder the items correctly',
+          style: const TextStyle(
               fontStyle: FontStyle.italic, color: EnolaTheme.textSecond),
         ),
         const SizedBox(height: 16),
-        ReorderableListView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          onReorder: (oldIndex, newIndex) {
-            if (_solvedCorrectly || _showingFeedback) return;
-            if (newIndex > oldIndex) newIndex -= 1;
-            setState(() {
-              final item = _orderedItems.removeAt(oldIndex);
-              _orderedItems.insert(newIndex, item);
-            });
-          },
-          children: [
-            for (int i = 0; i < _orderedItems.length; i++)
-              Container(
-                key: ValueKey(_orderedItems[i]),
+        // ── In read-only show a plain non-reorderable list ─────────────────
+        if (widget.readOnly)
+          Column(
+            children: List.generate(correctOrder.length, (i) {
+              return Container(
+                key: ValueKey(correctOrder[i]),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: EnolaTheme.correct.withAlpha(18),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: EnolaTheme.border),
+                  border: Border.all(color: EnolaTheme.correct.withAlpha(80)),
                 ),
                 child: ListTile(
-                  leading: const Icon(Icons.drag_indicator,
-                      color: EnolaTheme.border),
-                  title: Text(_orderedItems[i],
+                  leading: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: EnolaTheme.correct.withAlpha(60),
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: EnolaTheme.correct,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  title: Text(correctOrder[i],
                       style: const TextStyle(fontWeight: FontWeight.w500)),
+                  trailing: i == 0
+                      ? const Icon(Icons.check_circle,
+                          color: EnolaTheme.correct, size: 18)
+                      : null,
                 ),
-              ),
-          ],
-        ),
+              );
+            }),
+          )
+        else
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            onReorder: (oldIndex, newIndex) {
+              if (_solvedCorrectly || _showingFeedback) return;
+              if (newIndex > oldIndex) newIndex -= 1;
+              setState(() {
+                final item = _orderedItems.removeAt(oldIndex);
+                _orderedItems.insert(newIndex, item);
+              });
+            },
+            children: [
+              for (int i = 0; i < _orderedItems.length; i++)
+                Container(
+                  key: ValueKey(_orderedItems[i]),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: EnolaTheme.border),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.drag_indicator,
+                        color: EnolaTheme.border),
+                    title: Text(_orderedItems[i],
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w500)),
+                  ),
+                ),
+            ],
+          ),
         const SizedBox(height: 24),
-        if (!_solvedCorrectly && !_showingFeedback)
+        if (!widget.readOnly && !_solvedCorrectly && !_showingFeedback)
           ElevatedButton(
             onPressed: () => _onOrderingSubmit(correctOrder),
             child: const Text('Submit Order'),
           ),
-        if (_showingFeedback && !_solvedCorrectly)
+        if (!widget.readOnly && _showingFeedback && !_solvedCorrectly)
           const Padding(
             padding: EdgeInsets.only(top: 8),
             child: Text(
@@ -525,18 +624,23 @@ class _AnswerFeedback extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                isCorrect
+                    ? Icons.check_circle_rounded
+                    : Icons.cancel_rounded,
                 color: isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
                 size: 28,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  isCorrect ? 'Correct! Well done.' : 'Not quite — try again!',
+                  isCorrect
+                      ? 'Correct! Well done.'
+                      : 'Not quite — try again!',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
-                    color: isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
+                    color:
+                        isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
                   ),
                 ),
               ),
@@ -568,7 +672,8 @@ class _AnswerFeedback extends StatelessWidget {
                   fontSize: 13,
                   color: EnolaTheme.textSecond.withValues(alpha: 0.7),
                   decoration: TextDecoration.underline,
-                  decorationColor: EnolaTheme.textSecond.withValues(alpha: 0.5),
+                  decorationColor:
+                      EnolaTheme.textSecond.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -578,4 +683,3 @@ class _AnswerFeedback extends StatelessWidget {
     );
   }
 }
-
