@@ -332,8 +332,11 @@ late final GeneratedColumn<int> correctAnswers = GeneratedColumn<int>('correct_a
 static const VerificationMeta _riddleStarsJsonMeta = const VerificationMeta('riddleStarsJson');
 @override
 late final GeneratedColumn<String> riddleStarsJson = GeneratedColumn<String>('riddle_stars_json', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+static const VerificationMeta _riddlesVersionMeta = const VerificationMeta('riddlesVersion');
 @override
-List<GeneratedColumn> get $columns => [id, publicId, mapId, lastCompletedIndex, startedAt, completedAt, totalRiddles, correctAnswers, riddleStarsJson];
+late final GeneratedColumn<int> riddlesVersion = GeneratedColumn<int>('riddles_version', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: false, defaultValue: const Constant(0));
+@override
+List<GeneratedColumn> get $columns => [id, publicId, mapId, lastCompletedIndex, startedAt, completedAt, totalRiddles, correctAnswers, riddleStarsJson, riddlesVersion];
 @override
 String get aliasedName => _alias ?? actualTableName;
 @override
@@ -355,12 +358,13 @@ context.handle(_startedAtMeta, startedAt.isAcceptableOrUnknown(data['started_at'
 context.handle(_completedAtMeta, completedAt.isAcceptableOrUnknown(data['completed_at']!, _completedAtMeta));}if (data.containsKey('total_riddles')) {
 context.handle(_totalRiddlesMeta, totalRiddles.isAcceptableOrUnknown(data['total_riddles']!, _totalRiddlesMeta));}if (data.containsKey('correct_answers')) {
 context.handle(_correctAnswersMeta, correctAnswers.isAcceptableOrUnknown(data['correct_answers']!, _correctAnswersMeta));}if (data.containsKey('riddle_stars_json')) {
-context.handle(_riddleStarsJsonMeta, riddleStarsJson.isAcceptableOrUnknown(data['riddle_stars_json']!, _riddleStarsJsonMeta));}return context;
+context.handle(_riddleStarsJsonMeta, riddleStarsJson.isAcceptableOrUnknown(data['riddle_stars_json']!, _riddleStarsJsonMeta));}if (data.containsKey('riddles_version')) {
+context.handle(_riddlesVersionMeta, riddlesVersion.isAcceptableOrUnknown(data['riddles_version']!, _riddlesVersionMeta));}return context;
 }
 @override
 Set<GeneratedColumn> get $primaryKey => {id};
 @override PlaySession map(Map<String, dynamic> data, {String? tablePrefix})  {
-final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return PlaySession(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, publicId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}public_id'])!, mapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}map_id'])!, lastCompletedIndex: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}last_completed_index'])!, startedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!, completedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']), totalRiddles: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}total_riddles'])!, correctAnswers: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}correct_answers'])!, riddleStarsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}riddle_stars_json']), );
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return PlaySession(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, publicId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}public_id'])!, mapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}map_id'])!, lastCompletedIndex: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}last_completed_index'])!, startedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!, completedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']), totalRiddles: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}total_riddles'])!, correctAnswers: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}correct_answers'])!, riddleStarsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}riddle_stars_json']), riddlesVersion: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}riddles_version'])!, );
 }
 @override
 $PlaySessionsTable createAlias(String alias) {
@@ -375,7 +379,8 @@ final DateTime? completedAt;
 final int totalRiddles;
 final int correctAnswers;
 final String? riddleStarsJson;
-const PlaySession({required this.id, required this.publicId, required this.mapId, required this.lastCompletedIndex, required this.startedAt, this.completedAt, required this.totalRiddles, required this.correctAnswers, this.riddleStarsJson});@override
+final int riddlesVersion;
+const PlaySession({required this.id, required this.publicId, required this.mapId, required this.lastCompletedIndex, required this.startedAt, this.completedAt, required this.totalRiddles, required this.correctAnswers, this.riddleStarsJson, required this.riddlesVersion});@override
 Map<String, Expression> toColumns(bool nullToAbsent) {
 final map = <String, Expression> {};map['id'] = Variable<int>(id);
 map['public_id'] = Variable<String>(publicId);
@@ -386,26 +391,27 @@ if (!nullToAbsent || completedAt != null){map['completed_at'] = Variable<DateTim
 }map['total_riddles'] = Variable<int>(totalRiddles);
 map['correct_answers'] = Variable<int>(correctAnswers);
 if (!nullToAbsent || riddleStarsJson != null){map['riddle_stars_json'] = Variable<String>(riddleStarsJson);
-}return map; 
+}map['riddles_version'] = Variable<int>(riddlesVersion);
+return map; 
 }
 PlaySessionsCompanion toCompanion(bool nullToAbsent) {
-return PlaySessionsCompanion(id: Value(id),publicId: Value(publicId),mapId: Value(mapId),lastCompletedIndex: Value(lastCompletedIndex),startedAt: Value(startedAt),completedAt: completedAt == null && nullToAbsent ? const Value.absent() : Value(completedAt),totalRiddles: Value(totalRiddles),correctAnswers: Value(correctAnswers),riddleStarsJson: riddleStarsJson == null && nullToAbsent ? const Value.absent() : Value(riddleStarsJson),);
+return PlaySessionsCompanion(id: Value(id),publicId: Value(publicId),mapId: Value(mapId),lastCompletedIndex: Value(lastCompletedIndex),startedAt: Value(startedAt),completedAt: completedAt == null && nullToAbsent ? const Value.absent() : Value(completedAt),totalRiddles: Value(totalRiddles),correctAnswers: Value(correctAnswers),riddleStarsJson: riddleStarsJson == null && nullToAbsent ? const Value.absent() : Value(riddleStarsJson),riddlesVersion: Value(riddlesVersion),);
 }
 factory PlaySession.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
-return PlaySession(id: serializer.fromJson<int>(json['id']),publicId: serializer.fromJson<String>(json['publicId']),mapId: serializer.fromJson<String>(json['mapId']),lastCompletedIndex: serializer.fromJson<int>(json['lastCompletedIndex']),startedAt: serializer.fromJson<DateTime>(json['startedAt']),completedAt: serializer.fromJson<DateTime?>(json['completedAt']),totalRiddles: serializer.fromJson<int>(json['totalRiddles']),correctAnswers: serializer.fromJson<int>(json['correctAnswers']),riddleStarsJson: serializer.fromJson<String?>(json['riddleStarsJson']),);}
+return PlaySession(id: serializer.fromJson<int>(json['id']),publicId: serializer.fromJson<String>(json['publicId']),mapId: serializer.fromJson<String>(json['mapId']),lastCompletedIndex: serializer.fromJson<int>(json['lastCompletedIndex']),startedAt: serializer.fromJson<DateTime>(json['startedAt']),completedAt: serializer.fromJson<DateTime?>(json['completedAt']),totalRiddles: serializer.fromJson<int>(json['totalRiddles']),correctAnswers: serializer.fromJson<int>(json['correctAnswers']),riddleStarsJson: serializer.fromJson<String?>(json['riddleStarsJson']),riddlesVersion: serializer.fromJson<int>(json['riddlesVersion']),);}
 @override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
 return <String, dynamic>{
-'id': serializer.toJson<int>(id),'publicId': serializer.toJson<String>(publicId),'mapId': serializer.toJson<String>(mapId),'lastCompletedIndex': serializer.toJson<int>(lastCompletedIndex),'startedAt': serializer.toJson<DateTime>(startedAt),'completedAt': serializer.toJson<DateTime?>(completedAt),'totalRiddles': serializer.toJson<int>(totalRiddles),'correctAnswers': serializer.toJson<int>(correctAnswers),'riddleStarsJson': serializer.toJson<String?>(riddleStarsJson),};}PlaySession copyWith({int? id,String? publicId,String? mapId,int? lastCompletedIndex,DateTime? startedAt,Value<DateTime?> completedAt = const Value.absent(),int? totalRiddles,int? correctAnswers,Value<String?> riddleStarsJson = const Value.absent()}) => PlaySession(id: id ?? this.id,publicId: publicId ?? this.publicId,mapId: mapId ?? this.mapId,lastCompletedIndex: lastCompletedIndex ?? this.lastCompletedIndex,startedAt: startedAt ?? this.startedAt,completedAt: completedAt.present ? completedAt.value : this.completedAt,totalRiddles: totalRiddles ?? this.totalRiddles,correctAnswers: correctAnswers ?? this.correctAnswers,riddleStarsJson: riddleStarsJson.present ? riddleStarsJson.value : this.riddleStarsJson,);PlaySession copyWithCompanion(PlaySessionsCompanion data) {
+'id': serializer.toJson<int>(id),'publicId': serializer.toJson<String>(publicId),'mapId': serializer.toJson<String>(mapId),'lastCompletedIndex': serializer.toJson<int>(lastCompletedIndex),'startedAt': serializer.toJson<DateTime>(startedAt),'completedAt': serializer.toJson<DateTime?>(completedAt),'totalRiddles': serializer.toJson<int>(totalRiddles),'correctAnswers': serializer.toJson<int>(correctAnswers),'riddleStarsJson': serializer.toJson<String?>(riddleStarsJson),'riddlesVersion': serializer.toJson<int>(riddlesVersion),};}PlaySession copyWith({int? id,String? publicId,String? mapId,int? lastCompletedIndex,DateTime? startedAt,Value<DateTime?> completedAt = const Value.absent(),int? totalRiddles,int? correctAnswers,Value<String?> riddleStarsJson = const Value.absent(),int? riddlesVersion}) => PlaySession(id: id ?? this.id,publicId: publicId ?? this.publicId,mapId: mapId ?? this.mapId,lastCompletedIndex: lastCompletedIndex ?? this.lastCompletedIndex,startedAt: startedAt ?? this.startedAt,completedAt: completedAt.present ? completedAt.value : this.completedAt,totalRiddles: totalRiddles ?? this.totalRiddles,correctAnswers: correctAnswers ?? this.correctAnswers,riddleStarsJson: riddleStarsJson.present ? riddleStarsJson.value : this.riddleStarsJson,riddlesVersion: riddlesVersion ?? this.riddlesVersion,);PlaySession copyWithCompanion(PlaySessionsCompanion data) {
 return PlaySession(
-id: data.id.present ? data.id.value : this.id,publicId: data.publicId.present ? data.publicId.value : this.publicId,mapId: data.mapId.present ? data.mapId.value : this.mapId,lastCompletedIndex: data.lastCompletedIndex.present ? data.lastCompletedIndex.value : this.lastCompletedIndex,startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,completedAt: data.completedAt.present ? data.completedAt.value : this.completedAt,totalRiddles: data.totalRiddles.present ? data.totalRiddles.value : this.totalRiddles,correctAnswers: data.correctAnswers.present ? data.correctAnswers.value : this.correctAnswers,riddleStarsJson: data.riddleStarsJson.present ? data.riddleStarsJson.value : this.riddleStarsJson,);
+id: data.id.present ? data.id.value : this.id,publicId: data.publicId.present ? data.publicId.value : this.publicId,mapId: data.mapId.present ? data.mapId.value : this.mapId,lastCompletedIndex: data.lastCompletedIndex.present ? data.lastCompletedIndex.value : this.lastCompletedIndex,startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,completedAt: data.completedAt.present ? data.completedAt.value : this.completedAt,totalRiddles: data.totalRiddles.present ? data.totalRiddles.value : this.totalRiddles,correctAnswers: data.correctAnswers.present ? data.correctAnswers.value : this.correctAnswers,riddleStarsJson: data.riddleStarsJson.present ? data.riddleStarsJson.value : this.riddleStarsJson,riddlesVersion: data.riddlesVersion.present ? data.riddlesVersion.value : this.riddlesVersion,);
 }
 @override
-String toString() {return (StringBuffer('PlaySession(')..write('id: $id, ')..write('publicId: $publicId, ')..write('mapId: $mapId, ')..write('lastCompletedIndex: $lastCompletedIndex, ')..write('startedAt: $startedAt, ')..write('completedAt: $completedAt, ')..write('totalRiddles: $totalRiddles, ')..write('correctAnswers: $correctAnswers, ')..write('riddleStarsJson: $riddleStarsJson')..write(')')).toString();}
+String toString() {return (StringBuffer('PlaySession(')..write('id: $id, ')..write('publicId: $publicId, ')..write('mapId: $mapId, ')..write('lastCompletedIndex: $lastCompletedIndex, ')..write('startedAt: $startedAt, ')..write('completedAt: $completedAt, ')..write('totalRiddles: $totalRiddles, ')..write('correctAnswers: $correctAnswers, ')..write('riddleStarsJson: $riddleStarsJson, ')..write('riddlesVersion: $riddlesVersion')..write(')')).toString();}
 @override
- int get hashCode => Object.hash(id, publicId, mapId, lastCompletedIndex, startedAt, completedAt, totalRiddles, correctAnswers, riddleStarsJson);@override
-bool operator ==(Object other) => identical(this, other) || (other is PlaySession && other.id == this.id && other.publicId == this.publicId && other.mapId == this.mapId && other.lastCompletedIndex == this.lastCompletedIndex && other.startedAt == this.startedAt && other.completedAt == this.completedAt && other.totalRiddles == this.totalRiddles && other.correctAnswers == this.correctAnswers && other.riddleStarsJson == this.riddleStarsJson);
+ int get hashCode => Object.hash(id, publicId, mapId, lastCompletedIndex, startedAt, completedAt, totalRiddles, correctAnswers, riddleStarsJson, riddlesVersion);@override
+bool operator ==(Object other) => identical(this, other) || (other is PlaySession && other.id == this.id && other.publicId == this.publicId && other.mapId == this.mapId && other.lastCompletedIndex == this.lastCompletedIndex && other.startedAt == this.startedAt && other.completedAt == this.completedAt && other.totalRiddles == this.totalRiddles && other.correctAnswers == this.correctAnswers && other.riddleStarsJson == this.riddleStarsJson && other.riddlesVersion == this.riddlesVersion);
 }class PlaySessionsCompanion extends UpdateCompanion<PlaySession> {
 final Value<int> id;
 final Value<String> publicId;
@@ -416,8 +422,9 @@ final Value<DateTime?> completedAt;
 final Value<int> totalRiddles;
 final Value<int> correctAnswers;
 final Value<String?> riddleStarsJson;
-const PlaySessionsCompanion({this.id = const Value.absent(),this.publicId = const Value.absent(),this.mapId = const Value.absent(),this.lastCompletedIndex = const Value.absent(),this.startedAt = const Value.absent(),this.completedAt = const Value.absent(),this.totalRiddles = const Value.absent(),this.correctAnswers = const Value.absent(),this.riddleStarsJson = const Value.absent(),});
-PlaySessionsCompanion.insert({this.id = const Value.absent(),this.publicId = const Value.absent(),required String mapId,this.lastCompletedIndex = const Value.absent(),this.startedAt = const Value.absent(),this.completedAt = const Value.absent(),this.totalRiddles = const Value.absent(),this.correctAnswers = const Value.absent(),this.riddleStarsJson = const Value.absent(),}): mapId = Value(mapId);
+final Value<int> riddlesVersion;
+const PlaySessionsCompanion({this.id = const Value.absent(),this.publicId = const Value.absent(),this.mapId = const Value.absent(),this.lastCompletedIndex = const Value.absent(),this.startedAt = const Value.absent(),this.completedAt = const Value.absent(),this.totalRiddles = const Value.absent(),this.correctAnswers = const Value.absent(),this.riddleStarsJson = const Value.absent(),this.riddlesVersion = const Value.absent(),});
+PlaySessionsCompanion.insert({this.id = const Value.absent(),this.publicId = const Value.absent(),required String mapId,this.lastCompletedIndex = const Value.absent(),this.startedAt = const Value.absent(),this.completedAt = const Value.absent(),this.totalRiddles = const Value.absent(),this.correctAnswers = const Value.absent(),this.riddleStarsJson = const Value.absent(),this.riddlesVersion = const Value.absent(),}): mapId = Value(mapId);
 static Insertable<PlaySession> custom({Expression<int>? id, 
 Expression<String>? publicId, 
 Expression<String>? mapId, 
@@ -427,10 +434,11 @@ Expression<DateTime>? completedAt,
 Expression<int>? totalRiddles, 
 Expression<int>? correctAnswers, 
 Expression<String>? riddleStarsJson, 
+Expression<int>? riddlesVersion, 
 }) {
-return RawValuesInsertable({if (id != null)'id': id,if (publicId != null)'public_id': publicId,if (mapId != null)'map_id': mapId,if (lastCompletedIndex != null)'last_completed_index': lastCompletedIndex,if (startedAt != null)'started_at': startedAt,if (completedAt != null)'completed_at': completedAt,if (totalRiddles != null)'total_riddles': totalRiddles,if (correctAnswers != null)'correct_answers': correctAnswers,if (riddleStarsJson != null)'riddle_stars_json': riddleStarsJson,});
-}PlaySessionsCompanion copyWith({Value<int>? id, Value<String>? publicId, Value<String>? mapId, Value<int>? lastCompletedIndex, Value<DateTime>? startedAt, Value<DateTime?>? completedAt, Value<int>? totalRiddles, Value<int>? correctAnswers, Value<String?>? riddleStarsJson}) {
-return PlaySessionsCompanion(id: id ?? this.id,publicId: publicId ?? this.publicId,mapId: mapId ?? this.mapId,lastCompletedIndex: lastCompletedIndex ?? this.lastCompletedIndex,startedAt: startedAt ?? this.startedAt,completedAt: completedAt ?? this.completedAt,totalRiddles: totalRiddles ?? this.totalRiddles,correctAnswers: correctAnswers ?? this.correctAnswers,riddleStarsJson: riddleStarsJson ?? this.riddleStarsJson,);
+return RawValuesInsertable({if (id != null)'id': id,if (publicId != null)'public_id': publicId,if (mapId != null)'map_id': mapId,if (lastCompletedIndex != null)'last_completed_index': lastCompletedIndex,if (startedAt != null)'started_at': startedAt,if (completedAt != null)'completed_at': completedAt,if (totalRiddles != null)'total_riddles': totalRiddles,if (correctAnswers != null)'correct_answers': correctAnswers,if (riddleStarsJson != null)'riddle_stars_json': riddleStarsJson,if (riddlesVersion != null)'riddles_version': riddlesVersion,});
+}PlaySessionsCompanion copyWith({Value<int>? id, Value<String>? publicId, Value<String>? mapId, Value<int>? lastCompletedIndex, Value<DateTime>? startedAt, Value<DateTime?>? completedAt, Value<int>? totalRiddles, Value<int>? correctAnswers, Value<String?>? riddleStarsJson, Value<int>? riddlesVersion}) {
+return PlaySessionsCompanion(id: id ?? this.id,publicId: publicId ?? this.publicId,mapId: mapId ?? this.mapId,lastCompletedIndex: lastCompletedIndex ?? this.lastCompletedIndex,startedAt: startedAt ?? this.startedAt,completedAt: completedAt ?? this.completedAt,totalRiddles: totalRiddles ?? this.totalRiddles,correctAnswers: correctAnswers ?? this.correctAnswers,riddleStarsJson: riddleStarsJson ?? this.riddleStarsJson,riddlesVersion: riddlesVersion ?? this.riddlesVersion,);
 }
 @override
 Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -452,10 +460,12 @@ if (correctAnswers.present) {
 map['correct_answers'] = Variable<int>(correctAnswers.value);}
 if (riddleStarsJson.present) {
 map['riddle_stars_json'] = Variable<String>(riddleStarsJson.value);}
+if (riddlesVersion.present) {
+map['riddles_version'] = Variable<int>(riddlesVersion.value);}
 return map; 
 }
 @override
-String toString() {return (StringBuffer('PlaySessionsCompanion(')..write('id: $id, ')..write('publicId: $publicId, ')..write('mapId: $mapId, ')..write('lastCompletedIndex: $lastCompletedIndex, ')..write('startedAt: $startedAt, ')..write('completedAt: $completedAt, ')..write('totalRiddles: $totalRiddles, ')..write('correctAnswers: $correctAnswers, ')..write('riddleStarsJson: $riddleStarsJson')..write(')')).toString();}
+String toString() {return (StringBuffer('PlaySessionsCompanion(')..write('id: $id, ')..write('publicId: $publicId, ')..write('mapId: $mapId, ')..write('lastCompletedIndex: $lastCompletedIndex, ')..write('startedAt: $startedAt, ')..write('completedAt: $completedAt, ')..write('totalRiddles: $totalRiddles, ')..write('correctAnswers: $correctAnswers, ')..write('riddleStarsJson: $riddleStarsJson, ')..write('riddlesVersion: $riddlesVersion')..write(')')).toString();}
 }
 abstract class _$AppDatabase extends GeneratedDatabase{
 _$AppDatabase(QueryExecutor e): super(e);
@@ -1092,8 +1102,8 @@ GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
     (Riddle,$$RiddlesTableReferences),
     Riddle,
     PrefetchHooks Function({bool mapId})
-    >;typedef $$PlaySessionsTableCreateCompanionBuilder = PlaySessionsCompanion Function({Value<int> id,Value<String> publicId,required String mapId,Value<int> lastCompletedIndex,Value<DateTime> startedAt,Value<DateTime?> completedAt,Value<int> totalRiddles,Value<int> correctAnswers,Value<String?> riddleStarsJson,});
-typedef $$PlaySessionsTableUpdateCompanionBuilder = PlaySessionsCompanion Function({Value<int> id,Value<String> publicId,Value<String> mapId,Value<int> lastCompletedIndex,Value<DateTime> startedAt,Value<DateTime?> completedAt,Value<int> totalRiddles,Value<int> correctAnswers,Value<String?> riddleStarsJson,});
+    >;typedef $$PlaySessionsTableCreateCompanionBuilder = PlaySessionsCompanion Function({Value<int> id,Value<String> publicId,required String mapId,Value<int> lastCompletedIndex,Value<DateTime> startedAt,Value<DateTime?> completedAt,Value<int> totalRiddles,Value<int> correctAnswers,Value<String?> riddleStarsJson,Value<int> riddlesVersion,});
+typedef $$PlaySessionsTableUpdateCompanionBuilder = PlaySessionsCompanion Function({Value<int> id,Value<String> publicId,Value<String> mapId,Value<int> lastCompletedIndex,Value<DateTime> startedAt,Value<DateTime?> completedAt,Value<int> totalRiddles,Value<int> correctAnswers,Value<String?> riddleStarsJson,Value<int> riddlesVersion,});
       final class $$PlaySessionsTableReferences extends BaseReferences<
         _$AppDatabase,
         $PlaySessionsTable,
@@ -1165,6 +1175,11 @@ ColumnFilters<String> get riddleStarsJson => $composableBuilder(
       builder: (column) => 
       ColumnFilters(column));
       
+ColumnFilters<int> get riddlesVersion => $composableBuilder(
+      column: $table.riddlesVersion,
+      builder: (column) => 
+      ColumnFilters(column));
+      
         $$RiddleMapsTableFilterComposer get mapId {
                 final $$RiddleMapsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -1233,6 +1248,11 @@ ColumnOrderings<String> get riddleStarsJson => $composableBuilder(
       builder: (column) => 
       ColumnOrderings(column));
       
+ColumnOrderings<int> get riddlesVersion => $composableBuilder(
+      column: $table.riddlesVersion,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
         $$RiddleMapsTableOrderingComposer get mapId {
                 final $$RiddleMapsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1293,6 +1313,10 @@ GeneratedColumn<String> get riddleStarsJson => $composableBuilder(
       column: $table.riddleStarsJson,
       builder: (column) => column);
       
+GeneratedColumn<int> get riddlesVersion => $composableBuilder(
+      column: $table.riddlesVersion,
+      builder: (column) => column);
+      
         $$RiddleMapsTableAnnotationComposer get mapId {
                 final $$RiddleMapsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -1330,8 +1354,8 @@ GeneratedColumn<String> get riddleStarsJson => $composableBuilder(
         createFilteringComposer: () => $$PlaySessionsTableFilterComposer($db: db,$table:table),
         createOrderingComposer: () => $$PlaySessionsTableOrderingComposer($db: db,$table:table),
         createComputedFieldComposer: () => $$PlaySessionsTableAnnotationComposer($db: db,$table:table),
-        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> publicId = const Value.absent(),Value<String> mapId = const Value.absent(),Value<int> lastCompletedIndex = const Value.absent(),Value<DateTime> startedAt = const Value.absent(),Value<DateTime?> completedAt = const Value.absent(),Value<int> totalRiddles = const Value.absent(),Value<int> correctAnswers = const Value.absent(),Value<String?> riddleStarsJson = const Value.absent(),})=> PlaySessionsCompanion(id: id,publicId: publicId,mapId: mapId,lastCompletedIndex: lastCompletedIndex,startedAt: startedAt,completedAt: completedAt,totalRiddles: totalRiddles,correctAnswers: correctAnswers,riddleStarsJson: riddleStarsJson,),
-        createCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> publicId = const Value.absent(),required String mapId,Value<int> lastCompletedIndex = const Value.absent(),Value<DateTime> startedAt = const Value.absent(),Value<DateTime?> completedAt = const Value.absent(),Value<int> totalRiddles = const Value.absent(),Value<int> correctAnswers = const Value.absent(),Value<String?> riddleStarsJson = const Value.absent(),})=> PlaySessionsCompanion.insert(id: id,publicId: publicId,mapId: mapId,lastCompletedIndex: lastCompletedIndex,startedAt: startedAt,completedAt: completedAt,totalRiddles: totalRiddles,correctAnswers: correctAnswers,riddleStarsJson: riddleStarsJson,),
+        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> publicId = const Value.absent(),Value<String> mapId = const Value.absent(),Value<int> lastCompletedIndex = const Value.absent(),Value<DateTime> startedAt = const Value.absent(),Value<DateTime?> completedAt = const Value.absent(),Value<int> totalRiddles = const Value.absent(),Value<int> correctAnswers = const Value.absent(),Value<String?> riddleStarsJson = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),})=> PlaySessionsCompanion(id: id,publicId: publicId,mapId: mapId,lastCompletedIndex: lastCompletedIndex,startedAt: startedAt,completedAt: completedAt,totalRiddles: totalRiddles,correctAnswers: correctAnswers,riddleStarsJson: riddleStarsJson,riddlesVersion: riddlesVersion,),
+        createCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> publicId = const Value.absent(),required String mapId,Value<int> lastCompletedIndex = const Value.absent(),Value<DateTime> startedAt = const Value.absent(),Value<DateTime?> completedAt = const Value.absent(),Value<int> totalRiddles = const Value.absent(),Value<int> correctAnswers = const Value.absent(),Value<String?> riddleStarsJson = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),})=> PlaySessionsCompanion.insert(id: id,publicId: publicId,mapId: mapId,lastCompletedIndex: lastCompletedIndex,startedAt: startedAt,completedAt: completedAt,totalRiddles: totalRiddles,correctAnswers: correctAnswers,riddleStarsJson: riddleStarsJson,riddlesVersion: riddlesVersion,),
         withReferenceMapper: (p0) => p0
               .map(
                   (e) =>
