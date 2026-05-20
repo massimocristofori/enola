@@ -14,7 +14,7 @@ class RiddleMaps extends Table {
   TextColumn get subject => text().nullable()();
   BlobColumn get imageBytes => blob().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-	IntColumn get riddlesVersion => integer().withDefault(const Constant(0));
+	IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
