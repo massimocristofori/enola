@@ -104,6 +104,30 @@ class _RiddleScreenState extends State<RiddleScreen> {
     });
   }
 
+  // ── VISUAL DECORATOR FOR DRAGGING ITEM ─────────────────────────────────────
+
+  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (BuildContext context, Widget? child) {
+        return Material(
+          elevation: 6,
+          color: Colors.white,
+          shadowColor: EnolaTheme.accent.withAlpha(80),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: EnolaTheme.accent, width: 2),
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
   // ── HINT BOTTOM SHEET ──────────────────────────────────────────────────────
 
   void _showHint() {
@@ -491,7 +515,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
         Text(
           widget.readOnly
               ? 'Correct order'
-              : 'Drag to reorder the items correctly',
+              : 'Drag the handle to reorder the items correctly',
           style: const TextStyle(
               fontStyle: FontStyle.italic, color: EnolaTheme.textSecond),
         ),
@@ -532,12 +556,14 @@ class _RiddleScreenState extends State<RiddleScreen> {
             }),
           )
         else
-          // ── AbsorbPointer prevents drag long-press interactions during feedback ──
+          // ── AbsorbPointer prevents drag interactions during feedback ──
           AbsorbPointer(
             absorbing: _showingFeedback,
             child: ReorderableListView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
+              proxyDecorator: _proxyDecorator,
+              buildDefaultDragHandles: false, // Disables default long-press trigger on whole tile
               onReorder: (oldIndex, newIndex) {
                 if (_solvedCorrectly || _showingFeedback) return;
                 if (newIndex > oldIndex) newIndex -= 1;
@@ -557,8 +583,15 @@ class _RiddleScreenState extends State<RiddleScreen> {
                       border: Border.all(color: EnolaTheme.border),
                     ),
                     child: ListTile(
-                      leading: const Icon(Icons.drag_indicator,
-                          color: EnolaTheme.border),
+                      // Wrap handle icon with explicit start listener for zero latency response
+                      leading: ReorderableDragStartListener(
+                        index: i,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          child: Icon(Icons.drag_indicator,
+                              color: EnolaTheme.textSecond),
+                        ),
+                      ),
                       title: Text(_orderedItems[i],
                           style:
                               const TextStyle(fontWeight: FontWeight.w500)),
