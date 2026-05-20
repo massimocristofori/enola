@@ -58,7 +58,6 @@ class TreasureMapPath extends ConsumerWidget {
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
         final nodeWidget = _RiddleNode(
-          // --- NEW: pass the zero-based riddle index for the Hero tag ---
           riddleIndex: index,
           index: index + 1,
           status: status,
@@ -128,7 +127,6 @@ class TreasureMapPath extends ConsumerWidget {
 // ── Node ──────────────────────────────────────────────────────────────────────
 
 class _RiddleNode extends StatefulWidget {
-  // --- NEW ---
   final int riddleIndex;
   final int index;
   final NodeStatus status;
@@ -230,19 +228,8 @@ class _RiddleNodeState extends State<_RiddleNode>
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
-                // --- NEW: Hero wraps only the 60×60 box ---
                 child: Hero(
                   tag: 'riddle-node-${widget.riddleIndex}',
-                  // Keep the flight widget identical in shape/color to avoid
-                  // Flutter's default grey rectangle during the animation.
-                  flightShuttleBuilder: (_, animation, direction, fromCtx, toCtx) {
-                    return AnimatedBuilder(
-                      animation: animation,
-                      builder: (_, __) {
-                        return _buildBox(isCompleted, isCurrentReached, isLocked);
-                      },
-                    );
-                  },
                   child: _buildBox(isCompleted, isCurrentReached, isLocked),
                 ),
               ),
