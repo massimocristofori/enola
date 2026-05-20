@@ -410,8 +410,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: InkWell(
-            // ── Tapping is a no-op in read-only ───────────────────────────
-            onTap: widget.readOnly
+            // ── Tapping is disabled in read-only OR while showing feedback ──
+            onTap: (widget.readOnly || _showingFeedback)
                 ? null
                 : () => _onMultipleChoiceAnswer(
                     i, riddle.correctChoiceIndex ?? 0),
@@ -532,36 +532,40 @@ class _RiddleScreenState extends State<RiddleScreen> {
             }),
           )
         else
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            onReorder: (oldIndex, newIndex) {
-              if (_solvedCorrectly || _showingFeedback) return;
-              if (newIndex > oldIndex) newIndex -= 1;
-              setState(() {
-                final item = _orderedItems.removeAt(oldIndex);
-                _orderedItems.insert(newIndex, item);
-              });
-            },
-            children: [
-              for (int i = 0; i < _orderedItems.length; i++)
-                Container(
-                  key: ValueKey(_orderedItems[i]),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: EnolaTheme.border),
+          // ── AbsorbPointer prevents drag long-press interactions during feedback ──
+          AbsorbPointer(
+            absorbing: _showingFeedback,
+            child: ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              onReorder: (oldIndex, newIndex) {
+                if (_solvedCorrectly || _showingFeedback) return;
+                if (newIndex > oldIndex) newIndex -= 1;
+                setState(() {
+                  final item = _orderedItems.removeAt(oldIndex);
+                  _orderedItems.insert(newIndex, item);
+                });
+              },
+              children: [
+                for (int i = 0; i < _orderedItems.length; i++)
+                  Container(
+                    key: ValueKey(_orderedItems[i]),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: EnolaTheme.border),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.drag_indicator,
+                          color: EnolaTheme.border),
+                      title: Text(_orderedItems[i],
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w500)),
+                    ),
                   ),
-                  child: ListTile(
-                    leading: const Icon(Icons.drag_indicator,
-                        color: EnolaTheme.border),
-                    title: Text(_orderedItems[i],
-                        style:
-                            const TextStyle(fontWeight: FontWeight.w500)),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         const SizedBox(height: 24),
         if (!widget.readOnly && !_solvedCorrectly && !_showingFeedback)
