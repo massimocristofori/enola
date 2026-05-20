@@ -155,15 +155,23 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   // ── Active node: plays the riddle normally ────────────────────────────────
-  Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
+    Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
     if (playState == null) return;
 
     final riddle = riddles[riddleIndex];
     final errorCount = await Navigator.push<int>(
       context,
-      MaterialPageRoute(
-        builder: (_) => RiddleScreen(riddle: riddle, riddleIndex: riddleIndex),
+      // --- NEW: PageRouteBuilder enables the Hero to fly ---
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 450),
+        reverseTransitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, __, ___) => RiddleScreen(
+          riddle: riddle,
+          riddleIndex: riddleIndex,
+        ),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
       ),
     );
 
@@ -196,19 +204,24 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
   }
 
-  // ── Completed node: opens riddle in read-only review mode ─────────────────
   void _onCompletedNodeTap(List<Riddle> riddles, int riddleIndex) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => RiddleScreen(
+      // --- NEW: PageRouteBuilder enables the Hero to fly ---
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 450),
+        reverseTransitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, __, ___) => RiddleScreen(
           riddle: riddles[riddleIndex],
           riddleIndex: riddleIndex,
           readOnly: true,
         ),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
       ),
     );
   }
+
 
   Future<void> _playAgain() async {
     final db = DriftService.instance.db;
