@@ -14,6 +14,7 @@ class RiddleMaps extends Table {
   TextColumn get subject => text().nullable()();
   BlobColumn get imageBytes => blob().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+	IntColumn get riddlesVersion => integer().withDefault(const Constant(0));
 
   @override
   Set<Column> get primaryKey => {id};
@@ -41,6 +42,7 @@ class PlaySessions extends Table {
   IntColumn get totalRiddles => integer().withDefault(const Constant(0))();
   IntColumn get correctAnswers => integer().withDefault(const Constant(0))();
   TextColumn get riddleStarsJson => text().nullable()();
+	IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
 }
 
 // ---
@@ -107,7 +109,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -123,6 +125,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         await m.addColumn(riddles, riddles.sourceExcerpt);
+      }
+			if (from < 6) {
+        await m.addColumn(riddleMaps, riddleMaps.riddlesVersion);
+        await m.addColumn(playSessions, playSessions.riddlesVersion);
       }
     },
     beforeOpen: (details) async {
