@@ -25,8 +25,11 @@ late final GeneratedColumn<Uint8List> imageBytes = GeneratedColumn<Uint8List>('i
 static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
 @override
 late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('created_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+static const VerificationMeta _riddlesVersionMeta = const VerificationMeta('riddlesVersion');
 @override
-List<GeneratedColumn> get $columns => [id, title, description, subject, imageBytes, createdAt];
+late final GeneratedColumn<int> riddlesVersion = GeneratedColumn<int>('riddles_version', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: false, defaultValue: const Constant(0));
+@override
+List<GeneratedColumn> get $columns => [id, title, description, subject, imageBytes, createdAt, riddlesVersion];
 @override
 String get aliasedName => _alias ?? actualTableName;
 @override
@@ -48,12 +51,13 @@ if (data.containsKey('description')) {
 context.handle(_descriptionMeta, description.isAcceptableOrUnknown(data['description']!, _descriptionMeta));}if (data.containsKey('subject')) {
 context.handle(_subjectMeta, subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta));}if (data.containsKey('image_bytes')) {
 context.handle(_imageBytesMeta, imageBytes.isAcceptableOrUnknown(data['image_bytes']!, _imageBytesMeta));}if (data.containsKey('created_at')) {
-context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));}return context;
+context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));}if (data.containsKey('riddles_version')) {
+context.handle(_riddlesVersionMeta, riddlesVersion.isAcceptableOrUnknown(data['riddles_version']!, _riddlesVersionMeta));}return context;
 }
 @override
 Set<GeneratedColumn> get $primaryKey => {id};
 @override RiddleMap map(Map<String, dynamic> data, {String? tablePrefix})  {
-final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return RiddleMap(id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, description: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}description']), subject: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}subject']), imageBytes: attachedDatabase.typeMapping.read(DriftSqlType.blob, data['${effectivePrefix}image_bytes']), createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!, );
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return RiddleMap(id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, description: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}description']), subject: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}subject']), imageBytes: attachedDatabase.typeMapping.read(DriftSqlType.blob, data['${effectivePrefix}image_bytes']), createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!, riddlesVersion: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}riddles_version'])!, );
 }
 @override
 $RiddleMapsTable createAlias(String alias) {
@@ -65,7 +69,8 @@ final String? description;
 final String? subject;
 final Uint8List? imageBytes;
 final DateTime createdAt;
-const RiddleMap({required this.id, required this.title, this.description, this.subject, this.imageBytes, required this.createdAt});@override
+final int riddlesVersion;
+const RiddleMap({required this.id, required this.title, this.description, this.subject, this.imageBytes, required this.createdAt, required this.riddlesVersion});@override
 Map<String, Expression> toColumns(bool nullToAbsent) {
 final map = <String, Expression> {};map['id'] = Variable<String>(id);
 map['title'] = Variable<String>(title);
@@ -73,26 +78,27 @@ if (!nullToAbsent || description != null){map['description'] = Variable<String>(
 }if (!nullToAbsent || subject != null){map['subject'] = Variable<String>(subject);
 }if (!nullToAbsent || imageBytes != null){map['image_bytes'] = Variable<Uint8List>(imageBytes);
 }map['created_at'] = Variable<DateTime>(createdAt);
+map['riddles_version'] = Variable<int>(riddlesVersion);
 return map; 
 }
 RiddleMapsCompanion toCompanion(bool nullToAbsent) {
-return RiddleMapsCompanion(id: Value(id),title: Value(title),description: description == null && nullToAbsent ? const Value.absent() : Value(description),subject: subject == null && nullToAbsent ? const Value.absent() : Value(subject),imageBytes: imageBytes == null && nullToAbsent ? const Value.absent() : Value(imageBytes),createdAt: Value(createdAt),);
+return RiddleMapsCompanion(id: Value(id),title: Value(title),description: description == null && nullToAbsent ? const Value.absent() : Value(description),subject: subject == null && nullToAbsent ? const Value.absent() : Value(subject),imageBytes: imageBytes == null && nullToAbsent ? const Value.absent() : Value(imageBytes),createdAt: Value(createdAt),riddlesVersion: Value(riddlesVersion),);
 }
 factory RiddleMap.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
-return RiddleMap(id: serializer.fromJson<String>(json['id']),title: serializer.fromJson<String>(json['title']),description: serializer.fromJson<String?>(json['description']),subject: serializer.fromJson<String?>(json['subject']),imageBytes: serializer.fromJson<Uint8List?>(json['imageBytes']),createdAt: serializer.fromJson<DateTime>(json['createdAt']),);}
+return RiddleMap(id: serializer.fromJson<String>(json['id']),title: serializer.fromJson<String>(json['title']),description: serializer.fromJson<String?>(json['description']),subject: serializer.fromJson<String?>(json['subject']),imageBytes: serializer.fromJson<Uint8List?>(json['imageBytes']),createdAt: serializer.fromJson<DateTime>(json['createdAt']),riddlesVersion: serializer.fromJson<int>(json['riddlesVersion']),);}
 @override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
 return <String, dynamic>{
-'id': serializer.toJson<String>(id),'title': serializer.toJson<String>(title),'description': serializer.toJson<String?>(description),'subject': serializer.toJson<String?>(subject),'imageBytes': serializer.toJson<Uint8List?>(imageBytes),'createdAt': serializer.toJson<DateTime>(createdAt),};}RiddleMap copyWith({String? id,String? title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),DateTime? createdAt}) => RiddleMap(id: id ?? this.id,title: title ?? this.title,description: description.present ? description.value : this.description,subject: subject.present ? subject.value : this.subject,imageBytes: imageBytes.present ? imageBytes.value : this.imageBytes,createdAt: createdAt ?? this.createdAt,);RiddleMap copyWithCompanion(RiddleMapsCompanion data) {
+'id': serializer.toJson<String>(id),'title': serializer.toJson<String>(title),'description': serializer.toJson<String?>(description),'subject': serializer.toJson<String?>(subject),'imageBytes': serializer.toJson<Uint8List?>(imageBytes),'createdAt': serializer.toJson<DateTime>(createdAt),'riddlesVersion': serializer.toJson<int>(riddlesVersion),};}RiddleMap copyWith({String? id,String? title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),DateTime? createdAt,int? riddlesVersion}) => RiddleMap(id: id ?? this.id,title: title ?? this.title,description: description.present ? description.value : this.description,subject: subject.present ? subject.value : this.subject,imageBytes: imageBytes.present ? imageBytes.value : this.imageBytes,createdAt: createdAt ?? this.createdAt,riddlesVersion: riddlesVersion ?? this.riddlesVersion,);RiddleMap copyWithCompanion(RiddleMapsCompanion data) {
 return RiddleMap(
-id: data.id.present ? data.id.value : this.id,title: data.title.present ? data.title.value : this.title,description: data.description.present ? data.description.value : this.description,subject: data.subject.present ? data.subject.value : this.subject,imageBytes: data.imageBytes.present ? data.imageBytes.value : this.imageBytes,createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,);
+id: data.id.present ? data.id.value : this.id,title: data.title.present ? data.title.value : this.title,description: data.description.present ? data.description.value : this.description,subject: data.subject.present ? data.subject.value : this.subject,imageBytes: data.imageBytes.present ? data.imageBytes.value : this.imageBytes,createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,riddlesVersion: data.riddlesVersion.present ? data.riddlesVersion.value : this.riddlesVersion,);
 }
 @override
-String toString() {return (StringBuffer('RiddleMap(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt')..write(')')).toString();}
+String toString() {return (StringBuffer('RiddleMap(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('riddlesVersion: $riddlesVersion')..write(')')).toString();}
 @override
- int get hashCode => Object.hash(id, title, description, subject, $driftBlobEquality.hash(imageBytes), createdAt);@override
-bool operator ==(Object other) => identical(this, other) || (other is RiddleMap && other.id == this.id && other.title == this.title && other.description == this.description && other.subject == this.subject && $driftBlobEquality.equals(other.imageBytes, this.imageBytes) && other.createdAt == this.createdAt);
+ int get hashCode => Object.hash(id, title, description, subject, $driftBlobEquality.hash(imageBytes), createdAt, riddlesVersion);@override
+bool operator ==(Object other) => identical(this, other) || (other is RiddleMap && other.id == this.id && other.title == this.title && other.description == this.description && other.subject == this.subject && $driftBlobEquality.equals(other.imageBytes, this.imageBytes) && other.createdAt == this.createdAt && other.riddlesVersion == this.riddlesVersion);
 }class RiddleMapsCompanion extends UpdateCompanion<RiddleMap> {
 final Value<String> id;
 final Value<String> title;
@@ -100,20 +106,22 @@ final Value<String?> description;
 final Value<String?> subject;
 final Value<Uint8List?> imageBytes;
 final Value<DateTime> createdAt;
+final Value<int> riddlesVersion;
 final Value<int> rowid;
-const RiddleMapsCompanion({this.id = const Value.absent(),this.title = const Value.absent(),this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.rowid = const Value.absent(),});
-RiddleMapsCompanion.insert({required String id,required String title,this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.rowid = const Value.absent(),}): id = Value(id), title = Value(title);
+const RiddleMapsCompanion({this.id = const Value.absent(),this.title = const Value.absent(),this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.riddlesVersion = const Value.absent(),this.rowid = const Value.absent(),});
+RiddleMapsCompanion.insert({required String id,required String title,this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.riddlesVersion = const Value.absent(),this.rowid = const Value.absent(),}): id = Value(id), title = Value(title);
 static Insertable<RiddleMap> custom({Expression<String>? id, 
 Expression<String>? title, 
 Expression<String>? description, 
 Expression<String>? subject, 
 Expression<Uint8List>? imageBytes, 
 Expression<DateTime>? createdAt, 
+Expression<int>? riddlesVersion, 
 Expression<int>? rowid, 
 }) {
-return RawValuesInsertable({if (id != null)'id': id,if (title != null)'title': title,if (description != null)'description': description,if (subject != null)'subject': subject,if (imageBytes != null)'image_bytes': imageBytes,if (createdAt != null)'created_at': createdAt,if (rowid != null)'rowid': rowid,});
-}RiddleMapsCompanion copyWith({Value<String>? id, Value<String>? title, Value<String?>? description, Value<String?>? subject, Value<Uint8List?>? imageBytes, Value<DateTime>? createdAt, Value<int>? rowid}) {
-return RiddleMapsCompanion(id: id ?? this.id,title: title ?? this.title,description: description ?? this.description,subject: subject ?? this.subject,imageBytes: imageBytes ?? this.imageBytes,createdAt: createdAt ?? this.createdAt,rowid: rowid ?? this.rowid,);
+return RawValuesInsertable({if (id != null)'id': id,if (title != null)'title': title,if (description != null)'description': description,if (subject != null)'subject': subject,if (imageBytes != null)'image_bytes': imageBytes,if (createdAt != null)'created_at': createdAt,if (riddlesVersion != null)'riddles_version': riddlesVersion,if (rowid != null)'rowid': rowid,});
+}RiddleMapsCompanion copyWith({Value<String>? id, Value<String>? title, Value<String?>? description, Value<String?>? subject, Value<Uint8List?>? imageBytes, Value<DateTime>? createdAt, Value<int>? riddlesVersion, Value<int>? rowid}) {
+return RiddleMapsCompanion(id: id ?? this.id,title: title ?? this.title,description: description ?? this.description,subject: subject ?? this.subject,imageBytes: imageBytes ?? this.imageBytes,createdAt: createdAt ?? this.createdAt,riddlesVersion: riddlesVersion ?? this.riddlesVersion,rowid: rowid ?? this.rowid,);
 }
 @override
 Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -129,12 +137,14 @@ if (imageBytes.present) {
 map['image_bytes'] = Variable<Uint8List>(imageBytes.value);}
 if (createdAt.present) {
 map['created_at'] = Variable<DateTime>(createdAt.value);}
+if (riddlesVersion.present) {
+map['riddles_version'] = Variable<int>(riddlesVersion.value);}
 if (rowid.present) {
 map['rowid'] = Variable<int>(rowid.value);}
 return map; 
 }
 @override
-String toString() {return (StringBuffer('RiddleMapsCompanion(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('rowid: $rowid')..write(')')).toString();}
+String toString() {return (StringBuffer('RiddleMapsCompanion(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('riddlesVersion: $riddlesVersion, ')..write('rowid: $rowid')..write(')')).toString();}
 }
 class $RiddlesTable extends Riddles with TableInfo<$RiddlesTable, Riddle>{
 @override final GeneratedDatabase attachedDatabase;
@@ -480,8 +490,8 @@ List<DatabaseSchemaEntity> get allSchemaEntities => [riddleMaps, riddles, playSe
 @override
 StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), ],);
 }
-typedef $$RiddleMapsTableCreateCompanionBuilder = RiddleMapsCompanion Function({required String id,required String title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> rowid,});
-typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({Value<String> id,Value<String> title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> rowid,});
+typedef $$RiddleMapsTableCreateCompanionBuilder = RiddleMapsCompanion Function({required String id,required String title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
+typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({Value<String> id,Value<String> title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
       final class $$RiddleMapsTableReferences extends BaseReferences<
         _$AppDatabase,
         $RiddleMapsTable,
@@ -583,6 +593,11 @@ ColumnFilters<DateTime> get createdAt => $composableBuilder(
       builder: (column) => 
       ColumnFilters(column));
       
+ColumnFilters<int> get riddlesVersion => $composableBuilder(
+      column: $table.riddlesVersion,
+      builder: (column) => 
+      ColumnFilters(column));
+      
         Expression<bool> riddlesRefs(
           Expression<bool> Function( $$RiddlesTableFilterComposer f) f
         ) {
@@ -664,6 +679,11 @@ ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       builder: (column) => 
       ColumnOrderings(column));
       
+ColumnOrderings<int> get riddlesVersion => $composableBuilder(
+      column: $table.riddlesVersion,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
         }
       class $$RiddleMapsTableAnnotationComposer extends Composer<
         _$AppDatabase,
@@ -697,6 +717,10 @@ GeneratedColumn<Uint8List> get imageBytes => $composableBuilder(
       
 GeneratedColumn<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt,
+      builder: (column) => column);
+      
+GeneratedColumn<int> get riddlesVersion => $composableBuilder(
+      column: $table.riddlesVersion,
       builder: (column) => column);
       
         Expression<T> riddlesRefs<T extends Object>(
@@ -759,8 +783,8 @@ GeneratedColumn<DateTime> get createdAt => $composableBuilder(
         createFilteringComposer: () => $$RiddleMapsTableFilterComposer($db: db,$table:table),
         createOrderingComposer: () => $$RiddleMapsTableOrderingComposer($db: db,$table:table),
         createComputedFieldComposer: () => $$RiddleMapsTableAnnotationComposer($db: db,$table:table),
-        updateCompanionCallback: ({Value<String> id = const Value.absent(),Value<String> title = const Value.absent(),Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,rowid: rowid,),
-        createCompanionCallback: ({required String id,required String title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion.insert(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,rowid: rowid,),
+        updateCompanionCallback: ({Value<String> id = const Value.absent(),Value<String> title = const Value.absent(),Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,riddlesVersion: riddlesVersion,rowid: rowid,),
+        createCompanionCallback: ({required String id,required String title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion.insert(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,riddlesVersion: riddlesVersion,rowid: rowid,),
         withReferenceMapper: (p0) => p0
               .map(
                   (e) =>
