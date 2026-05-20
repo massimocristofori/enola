@@ -24,30 +24,14 @@ class PlayScreen extends ConsumerStatefulWidget {
 class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _initialising = true;
   String? _initError;
-  bool _isCompleted = false; // NEW
-
-
-	Future<void> _resetAndReload() async {
-  final db = DriftService.instance.db;
-  await (db.delete(db.playSessions)
-        ..where((t) => t.mapId.equals(widget.mapId)))
-      .go();
-  ref.invalidate(latestSessionProvider(widget.mapId));
-  await _loadSession();
-}
-
+  bool _isCompleted = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initSession());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSession());
   }
 
-  Future<void> _initSession() async {
-    await _loadSession();
-  }
-
-  // NEW: extracted so both _initSession and _playAgain can call it
   Future<void> _loadSession() async {
     if (mounted) {
       setState(() {
@@ -69,7 +53,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       final db = DriftService.instance.db;
       final riddles = await db.getRiddlesForMap(widget.mapId);
 
-      final existing = await (db.select(db.playSessions)
+      // ── Fetch current map version ────────────────────────────────────────
+      final currentMap = await (db.select(db.riddleMaps)
+            ..where((t) => t.id.equals(widget.mapId)))
+          .getSingleOrNull();
+      final currentVersion = currentMap?.riddlesVersion ?? 0;
+
+      // ── Load latest session ──────────────────────────────────────────────
+      var existing = await (db.select(db.playSessions)
             ..where((t) => t.mapId.equals(widget.mapId))
             ..orderBy([(t) => drift.OrderingTerm(
                   expression: t.startedAt,
@@ -78,14 +69,27 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             ..limit(1))
           .get();
 
+      // ── Stale session check: wipe and restart if version mismatch ────────
+      if (existing.isNotEmpty &&
+          existing.first.riddlesVersion != currentVersion) {
+        debugPrint(
+            "riddlesVersion mismatch (session=${existing.first.riddlesVersion} "
+            "map=$currentVersion) — wiping sessions for ${widget.mapId}");
+        await (db.delete(db.playSessions)
+              ..where((t) => t.mapId.equals(widget.mapId)))
+            .go();
+        ref.invalidate(latestSessionProvider(widget.mapId));
+        existing = []; // treat as no session
+      }
+
       final int sessionId;
       final int lastCompleted;
       final int correctAnswers;
       final List<int> riddleStars;
-      bool isCompleted = false; // local flag, applied to state at the end
+      bool isCompleted = false;
 
       if (existing.isNotEmpty && existing.first.completedAt == null) {
-        // ── In-progress session ──────────────────────────────────────────────
+        // ── In-progress session ────────────────────────────────────────────
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
         correctAnswers = existing.first.correctAnswers;
@@ -101,7 +105,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         riddleStars = tempStars;
 
       } else if (existing.isNotEmpty && existing.first.completedAt != null) {
-        // ── Completed session — load read-only, show Play Again ──────────────
+        // ── Completed session — load read-only, show Play Again ────────────
         isCompleted = true;
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
@@ -118,7 +122,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         riddleStars = tempStars;
 
       } else {
-        // ── No session yet ───────────────────────────────────────────────────
+        // ── No session yet ─────────────────────────────────────────────────
         sessionId = await DriftService.instance.startSession(
           widget.mapId,
           riddles.length,
@@ -191,7 +195,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
   }
 
-  // NEW: delete all sessions for this map and restart fresh
   Future<void> _playAgain() async {
     final db = DriftService.instance.db;
     await (db.delete(db.playSessions)
@@ -224,12 +227,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final map = mapAsync.valueOrNull;
     final riddles = riddlesAsync.valueOrNull;
 
-
-
-
-
-
-
     final title = map?.title ?? '';
     final maxStars = (riddles?.length ?? 0) * 3;
     final achievedStars = playState?.totalStars ?? 0;
@@ -237,23 +234,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     final bool showingLoader = _initialising || playState == null;
 
-		ref.listen<AsyncValue<List<Riddle>>>(
-  riddlesForMapProvider(widget.mapId),
-  (previous, next) {
-    final prevCount = previous?.valueOrNull?.length;
-    final nextCount = next.valueOrNull?.length;
-    if (prevCount == null || nextCount == null) return;
-    if (prevCount != nextCount && !_initialising) {
-      _resetAndReload();
-    }
-  },
-);
-
-
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      // CHANGED: show Play Again FAB when completed, Back FAB otherwise
       floatingActionButton: _isCompleted
           ? _PlayAgainFab(
               onPlayAgain: _playAgain,
@@ -261,118 +244,116 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             )
           : _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
-				child: Center(
-				child: ConstrainedBox(
-	      constraints: const BoxConstraints(maxWidth: 600),
-        child: Column(
-          children: [
-            // Header — always in tree from frame 1 for the Hero to work.
-            _PlayHeader(
-              mapId: widget.mapId,
-              title: title,
-              achievedStars: achievedStars,
-              maxStars: maxStars,
-              hasBeenPlayed: hasBeenPlayed,
-            ),
-
-            Expanded(
-              child: showingLoader
-                  ? const Center(
-                      child:
-                          CircularProgressIndicator(color: EnolaTheme.accent))
-                  : mapAsync.when(
-                      loading: () => const Center(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              children: [
+                _PlayHeader(
+                  mapId: widget.mapId,
+                  title: title,
+                  achievedStars: achievedStars,
+                  maxStars: maxStars,
+                  hasBeenPlayed: hasBeenPlayed,
+                ),
+                Expanded(
+                  child: showingLoader
+                      ? const Center(
                           child: CircularProgressIndicator(
-                              color: EnolaTheme.accent)),
-                      error: (e, _) => Center(child: Text('$e')),
-                      data: (map) => riddlesAsync.when(
-                        loading: () => const Center(
-                            child: CircularProgressIndicator(
-                                color: EnolaTheme.accent)),
-                        error: (e, _) => Center(child: Text('$e')),
-                        data: (riddles) {
-                          return Column(
-                            children: [
-                              // CHANGED: hint text logic
-                              if (_isCompleted)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 8, bottom: 4),
-                                  child: Text(
-                                    'Quest complete! All riddles solved.',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                      color: EnolaTheme.accent.withAlpha(200),
+                              color: EnolaTheme.accent))
+                      : mapAsync.when(
+                          loading: () => const Center(
+                              child: CircularProgressIndicator(
+                                  color: EnolaTheme.accent)),
+                          error: (e, _) => Center(child: Text('$e')),
+                          data: (map) => riddlesAsync.when(
+                            loading: () => const Center(
+                                child: CircularProgressIndicator(
+                                    color: EnolaTheme.accent)),
+                            error: (e, _) => Center(child: Text('$e')),
+                            data: (riddles) {
+                              return Column(
+                                children: [
+                                  if (_isCompleted)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 8, bottom: 4),
+                                      child: Text(
+                                        'Quest complete! All riddles solved.',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                          color: EnolaTheme.accent
+                                              .withAlpha(200),
+                                        ),
+                                      ).animate().fadeIn(delay: 400.ms),
+                                    )
+                                  else if (playState.lastCompletedIndex <
+                                      riddles.length - 1)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 8, bottom: 4),
+                                      child: Text(
+                                        'Tap the glowing node to answer the next riddle',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                          color: EnolaTheme.textSecond
+                                              .withAlpha(180),
+                                        ),
+                                      ).animate().fadeIn(delay: 400.ms),
                                     ),
-                                  ).animate().fadeIn(delay: 400.ms),
-                                )
-                              else if (playState.lastCompletedIndex <
-                                  riddles.length - 1)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 8, bottom: 4),
-                                  child: Text(
-                                    'Tap the glowing node to answer the next riddle',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                      color:
-                                          EnolaTheme.textSecond.withAlpha(180),
-                                    ),
-                                  ).animate().fadeIn(delay: 400.ms),
-                                ),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(
-                                      24, 16, 24, 100),
-                                  child: Center(
-                                    child: ConstrainedBox(
-                                      constraints:
-                                          const BoxConstraints(maxWidth: 400),
-                                      child: TreasureMapPath(
-                                        riddles: riddles,
-                                        mapId: widget.mapId,
-                                        lastCompletedIndex:
-                                            playState.lastCompletedIndex,
-                                        riddleStars: playState.riddleStars,
-                                        imageBytes: map?.imageBytes,
-                                        immediateActivation:
-                                            playState.lastCompletedIndex == -1,
-                                        // CHANGED: no tap when completed
-                                        onCurrentNodeTap: _isCompleted
-                                            ? null
-                                            : playState.lastCompletedIndex <
-                                                    riddles.length - 1
-                                                ? () => _onNodeTap(
-                                                      riddles,
-                                                      playState
-                                                              .lastCompletedIndex +
-                                                          1,
-                                                    )
-                                                : null,
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          24, 16, 24, 100),
+                                      child: Center(
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                              maxWidth: 400),
+                                          child: TreasureMapPath(
+                                            riddles: riddles,
+                                            mapId: widget.mapId,
+                                            lastCompletedIndex:
+                                                playState.lastCompletedIndex,
+                                            riddleStars: playState.riddleStars,
+                                            imageBytes: map?.imageBytes,
+                                            immediateActivation:
+                                                playState.lastCompletedIndex ==
+                                                    -1,
+                                            onCurrentNodeTap: _isCompleted
+                                                ? null
+                                                : playState
+                                                            .lastCompletedIndex <
+                                                        riddles.length - 1
+                                                    ? () => _onNodeTap(
+                                                          riddles,
+                                                          playState
+                                                                  .lastCompletedIndex +
+                                                              1,
+                                                        )
+                                                    : null,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-			),
-			),
     );
   }
 }
 
 // ── Play Header ───────────────────────────────────────────────────────────────
-// UNCHANGED
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
@@ -395,84 +376,82 @@ class _PlayHeader extends StatelessWidget {
       onTap: () => Navigator.pop(context),
       child: Hero(
         tag: 'map-card-$mapId',
-				child: Padding(
-				padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Container(
-            //width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(20)),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x18000000),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    color: EnolaTheme.textPrimary,
-                    height: 1.3,
-                    letterSpacing: 0.1,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(20)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x18000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded,
-                        size: 17, color: Color(0xFFf59e0b)),
-                    const SizedBox(width: 4),
-                    Text(
-                      hasBeenPlayed
-                          ? '$achievedStars / $maxStars'
-                          : '$maxStars',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF555555),
-                      ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: EnolaTheme.textPrimary,
+                      height: 1.3,
+                      letterSpacing: 0.1,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: maxStars > 0 && hasBeenPlayed
-                        ? achievedStars / maxStars
-                        : 0,
-                    minHeight: 5,
-                    backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFFf59e0b)),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded,
+                          size: 17, color: Color(0xFFf59e0b)),
+                      const SizedBox(width: 4),
+                      Text(
+                        hasBeenPlayed
+                            ? '$achievedStars / $maxStars'
+                            : '$maxStars',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF555555),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: maxStars > 0 && hasBeenPlayed
+                          ? achievedStars / maxStars
+                          : 0,
+                      minHeight: 5,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFf59e0b)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-				),
       ),
     );
   }
 }
 
 // ── Back FAB ──────────────────────────────────────────────────────────────────
-// UNCHANGED
 
 class _BackFab extends StatelessWidget {
   final VoidCallback onTap;
@@ -517,7 +496,6 @@ class _BackFab extends StatelessWidget {
 }
 
 // ── Play Again FAB ────────────────────────────────────────────────────────────
-// NEW
 
 class _PlayAgainFab extends StatelessWidget {
   final VoidCallback onPlayAgain;
