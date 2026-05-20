@@ -45,10 +45,12 @@ class ResultScreen extends StatelessWidget {
     return 'The path to mastery begins with a single step.';
   }
 
+  // Happy, vibrant "video-game victory" colors based on performance tier
   Color get _scoreColor {
-    if (_starRatio >= 0.7) return EnolaTheme.correct;
-    if (_starRatio >= 0.5) return EnolaTheme.accent;
-    return EnolaTheme.wrong;
+    if (_starRatio >= 0.9) return const Color(0xFFFFD700); // Epic Gaming Gold
+    if (_starRatio >= 0.7) return const Color(0xFF00E676); // Vibrant Lime/Green
+    if (_starRatio >= 0.5) return const Color(0xFF00E5FF); // Bright Cyan Magic Blue
+    return const Color(0xFFFF9100); // Energetic Sunset Orange (instead of a sad red/wrong color)
   }
 
   @override
@@ -109,8 +111,8 @@ class ResultScreen extends StatelessWidget {
             letterSpacing: 1,
             shadows:  [
               Shadow(
-                color: _scoreColor.withValues(alpha: 0.2),
-                blurRadius: 20,
+                color: _scoreColor.withValues(alpha: 0.4), // Increased alpha for a glowing achievement pop
+                blurRadius: 25,
               ),
             ],
           ),
@@ -135,14 +137,14 @@ class ResultScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: EnolaTheme.accentSoft,
+        color: _scoreColor.withValues(alpha: 0.1), // Matches the rank tier energy
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Animated star icon
-          const Icon(Icons.star_rounded, color: EnolaTheme.accent, size: 32)
+          Icon(Icons.star_rounded, color: _scoreColor, size: 32)
               .animate()
               .scale(
                 begin: const Offset(0, 0),
@@ -209,21 +211,21 @@ class ResultScreen extends StatelessWidget {
           icon: Icons.menu_book_rounded,
           value: '$total',
           label: 'Riddles',
-          color: EnolaTheme.accent,
+          color: const Color(0xFFFF7043), // Fun, cheerful Coral Orange for books
         ),
         const SizedBox(width: 16),
         _StatBox(
           icon: Icons.star_rounded,
           value: '$totalStars',
           label: 'Stars',
-          color: EnolaTheme.correct,
+          color: const Color(0xFFFFCA28), // Bright, happy Amber Gold for Stars
         ),
         const SizedBox(width: 16),
         _StatBox(
           icon: Icons.emoji_events_rounded,
           value: '${((_starRatio) * 100).round()}%',
           label: 'Score',
-          color: _scoreColor,
+          color: _scoreColor, // Stays mapped to their overall tier color
         ),
       ],
     ).animate().fadeIn(delay: 1000.ms, duration: 400.ms);
@@ -238,6 +240,12 @@ class ResultScreen extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.replay_rounded),
             label: const Text('Play Again'),
+            style: ElevatedButton.styleFrom(
+              // Using the primary score color to give the button a rewarding theme
+              backgroundColor: _scoreColor,
+              foregroundColor: Colors.black87, // High contrast text readability
+              elevation: 4,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -250,11 +258,11 @@ class ResultScreen extends StatelessWidget {
                 (_) => false,
               );
             },
-            icon: const Icon(Icons.home_rounded, color: EnolaTheme.accent),
-            label: const Text('Back to Maps',
-                style: TextStyle(color: EnolaTheme.accent)),
+            icon: Icon(Icons.home_rounded, color: _scoreColor),
+            label: Text('Back to Maps',
+                style: TextStyle(color: _scoreColor, fontWeight: FontWeight.bold)),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: EnolaTheme.accent),
+              side: BorderSide(color: _scoreColor, width: 1.5),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
@@ -285,13 +293,13 @@ class _StatBox extends StatelessWidget {
       width: 90,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.12), // Slightly bumped alpha for richer box backgrounds
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5), // Noticeable glowing trim
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 22),
+          Icon(icon, color: color, size: 24), // Bumped icon size slightly for game layout feel
           const SizedBox(height: 6),
           Text(
             value,
