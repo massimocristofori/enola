@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/connection/connection.dart' as impl;
-
 import 'package:enola/database/schema_utils.dart';
-
 
 class DriftService {
   static final DriftService instance = DriftService._internal();
@@ -40,6 +38,16 @@ class DriftService {
 
   Stream<List<RiddleMap>> watchAllMaps() => db.select(db.riddleMaps).watch();
 
+  // ── RIDDLES VERSION ───────────────────────────────────────────────────────
+
+  /// Bumps the riddlesVersion on a map to the current timestamp.
+  /// Call this whenever riddles for a map are added, updated, or deleted.
+  Future<void> bumpRiddlesVersion(String mapId) async {
+    final newVersion = DateTime.now().millisecondsSinceEpoch;
+    await (db.update(db.riddleMaps)..where((t) => t.id.equals(mapId)))
+        .write(RiddleMapsCompanion(riddlesVersion: Value(newVersion)));
+  }
+
   // ── RIDDLES ───────────────────────────────────────────────────────────────
 
   Stream<List<Riddle>> watchRiddles(String mapId) {
@@ -72,6 +80,7 @@ class DriftService {
       correctIndex: Value(correctIndex),
     );
     await db.into(db.riddles).insertOnConflictUpdate(companion);
+    await bumpRiddlesVersion(mapId);
   }
 
   Future<void> saveOrderingRiddle({
@@ -93,6 +102,7 @@ class DriftService {
       correctIndex: const Value(null),
     );
     await db.into(db.riddles).insertOnConflictUpdate(companion);
+    await bumpRiddlesVersion(mapId);
   }
 
   Future<void> saveRiddle({
@@ -121,54 +131,65 @@ class DriftService {
           existingId: existingId,
         );
     }
+    // Note: bumpRiddlesVersion is already called inside each branch above.
   }
 
   Future<void> deleteRiddle(int riddleId) async {
+    // Fetch mapId before deleting so we can bump the version after.
+    final riddle = await (db.select(db.riddles)
+          ..where((t) => t.id.equals(riddleId)))
+        .getSingleOrNull();
     await (db.delete(db.riddles)..where((t) => t.id.equals(riddleId))).go();
+    if (riddle != null) {
+      await bumpRiddlesVersion(riddle.mapId);
+    }
   }
 
   Future<void> deleteRiddlesForMap(String mapId) async {
     await (db.delete(db.riddles)..where((t) => t.mapId.equals(mapId))).go();
+    await bumpRiddlesVersion(mapId);
   }
 
   Future<void> reorderRiddles(List<Riddle> ordered) async {
+    // Reordering changes the map's riddle structure, so bump the version.
     await db.transaction(() async {
       for (var i = 0; i < ordered.length; i++) {
-        await (db.update(db.riddles)..where((t) => t.id.equals(ordered[i].id)))
+        await (db.update(db.riddles)
+              ..where((t) => t.id.equals(ordered[i].id)))
             .write(RiddlesCompanion(orderInMap: Value(i)));
       }
     });
+    if (ordered.isNotEmpty) {
+      await bumpRiddlesVersion(ordered.first.mapId);
+    }
   }
 
-	Future<int> insertBlankRiddle({
-	  required String mapId,
-	  required int orderInMap,
-	}) async {
-	  return await db.into(db.riddles).insert(
-	    RiddlesCompanion(
-	      id: Value.absent(),
-	      mapId: Value(mapId),
-	      orderInMap: Value(orderInMap),
-	      // Default template values to prevent UI crashes
-	      question: Value("New Riddle"),
-	      typeIndex: Value(0), // 0 = Multiple Choice
-	      correctIndex: Value(0),
-	      payloadJson: Value('{}'),
-	      choicesJson: Value('["Option 1", "Option 2"]'),
-	    ),
-	  );
-	}
+  Future<int> insertBlankRiddle({
+    required String mapId,
+    required int orderInMap,
+  }) async {
+    final newId = await db.into(db.riddles).insert(
+      RiddlesCompanion(
+        id: Value.absent(),
+        mapId: Value(mapId),
+        orderInMap: Value(orderInMap),
+        question: Value("New Riddle"),
+        typeIndex: Value(0),
+        correctIndex: Value(0),
+        payloadJson: Value('{}'),
+        choicesJson: Value('["Option 1", "Option 2"]'),
+      ),
+    );
+    await bumpRiddlesVersion(mapId);
+    return newId;
+  }
 
-
-
-  
   Future<void> saveRiddleFromRow({
     required String mapId,
     required int orderInMap,
     required Riddle riddle,
   }) async {
     final companion = RiddlesCompanion(
-      //id: const Value.absent(),
       mapId: Value(mapId),
       question: Value(riddle.question),
       typeIndex: Value(riddle.typeIndex),
@@ -176,21 +197,29 @@ class DriftService {
       payloadJson: Value(riddle.payloadJson),
       choicesJson: Value(riddle.choicesJson),
       correctIndex: Value(riddle.correctIndex),
-			sourceExcerpt: Value(riddle.sourceExcerpt), // ← add this
+      sourceExcerpt: Value(riddle.sourceExcerpt),
     );
     await db.into(db.riddles).insert(companion);
+    await bumpRiddlesVersion(mapId);
   }
-
 
   // ── PLAY SESSIONS ─────────────────────────────────────────────────────────
 
+  /// Starts a new session, stamping it with the map's current riddlesVersion.
+  /// This is what play_screen uses to later detect stale sessions.
   Future<int> startSession(String mapId, int totalRiddles) async {
+    final currentMap = await (db.select(db.riddleMaps)
+          ..where((t) => t.id.equals(mapId)))
+        .getSingleOrNull();
+    final currentVersion = currentMap?.riddlesVersion ?? 0;
+
     return await db.into(db.playSessions).insert(
       PlaySessionsCompanion.insert(
         mapId: mapId,
         totalRiddles: Value(totalRiddles),
         correctAnswers: const Value(0),
         startedAt: Value(DateTime.now()),
+        riddlesVersion: Value(currentVersion),
       ),
     );
   }
@@ -207,7 +236,8 @@ class DriftService {
 
   Future<void> advanceProgress(int sessionId, int completedIndex) async {
     await (db.update(db.playSessions)..where((t) => t.id.equals(sessionId)))
-        .write(PlaySessionsCompanion(lastCompletedIndex: Value(completedIndex)));
+        .write(
+            PlaySessionsCompanion(lastCompletedIndex: Value(completedIndex)));
   }
 
   Future<void> completeSession(int sessionId) async {
@@ -216,7 +246,8 @@ class DriftService {
   }
 
   Stream<PlaySession> watchSession(int sessionId) {
-    return (db.select(db.playSessions)..where((t) => t.id.equals(sessionId)))
+    return (db.select(db.playSessions)
+          ..where((t) => t.id.equals(sessionId)))
         .watchSingle();
   }
 
