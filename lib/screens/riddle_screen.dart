@@ -10,11 +10,8 @@ class RiddleScreen extends StatefulWidget {
   final Riddle riddle;
   final int riddleIndex;
   final bool readOnly;
-  // ── Called when user dismisses (back arrow) ───────────────────────────────
   final VoidCallback onDismiss;
-  // ── Called when riddle is completed, passes errorCount ───────────────────
   final void Function(int errorCount) onComplete;
-  // ── Called when user skips (3 errors) ────────────────────────────────────
   final VoidCallback onSkip;
 
   const RiddleScreen({
@@ -210,8 +207,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
     );
   }
 
-  // ── BUILD ──────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final riddle = widget.riddle;
@@ -246,8 +241,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
                     decoration: BoxDecoration(
                       color: EnolaTheme.accent.withAlpha(20),
                       borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: EnolaTheme.accent.withAlpha(80)),
+                      border: Border.all(
+                          color: EnolaTheme.accent.withAlpha(80)),
                     ),
                     child: Text(
                       'Review',
@@ -280,8 +275,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
                                   end: Alignment.centerRight,
                                 )
                               : null,
-                          color:
-                              _canShowHint ? null : EnolaTheme.surface,
+                          color: _canShowHint ? null : EnolaTheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           border: _canShowHint
                               ? null
@@ -335,8 +329,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
                         color: (widget.readOnly || _solvedCorrectly)
                             ? EnolaTheme.accent
                             : EnolaTheme.border,
-                        width:
-                            (widget.readOnly || _solvedCorrectly) ? 2 : 1,
+                        width: (widget.readOnly || _solvedCorrectly) ? 2 : 1,
                       ),
                     ),
                     child: Padding(
@@ -345,18 +338,23 @@ class _RiddleScreenState extends State<RiddleScreen> {
                         children: [
                           Text('Riddle #${widget.riddleIndex + 1}',
                               style: EnolaTheme.sectionHeader),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
+                          // ── Smaller font for the question ─────────────────
                           Text(
                             riddle.question,
                             textAlign: TextAlign.center,
-                            style:
-                                Theme.of(context).textTheme.titleLarge,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: EnolaTheme.textPrimary,
+                              height: 1.4,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ).animate().fadeIn().scale(delay: 100.ms),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   if (riddle.type == RiddleType.multipleChoice ||
                       riddle.type == RiddleType.trueFalse)
@@ -656,7 +654,9 @@ class _AnswerFeedback extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  isCorrect ? 'Correct! Well done.' : 'Not quite — try again!',
+                  isCorrect
+                      ? 'Correct! Well done.'
+                      : 'Not quite — try again!',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
