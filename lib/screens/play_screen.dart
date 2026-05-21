@@ -14,6 +14,7 @@ import 'package:enola/services/drift_service.dart';
 import 'package:drift/drift.dart' as drift;
 
 const double kPlayHeaderHeight = 90.0;
+const double kPlayHeaderCompact = 58.0;
 
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
@@ -28,9 +29,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   String? _initError;
   bool _isCompleted = false;
 
-  // ── null = show map, set = show riddle ────────────────────────────────────
   int? _activeRiddleIndex;
-  // ── true = read-only review mode ─────────────────────────────────────────
   bool _activeRiddleReadOnly = false;
 
   @override
@@ -151,7 +150,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     if (mounted) setState(() => _initialising = false);
   }
 
-  // ── Open riddle (active node) ─────────────────────────────────────────────
   void _onNodeTap(int riddleIndex) {
     setState(() {
       _activeRiddleIndex = riddleIndex;
@@ -159,7 +157,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     });
   }
 
-  // ── Open riddle (completed, review mode) ─────────────────────────────────
   void _onCompletedNodeTap(int riddleIndex) {
     setState(() {
       _activeRiddleIndex = riddleIndex;
@@ -167,12 +164,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     });
   }
 
-  // ── Dismiss riddle, back to map ───────────────────────────────────────────
   void _dismissRiddle() {
     setState(() => _activeRiddleIndex = null);
   }
 
-  // ── Riddle completed ──────────────────────────────────────────────────────
   Future<void> _onRiddleComplete(
       List<Riddle> riddles, int riddleIndex, int errorCount) async {
     await ref
@@ -200,7 +195,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         );
       }
     } else {
-      // fade back to map
       setState(() => _activeRiddleIndex = null);
     }
   }
@@ -241,14 +235,13 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final maxStars = (riddles?.length ?? 0) * 3;
     final achievedStars = playState?.totalStars ?? 0;
     final hasBeenPlayed = (playState?.lastCompletedIndex ?? -1) >= 0;
-
     final bool showingLoader = _initialising || playState == null;
+    final bool riddleActive = _activeRiddleIndex != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      // ── Hide FAB while a riddle is active ─────────────────────────────────
-      floatingActionButton: _activeRiddleIndex != null
+      floatingActionButton: riddleActive
           ? null
           : _isCompleted
               ? _PlayAgainFab(
@@ -260,16 +253,17 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
+            // ── Stack so the header always renders on top of the content ────
+            child: Stack(
               children: [
-                _PlayHeader(
-                  mapId: widget.mapId,
-                  title: title,
-                  achievedStars: achievedStars,
-                  maxStars: maxStars,
-                  hasBeenPlayed: hasBeenPlayed,
-                ),
-                Expanded(
+                // ── Content sits below the header ──────────────────────────
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  top: riddleActive ? kPlayHeaderCompact : kPlayHeaderHeight,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   child: showingLoader
                       ? const Center(
                           child: CircularProgressIndicator(
@@ -287,7 +281,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                             data: (riddles) {
                               return AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
-                                child: _activeRiddleIndex != null
+                                child: riddleActive
                                     ? RiddleScreen(
                                         key: ValueKey(
                                             'riddle-$_activeRiddleIndex'),
@@ -322,6 +316,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                           ),
                         ),
                 ),
+
+                // ── Header always on top ────────────────────────────────────
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _PlayHeader(
+                    mapId: widget.mapId,
+                    title: title,
+                    achievedStars: achievedStars,
+                    maxStars: maxStars,
+                    hasBeenPlayed: hasBeenPlayed,
+                    compact: riddleActive,
+                  ),
+                ),
               ],
             ),
           ),
@@ -331,7 +340,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 }
 
-// ── Map view (extracted to give AnimatedSwitcher a clean key) ─────────────────
+// ── Map view ──────────────────────────────────────────────────────────────────
 
 class _MapView extends StatelessWidget {
   final List<Riddle> riddles;
@@ -397,8 +406,8 @@ class _MapView extends StatelessWidget {
                   onCurrentNodeTap: isCompleted
                       ? null
                       : playState.lastCompletedIndex < riddles.length - 1
-                          ? () => onNodeTap(
-                              playState.lastCompletedIndex + 1)
+                          ? () =>
+                              onNodeTap(playState.lastCompletedIndex + 1)
                           : null,
                   onCompletedNodeTap: onCompletedNodeTap,
                 ),
@@ -419,6 +428,7 @@ class _PlayHeader extends StatelessWidget {
   final int achievedStars;
   final int maxStars;
   final bool hasBeenPlayed;
+  final bool compact;
 
   const _PlayHeader({
     required this.mapId,
@@ -426,6 +436,7 @@ class _PlayHeader extends StatelessWidget {
     required this.achievedStars,
     required this.maxStars,
     required this.hasBeenPlayed,
+    this.compact = false,
   });
 
   @override
@@ -436,67 +447,90 @@ class _PlayHeader extends StatelessWidget {
         tag: 'map-card-$mapId',
         child: Material(
           type: MaterialType.transparency,
-          child: SizedBox(
-            height: kPlayHeaderHeight,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.vertical(bottom: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x18000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            height: compact ? kPlayHeaderCompact : kPlayHeaderHeight,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  BorderRadius.vertical(bottom: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x18000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            // ClipRRect hides the title as it slides up out of the header
+            child: ClipRect(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: EnolaTheme.textPrimary,
-                      height: 1.3,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded,
-                          size: 17, color: Color(0xFFf59e0b)),
-                      const SizedBox(width: 4),
-                      Text(
-                        hasBeenPlayed
-                            ? '$achievedStars / $maxStars'
-                            : '$maxStars',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF555555),
+                  // ── Title slides up and out when compact ─────────────────
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    height: compact ? 0 : 32,
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            color: EnolaTheme.textPrimary,
+                            height: 1.3,
+                            letterSpacing: 0.1,
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: maxStars > 0 && hasBeenPlayed
-                          ? achievedStars / maxStars
-                          : 0,
-                      minHeight: 5,
-                      backgroundColor: const Color(0xFFE5E7EB),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFFf59e0b)),
+                  // ── Stars + progress always visible ──────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                size: 17, color: Color(0xFFf59e0b)),
+                            const SizedBox(width: 4),
+                            Text(
+                              hasBeenPlayed
+                                  ? '$achievedStars / $maxStars'
+                                  : '$maxStars',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF555555),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: maxStars > 0 && hasBeenPlayed
+                                ? achievedStars / maxStars
+                                : 0,
+                            minHeight: 5,
+                            backgroundColor: const Color(0xFFE5E7EB),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFFf59e0b)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
