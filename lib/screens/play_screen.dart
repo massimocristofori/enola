@@ -13,6 +13,9 @@ import 'package:enola/services/drift_service.dart';
 
 import 'package:drift/drift.dart' as drift;
 
+// ── How tall the fixed header is ─────────────────────────────────────────────
+const double kPlayHeaderHeight = 90.0;
+
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
   const PlayScreen({super.key, required this.mapId});
@@ -53,13 +56,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       final db = DriftService.instance.db;
       final riddles = await db.getRiddlesForMap(widget.mapId);
 
-      // ── Fetch current map version ────────────────────────────────────────
       final currentMap = await (db.select(db.riddleMaps)
             ..where((t) => t.id.equals(widget.mapId)))
           .getSingleOrNull();
       final currentVersion = currentMap?.riddlesVersion ?? 0;
 
-      // ── Load latest session ──────────────────────────────────────────────
       var existing = await (db.select(db.playSessions)
             ..where((t) => t.mapId.equals(widget.mapId))
             ..orderBy([(t) => drift.OrderingTerm(
@@ -69,7 +70,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             ..limit(1))
           .get();
 
-      // ── Stale session check: wipe and restart if version mismatch ────────
       if (existing.isNotEmpty &&
           existing.first.riddlesVersion != currentVersion) {
         debugPrint(
@@ -89,7 +89,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       bool isCompleted = false;
 
       if (existing.isNotEmpty && existing.first.completedAt == null) {
-        // ── In-progress session ────────────────────────────────────────────
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
         correctAnswers = existing.first.correctAnswers;
@@ -105,7 +104,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         riddleStars = tempStars;
 
       } else if (existing.isNotEmpty && existing.first.completedAt != null) {
-        // ── Completed session — load read-only, show Play Again ────────────
         isCompleted = true;
         sessionId = existing.first.id;
         lastCompleted = existing.first.lastCompletedIndex;
@@ -122,7 +120,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         riddleStars = tempStars;
 
       } else {
-        // ── No session yet ─────────────────────────────────────────────────
         sessionId = await DriftService.instance.startSession(
           widget.mapId,
           riddles.length,
@@ -154,25 +151,41 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
   }
 
-  // ── Active node: plays the riddle normally ────────────────────────────────
-    Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
+  // ── Custom route: slides up from bottom, stops behind the header ──────────
+  PageRouteBuilder _slideUpRoute(Widget page) {
+    return PageRouteBuilder(
+      opaque: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 420),
+      reverseTransitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (context, animation, _, child) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        // The riddle panel travels from the bottom of the screen
+        // up to kPlayHeaderHeight from the top.
+        final tween = Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset(0, kPlayHeaderHeight / screenHeight),
+        ).chain(CurveTween(curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+    );
+  }
+
+  Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
     if (playState == null) return;
 
     final riddle = riddles[riddleIndex];
     final errorCount = await Navigator.push<int>(
       context,
-      // --- NEW: PageRouteBuilder enables the Hero to fly ---
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 450),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, __, ___) => RiddleScreen(
-          riddle: riddle,
-          riddleIndex: riddleIndex,
-        ),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
+      _slideUpRoute(RiddleScreen(
+        riddle: riddle,
+        riddleIndex: riddleIndex,
+      )),
     );
 
     if (errorCount == null || !mounted) return;
@@ -207,21 +220,13 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   void _onCompletedNodeTap(List<Riddle> riddles, int riddleIndex) {
     Navigator.push(
       context,
-      // --- NEW: PageRouteBuilder enables the Hero to fly ---
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 450),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, __, ___) => RiddleScreen(
-          riddle: riddles[riddleIndex],
-          riddleIndex: riddleIndex,
-          readOnly: true,
-        ),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
+      _slideUpRoute(RiddleScreen(
+        riddle: riddles[riddleIndex],
+        riddleIndex: riddleIndex,
+        readOnly: true,
+      )),
     );
   }
-
 
   Future<void> _playAgain() async {
     final db = DriftService.instance.db;
@@ -361,7 +366,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                                               1,
                                                         )
                                                     : null,
-                                            // ── NEW ──────────────────────
                                             onCompletedNodeTap: (index) =>
                                                 _onCompletedNodeTap(
                                                     riddles, index),
@@ -408,10 +412,10 @@ class _PlayHeader extends StatelessWidget {
       onTap: () => Navigator.pop(context),
       child: Hero(
         tag: 'map-card-$mapId',
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-          child: Material(
-            type: MaterialType.transparency,
+        child: Material(
+          type: MaterialType.transparency,
+          child: SizedBox(
+            height: kPlayHeaderHeight,
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -432,7 +436,7 @@ class _PlayHeader extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 15,
