@@ -152,8 +152,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   // ── Custom route: slides up from bottom, stops behind the header ──────────
-  PageRouteBuilder _slideUpRoute(Widget page) {
-    return PageRouteBuilder(
+    PageRouteBuilder<T> _slideUpRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
       opaque: false,
       barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 420),
@@ -161,8 +161,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       pageBuilder: (_, __, ___) => page,
       transitionsBuilder: (context, animation, _, child) {
         final screenHeight = MediaQuery.of(context).size.height;
-        // The riddle panel travels from the bottom of the screen
-        // up to kPlayHeaderHeight from the top.
         final tween = Tween<Offset>(
           begin: const Offset(0, 1),
           end: Offset(0, kPlayHeaderHeight / screenHeight),
@@ -174,6 +172,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       },
     );
   }
+
 
   Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
     final playState = ref.read(playStateProvider);
