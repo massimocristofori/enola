@@ -10,11 +10,20 @@ class RiddleScreen extends StatefulWidget {
   final Riddle riddle;
   final int riddleIndex;
   final bool readOnly;
+  // ── Called when user dismisses (back arrow) ───────────────────────────────
+  final VoidCallback onDismiss;
+  // ── Called when riddle is completed, passes errorCount ───────────────────
+  final void Function(int errorCount) onComplete;
+  // ── Called when user skips (3 errors) ────────────────────────────────────
+  final VoidCallback onSkip;
 
   const RiddleScreen({
     super.key,
     required this.riddle,
     required this.riddleIndex,
+    required this.onDismiss,
+    required this.onComplete,
+    required this.onSkip,
     this.readOnly = false,
   });
 
@@ -29,9 +38,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
   bool _showingFeedback = false;
   int _errorCount = 0;
   List<String> _orderedItems = [];
-
-  // ── Swipe-to-dismiss ───────────────────────────────────────────────────────
-  double _dragStartY = 0;
 
   @override
   void initState() {
@@ -83,9 +89,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
 
   void _confirm() {
     if (_solvedCorrectly) {
-      Navigator.pop(context, _errorCount);
-    } else {
-      Navigator.pop(context, null);
+      widget.onComplete(_errorCount);
     }
   }
 
@@ -212,215 +216,169 @@ class _RiddleScreenState extends State<RiddleScreen> {
   Widget build(BuildContext context) {
     final riddle = widget.riddle;
 
-    // The riddle panel fills from its top position down to the
-    // bottom of the screen. We wrap in GestureDetector for swipe-down.
-    return GestureDetector(
-      onVerticalDragStart: (d) => _dragStartY = d.globalPosition.dy,
-      onVerticalDragEnd: (d) {
-        final delta = d.globalPosition.dy - _dragStartY;
-        if (delta > 80 || (d.primaryVelocity ?? 0) > 600) {
-          Navigator.pop(context, null);
-        }
-      },
-      child: Material(
-        color: EnolaTheme.background,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        clipBehavior: Clip.hardEdge,
-        child: SafeArea(
-          top: false, // header above handles safe area top
-          child: Column(
-            children: [
-              // ── Top bar with drag handle + X button ───────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
-                child: Row(
-                  children: [
-                    // drag handle
-                    Expanded(
-                      child: Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: EnolaTheme.border,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // X button
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: EnolaTheme.textSecond),
-                      onPressed: () => Navigator.pop(context, null),
-                    ),
-                  ],
+    return ColoredBox(
+      color: const Color(0xFFF1F4F8),
+      child: Column(
+        children: [
+          // ── Header ────────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: EnolaTheme.textSecond),
+                  onPressed: widget.onDismiss,
                 ),
-              ),
-
-              // ── Header row: riddle number + review badge + hint ────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    Text(
-                      'Riddle #${widget.riddleIndex + 1}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: EnolaTheme.textPrimary,
-                      ),
-                    ),
-                    if (widget.readOnly) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: EnolaTheme.accent.withAlpha(20),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: EnolaTheme.accent.withAlpha(80)),
-                        ),
-                        child: Text(
-                          'Review',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: EnolaTheme.accent.withAlpha(200),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    if (_hasHint)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: _canShowHint ? _showHint : null,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              gradient: _canShowHint
-                                  ? const LinearGradient(
-                                      colors: [
-                                        EnolaTheme.accent,
-                                        EnolaTheme.secondary,
-                                      ],
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                    )
-                                  : null,
-                              color: _canShowHint
-                                  ? null
-                                  : EnolaTheme.surface,
-                              borderRadius: BorderRadius.circular(20),
-                              border: _canShowHint
-                                  ? null
-                                  : Border.all(color: EnolaTheme.border),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.lightbulb_outline_rounded,
-                                  size: 15,
-                                  color: _canShowHint
-                                      ? Colors.white
-                                      : EnolaTheme.textSecond,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Hint',
-                                  style: TextStyle(
-                                    color: _canShowHint
-                                        ? Colors.white
-                                        : EnolaTheme.textSecond,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-
-              // ── Content ───────────────────────────────────────────────────
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Card(
-                        elevation: widget.readOnly
-                            ? 4
-                            : (_solvedCorrectly ? 4 : 0),
-                        shadowColor: (widget.readOnly || _solvedCorrectly)
-                            ? EnolaTheme.accent.withValues(alpha: 0.3)
-                            : null,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: (widget.readOnly || _solvedCorrectly)
-                                ? EnolaTheme.accent
-                                : EnolaTheme.border,
-                            width: (widget.readOnly || _solvedCorrectly)
-                                ? 2
-                                : 1,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Riddle #${widget.riddleIndex + 1}',
-                                style: EnolaTheme.sectionHeader,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                riddle.question,
-                                textAlign: TextAlign.center,
-                                style:
-                                    Theme.of(context).textTheme.titleLarge,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ).animate().fadeIn().scale(delay: 100.ms),
-                      const SizedBox(height: 32),
-
-                      if (riddle.type == RiddleType.multipleChoice ||
-                          riddle.type == RiddleType.trueFalse)
-                        _buildMultipleChoice(riddle)
-                      else
-                        _buildOrdering(riddle),
-                    ],
+                Text(
+                  'Riddle #${widget.riddleIndex + 1}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: EnolaTheme.textPrimary,
                   ),
                 ),
-              ),
-
-              // ── Feedback bar ──────────────────────────────────────────────
-              if (!widget.readOnly && _showingFeedback)
-                _AnswerFeedback(
-                  isCorrect: _lastAnswerCorrect ?? false,
-                  errorCount: _errorCount,
-                  onSkip: () => Navigator.pop(context, 3),
-                  onContinue: (_lastAnswerCorrect ?? false)
-                      ? _confirm
-                      : _retryAfterWrong,
-                ).animate().slideY(begin: 1, end: 0).fadeIn(),
-            ],
+                if (widget.readOnly) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: EnolaTheme.accent.withAlpha(20),
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: EnolaTheme.accent.withAlpha(80)),
+                    ),
+                    child: Text(
+                      'Review',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: EnolaTheme.accent.withAlpha(200),
+                      ),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                if (_hasHint)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: _canShowHint ? _showHint : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: _canShowHint
+                              ? const LinearGradient(
+                                  colors: [
+                                    EnolaTheme.accent,
+                                    EnolaTheme.secondary,
+                                  ],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                )
+                              : null,
+                          color:
+                              _canShowHint ? null : EnolaTheme.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: _canShowHint
+                              ? null
+                              : Border.all(color: EnolaTheme.border),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lightbulb_outline_rounded,
+                              size: 15,
+                              color: _canShowHint
+                                  ? Colors.white
+                                  : EnolaTheme.textSecond,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Hint',
+                              style: TextStyle(
+                                color: _canShowHint
+                                    ? Colors.white
+                                    : EnolaTheme.textSecond,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
+
+          // ── Content ───────────────────────────────────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Card(
+                    elevation:
+                        widget.readOnly ? 4 : (_solvedCorrectly ? 4 : 0),
+                    shadowColor: (widget.readOnly || _solvedCorrectly)
+                        ? EnolaTheme.accent.withValues(alpha: 0.3)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: (widget.readOnly || _solvedCorrectly)
+                            ? EnolaTheme.accent
+                            : EnolaTheme.border,
+                        width:
+                            (widget.readOnly || _solvedCorrectly) ? 2 : 1,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Text('Riddle #${widget.riddleIndex + 1}',
+                              style: EnolaTheme.sectionHeader),
+                          const SizedBox(height: 16),
+                          Text(
+                            riddle.question,
+                            textAlign: TextAlign.center,
+                            style:
+                                Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ).animate().fadeIn().scale(delay: 100.ms),
+                  const SizedBox(height: 32),
+
+                  if (riddle.type == RiddleType.multipleChoice ||
+                      riddle.type == RiddleType.trueFalse)
+                    _buildMultipleChoice(riddle)
+                  else
+                    _buildOrdering(riddle),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Feedback bar ──────────────────────────────────────────────────
+          if (!widget.readOnly && _showingFeedback)
+            _AnswerFeedback(
+              isCorrect: _lastAnswerCorrect ?? false,
+              errorCount: _errorCount,
+              onSkip: widget.onSkip,
+              onContinue: (_lastAnswerCorrect ?? false)
+                  ? _confirm
+                  : _retryAfterWrong,
+            ).animate().slideY(begin: 1, end: 0).fadeIn(),
+        ],
       ),
     );
   }
@@ -698,14 +656,11 @@ class _AnswerFeedback extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  isCorrect
-                      ? 'Correct! Well done.'
-                      : 'Not quite — try again!',
+                  isCorrect ? 'Correct! Well done.' : 'Not quite — try again!',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
-                    color:
-                        isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
+                    color: isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
                   ),
                 ),
               ),
