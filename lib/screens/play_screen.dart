@@ -13,7 +13,6 @@ import 'package:enola/services/drift_service.dart';
 
 import 'package:drift/drift.dart' as drift;
 
-// ── How tall the fixed header is ─────────────────────────────────────────────
 const double kPlayHeaderHeight = 90.0;
 
 class PlayScreen extends ConsumerStatefulWidget {
@@ -29,6 +28,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   String? _initError;
   bool _isCompleted = false;
 
+  // ── null = show map, set = show riddle ────────────────────────────────────
+  int? _activeRiddleIndex;
+  // ── true = read-only review mode ─────────────────────────────────────────
+  bool _activeRiddleReadOnly = false;
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +45,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         _initialising = true;
         _initError = null;
         _isCompleted = false;
+        _activeRiddleIndex = null;
       });
     }
 
@@ -102,7 +107,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           debugPrint("JSON Decode error: $e");
         }
         riddleStars = tempStars;
-
       } else if (existing.isNotEmpty && existing.first.completedAt != null) {
         isCompleted = true;
         sessionId = existing.first.id;
@@ -118,7 +122,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           debugPrint("JSON Decode error: $e");
         }
         riddleStars = tempStars;
-
       } else {
         sessionId = await DriftService.instance.startSession(
           widget.mapId,
@@ -133,7 +136,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             sessionId, lastCompleted, correctAnswers, riddleStars);
 
       if (mounted) setState(() => _isCompleted = isCompleted);
-
     } catch (e, stackTrace) {
       debugPrint("CAUGHT ERROR: $e");
       debugPrint("$stackTrace");
@@ -146,49 +148,33 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       }
     }
 
-    if (mounted) {
-      setState(() => _initialising = false);
-    }
+    if (mounted) setState(() => _initialising = false);
   }
 
-  // ── Custom route: slides up from bottom, stops behind the header ──────────
-    PageRouteBuilder<T> _slideUpRoute<T>(Widget page) {
-    return PageRouteBuilder<T>(
-      opaque: false,
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 420),
-      reverseTransitionDuration: const Duration(milliseconds: 350),
-      pageBuilder: (_, __, ___) => page,
-      transitionsBuilder: (context, animation, _, child) {
-        final screenHeight = MediaQuery.of(context).size.height;
-        final tween = Tween<Offset>(
-          begin: const Offset(0, 1),
-          end: Offset(0, kPlayHeaderHeight / screenHeight),
-        ).chain(CurveTween(curve: Curves.easeOutCubic));
-        return SlideTransition(
-          position: animation.drive(tween),
-          child: child,
-        );
-      },
-    );
+  // ── Open riddle (active node) ─────────────────────────────────────────────
+  void _onNodeTap(int riddleIndex) {
+    setState(() {
+      _activeRiddleIndex = riddleIndex;
+      _activeRiddleReadOnly = false;
+    });
   }
 
+  // ── Open riddle (completed, review mode) ─────────────────────────────────
+  void _onCompletedNodeTap(int riddleIndex) {
+    setState(() {
+      _activeRiddleIndex = riddleIndex;
+      _activeRiddleReadOnly = true;
+    });
+  }
 
-  Future<void> _onNodeTap(List<Riddle> riddles, int riddleIndex) async {
-    final playState = ref.read(playStateProvider);
-    if (playState == null) return;
+  // ── Dismiss riddle, back to map ───────────────────────────────────────────
+  void _dismissRiddle() {
+    setState(() => _activeRiddleIndex = null);
+  }
 
-    final riddle = riddles[riddleIndex];
-    final errorCount = await Navigator.push<int>(
-      context,
-      _slideUpRoute(RiddleScreen(
-        riddle: riddle,
-        riddleIndex: riddleIndex,
-      )),
-    );
-
-    if (errorCount == null || !mounted) return;
-
+  // ── Riddle completed ──────────────────────────────────────────────────────
+  Future<void> _onRiddleComplete(
+      List<Riddle> riddles, int riddleIndex, int errorCount) async {
     await ref
         .read(playStateProvider.notifier)
         .completeRiddle(riddleIndex, errorCount);
@@ -213,18 +199,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           ),
         );
       }
+    } else {
+      // fade back to map
+      setState(() => _activeRiddleIndex = null);
     }
-  }
-
-  void _onCompletedNodeTap(List<Riddle> riddles, int riddleIndex) {
-    Navigator.push(
-      context,
-      _slideUpRoute(RiddleScreen(
-        riddle: riddles[riddleIndex],
-        riddleIndex: riddleIndex,
-        readOnly: true,
-      )),
-    );
   }
 
   Future<void> _playAgain() async {
@@ -269,12 +247,15 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _isCompleted
-          ? _PlayAgainFab(
-              onPlayAgain: _playAgain,
-              onBack: () => Navigator.pop(context),
-            )
-          : _BackFab(onTap: () => Navigator.pop(context)),
+      // ── Hide FAB while a riddle is active ─────────────────────────────────
+      floatingActionButton: _activeRiddleIndex != null
+          ? null
+          : _isCompleted
+              ? _PlayAgainFab(
+                  onPlayAgain: _playAgain,
+                  onBack: () => Navigator.pop(context),
+                )
+              : _BackFab(onTap: () => Navigator.pop(context)),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -304,76 +285,38 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                     color: EnolaTheme.accent)),
                             error: (e, _) => Center(child: Text('$e')),
                             data: (riddles) {
-                              return Column(
-                                children: [
-                                  if (_isCompleted)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 8, bottom: 4),
-                                      child: Text(
-                                        'Quest complete! All riddles solved.',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic,
-                                          color: EnolaTheme.accent
-                                              .withAlpha(200),
-                                        ),
-                                      ).animate().fadeIn(delay: 400.ms),
-                                    )
-                                  else if (playState.lastCompletedIndex <
-                                      riddles.length - 1)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 8, bottom: 4),
-                                      child: Text(
-                                        'Tap the glowing node to answer the next riddle',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic,
-                                          color: EnolaTheme.textSecond
-                                              .withAlpha(180),
-                                        ),
-                                      ).animate().fadeIn(delay: 400.ms),
-                                    ),
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          24, 16, 24, 100),
-                                      child: Center(
-                                        child: ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                              maxWidth: 400),
-                                          child: TreasureMapPath(
-                                            riddles: riddles,
-                                            mapId: widget.mapId,
-                                            lastCompletedIndex:
-                                                playState.lastCompletedIndex,
-                                            riddleStars: playState.riddleStars,
-                                            imageBytes: map?.imageBytes,
-                                            immediateActivation:
-                                                playState.lastCompletedIndex ==
-                                                    -1,
-                                            onCurrentNodeTap: _isCompleted
-                                                ? null
-                                                : playState
-                                                            .lastCompletedIndex <
-                                                        riddles.length - 1
-                                                    ? () => _onNodeTap(
-                                                          riddles,
-                                                          playState
-                                                                  .lastCompletedIndex +
-                                                              1,
-                                                        )
-                                                    : null,
-                                            onCompletedNodeTap: (index) =>
-                                                _onCompletedNodeTap(
-                                                    riddles, index),
-                                          ),
-                                        ),
+                              return AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: _activeRiddleIndex != null
+                                    ? RiddleScreen(
+                                        key: ValueKey(
+                                            'riddle-$_activeRiddleIndex'),
+                                        riddle:
+                                            riddles[_activeRiddleIndex!],
+                                        riddleIndex: _activeRiddleIndex!,
+                                        readOnly: _activeRiddleReadOnly,
+                                        onDismiss: _dismissRiddle,
+                                        onComplete: (errorCount) =>
+                                            _onRiddleComplete(
+                                                riddles,
+                                                _activeRiddleIndex!,
+                                                errorCount),
+                                        onSkip: () => _onRiddleComplete(
+                                            riddles,
+                                            _activeRiddleIndex!,
+                                            3),
+                                      )
+                                    : _MapView(
+                                        key: const ValueKey('map'),
+                                        riddles: riddles,
+                                        mapId: widget.mapId,
+                                        playState: playState,
+                                        isCompleted: _isCompleted,
+                                        imageBytes: map?.imageBytes,
+                                        onNodeTap: _onNodeTap,
+                                        onCompletedNodeTap:
+                                            _onCompletedNodeTap,
                                       ),
-                                    ),
-                                  ),
-                                ],
                               );
                             },
                           ),
@@ -384,6 +327,86 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Map view (extracted to give AnimatedSwitcher a clean key) ─────────────────
+
+class _MapView extends StatelessWidget {
+  final List<Riddle> riddles;
+  final String mapId;
+  final dynamic playState;
+  final bool isCompleted;
+  final dynamic imageBytes;
+  final void Function(int) onNodeTap;
+  final void Function(int) onCompletedNodeTap;
+
+  const _MapView({
+    super.key,
+    required this.riddles,
+    required this.mapId,
+    required this.playState,
+    required this.isCompleted,
+    required this.imageBytes,
+    required this.onNodeTap,
+    required this.onCompletedNodeTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (isCompleted)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              'Quest complete! All riddles solved.',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: EnolaTheme.accent.withAlpha(200),
+              ),
+            ).animate().fadeIn(delay: 400.ms),
+          )
+        else if (playState.lastCompletedIndex < riddles.length - 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              'Tap the glowing node to answer the next riddle',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: EnolaTheme.textSecond.withAlpha(180),
+              ),
+            ).animate().fadeIn(delay: 400.ms),
+          ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: TreasureMapPath(
+                  riddles: riddles,
+                  mapId: mapId,
+                  lastCompletedIndex: playState.lastCompletedIndex,
+                  riddleStars: playState.riddleStars,
+                  imageBytes: imageBytes,
+                  immediateActivation: playState.lastCompletedIndex == -1,
+                  onCurrentNodeTap: isCompleted
+                      ? null
+                      : playState.lastCompletedIndex < riddles.length - 1
+                          ? () => onNodeTap(
+                              playState.lastCompletedIndex + 1)
+                          : null,
+                  onCompletedNodeTap: onCompletedNodeTap,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -545,7 +568,8 @@ class _PlayAgainFab extends StatelessWidget {
         GestureDetector(
           onTap: onBack,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(30),
@@ -579,7 +603,8 @@ class _PlayAgainFab extends StatelessWidget {
         GestureDetector(
           onTap: onPlayAgain,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             decoration: BoxDecoration(
               color: EnolaTheme.accent,
               borderRadius: BorderRadius.circular(30),
