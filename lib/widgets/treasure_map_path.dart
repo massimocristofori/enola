@@ -228,10 +228,7 @@ class _RiddleNodeState extends State<_RiddleNode>
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
-                child: Hero(
-                  tag: 'riddle-node-${widget.riddleIndex}',
-                  child: _buildBox(isCompleted, isCurrentReached, isLocked),
-                ),
+                child: _buildBox(isCompleted, isCurrentReached, isLocked),
               ),
               if (isCompleted)
                 Positioned(top: 0, child: _StarsRow(stars: widget.stars)),
