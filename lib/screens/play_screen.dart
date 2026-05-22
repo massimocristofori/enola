@@ -191,8 +191,16 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     List<Riddle> riddles, int riddleIndex, int errorCount) async {
 
   final earnedStars = starsForErrors(errorCount);
-  // Capture display base BEFORE state updates
   final baseStars = ref.read(playStateProvider)?.totalStars ?? 0;
+
+  // If stars to animate: freeze header and dismiss first,
+  // then update state so the header never sees the jump
+  if (earnedStars > 0 && riddleIndex < riddles.length - 1) {
+    setState(() {
+      _activeRiddleIndex = null;
+      _animatedStars = baseStars;
+    });
+  }
 
   await ref
       .read(playStateProvider.notifier)
@@ -220,17 +228,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     }
   } else {
     if (earnedStars > 0) {
-      // Freeze display at pre-completion value immediately
-      setState(() {
-        _activeRiddleIndex = null;
-        _animatedStars = baseStars;
-      });
       _scheduleStarAnimation(riddleIndex, earnedStars, baseStars);
     } else {
+      // 0 stars: just dismiss normally (not done above)
       setState(() => _activeRiddleIndex = null);
     }
   }
 }
+
 
 void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
   Future.delayed(const Duration(milliseconds: 1700), () {
