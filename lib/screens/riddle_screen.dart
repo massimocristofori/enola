@@ -220,11 +220,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                      color: EnolaTheme.textSecond),
-                  onPressed: widget.onDismiss,
-                ),
+                // back button removed
                 Text(
                   'Riddle #${widget.riddleIndex + 1}',
                   style: const TextStyle(
@@ -339,7 +335,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
                           Text('Riddle #${widget.riddleIndex + 1}',
                               style: EnolaTheme.sectionHeader),
                           const SizedBox(height: 12),
-                          // ── Smaller font for the question ─────────────────
                           Text(
                             riddle.question,
                             textAlign: TextAlign.center,
@@ -624,8 +619,6 @@ class _AnswerFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canSkip = !isCorrect && errorCount >= 3 && onSkip != null;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
@@ -639,65 +632,60 @@ class _AnswerFeedback extends StatelessWidget {
           ),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(
-                isCorrect
-                    ? Icons.check_circle_rounded
-                    : Icons.cancel_rounded,
-                color: isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  isCorrect
-                      ? 'Correct! Well done.'
-                      : 'Not quite — try again!',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: isCorrect ? EnolaTheme.correct : EnolaTheme.wrong,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: onContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isCorrect ? EnolaTheme.correct : EnolaTheme.accent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                  isCorrect ? 'Continue' : 'Try Again',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-          if (canSkip) ...[
-            const SizedBox(height: 10),
-            GestureDetector(
-              onTap: onSkip,
+          if (isCorrect) ...[
+            const Icon(
+              Icons.check_circle_rounded,
+              color: EnolaTheme.correct,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
               child: Text(
-                'Skip this riddle (0 stars)',
+                'Correct! Well done.',
                 style: TextStyle(
-                  fontSize: 13,
-                  color: EnolaTheme.textSecond.withValues(alpha: 0.7),
-                  decoration: TextDecoration.underline,
-                  decorationColor:
-                      EnolaTheme.textSecond.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: EnolaTheme.correct,
                 ),
               ),
             ),
+          ] else ...[
+            if (onSkip != null)
+              TextButton(
+                onPressed: onSkip,
+                style: TextButton.styleFrom(
+                  foregroundColor: EnolaTheme.textSecond,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                ),
+                child: const Text(
+                  'Skip',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            const Spacer(),
           ],
+          ElevatedButton(
+            onPressed: onContinue,
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  isCorrect ? EnolaTheme.correct : EnolaTheme.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              isCorrect ? 'Continue' : 'Try Again',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
