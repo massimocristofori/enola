@@ -1,3 +1,5 @@
+// ── play_screen.dart ──────────────────────────────────────────────────────────
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -32,10 +34,27 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   int? _activeRiddleIndex;
   bool _activeRiddleReadOnly = false;
 
+  // ── Star animation state ───────────────────────────────────────────────────
+  // GlobalKey on the header star icon — landing target
+  final GlobalKey _headerStarKey = GlobalKey();
+  // GlobalKey per node — flying origin; populated by TreasureMapPath
+  final Map<int, GlobalKey> _nodeKeys = {};
+  // Stars to display in header during animation (null = use real state value)
+  int? _animatedStars;
+  // Overlay entry for flying stars
+  OverlayEntry? _starOverlay;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadSession());
+  }
+
+  @override
+  void dispose() {
+    _starOverlay?.remove();
+    _starOverlay = null;
+    super.dispose();
   }
 
   Future<void> _loadSession() async {
@@ -170,6 +189,10 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   Future<void> _onRiddleComplete(
       List<Riddle> riddles, int riddleIndex, int errorCount) async {
+
+    // Compute stars before state updates
+    final earnedStars = starsForErrors(errorCount);
+
     await ref
         .read(playStateProvider.notifier)
         .completeRiddle(riddleIndex, errorCount);
@@ -195,8 +218,66 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         );
       }
     } else {
+      // Dismiss riddle first, then schedule the star animation
       setState(() => _activeRiddleIndex = null);
+      if (earnedStars > 0) {
+        _scheduleStarAnimation(riddleIndex, earnedStars);
+      }
     }
+  }
+
+  void _scheduleStarAnimation(int riddleIndex, int starCount) {
+    // AnimatedSwitcher: 300ms
+    // _StarsRow last star animates at: 400ms delay + 800ms duration = 1200ms
+    // Add 200ms buffer → 1700ms total
+    Future.delayed(const Duration(milliseconds: 1700), () {
+      if (!mounted) return;
+      _runStarAnimation(riddleIndex, starCount);
+    });
+  }
+
+  void _runStarAnimation(int riddleIndex, int starCount) {
+    if (!mounted) return;
+
+    final nodeKey = _nodeKeys[riddleIndex];
+    if (nodeKey == null) return;
+
+    final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
+    final headerBox =
+        _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (nodeBox == null || headerBox == null) return;
+
+    final nodePos = nodeBox.localToGlobal(
+      Offset(nodeBox.size.width / 2, nodeBox.size.height / 2),
+    );
+    final headerPos = headerBox.localToGlobal(
+      Offset(headerBox.size.width / 2, headerBox.size.height / 2),
+    );
+
+    // Capture the stars value right before animation starts
+    final baseStars =
+        (ref.read(playStateProvider)?.totalStars ?? 0) - starCount;
+
+    setState(() => _animatedStars = baseStars);
+
+    _starOverlay?.remove();
+    _starOverlay = OverlayEntry(
+      builder: (_) => _FlyingStarsOverlay(
+        from: nodePos,
+        to: headerPos,
+        starCount: starCount,
+        onStarLanded: (landedCount) {
+          if (mounted) setState(() => _animatedStars = baseStars + landedCount);
+        },
+        onComplete: () {
+          _starOverlay?.remove();
+          _starOverlay = null;
+          if (mounted) setState(() => _animatedStars = null);
+        },
+      ),
+    );
+
+    Overlay.of(context).insert(_starOverlay!);
   }
 
   Future<void> _playAgain() async {
@@ -233,7 +314,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     final title = map?.title ?? '';
     final maxStars = (riddles?.length ?? 0) * 3;
-    final achievedStars = playState?.totalStars ?? 0;
+    final realAchievedStars = playState?.totalStars ?? 0;
+    final achievedStars = _animatedStars ?? realAchievedStars;
     final hasBeenPlayed = (playState?.lastCompletedIndex ?? -1) >= 0;
     final bool showingLoader = _initialising || playState == null;
     final bool riddleActive = _activeRiddleIndex != null;
@@ -253,10 +335,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            // ── Stack so the header always renders on top of the content ────
             child: Stack(
               children: [
-                // ── Content sits below the header ──────────────────────────
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -307,6 +387,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                         playState: playState,
                                         isCompleted: _isCompleted,
                                         imageBytes: map?.imageBytes,
+                                        nodeKeys: _nodeKeys,
                                         onNodeTap: _onNodeTap,
                                         onCompletedNodeTap:
                                             _onCompletedNodeTap,
@@ -317,7 +398,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                         ),
                 ),
 
-                // ── Header always on top ────────────────────────────────────
                 Positioned(
                   top: 0,
                   left: 0,
@@ -329,6 +409,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                     maxStars: maxStars,
                     hasBeenPlayed: hasBeenPlayed,
                     compact: riddleActive,
+                    starKey: _headerStarKey,
                   ),
                 ),
               ],
@@ -348,6 +429,7 @@ class _MapView extends StatelessWidget {
   final dynamic playState;
   final bool isCompleted;
   final dynamic imageBytes;
+  final Map<int, GlobalKey> nodeKeys;
   final void Function(int) onNodeTap;
   final void Function(int) onCompletedNodeTap;
 
@@ -358,6 +440,7 @@ class _MapView extends StatelessWidget {
     required this.playState,
     required this.isCompleted,
     required this.imageBytes,
+    required this.nodeKeys,
     required this.onNodeTap,
     required this.onCompletedNodeTap,
   });
@@ -402,6 +485,7 @@ class _MapView extends StatelessWidget {
                   lastCompletedIndex: playState.lastCompletedIndex,
                   riddleStars: playState.riddleStars,
                   imageBytes: imageBytes,
+                  nodeKeys: nodeKeys,
                   immediateActivation: playState.lastCompletedIndex == -1,
                   onCurrentNodeTap: isCompleted
                       ? null
@@ -429,6 +513,7 @@ class _PlayHeader extends StatelessWidget {
   final int maxStars;
   final bool hasBeenPlayed;
   final bool compact;
+  final GlobalKey starKey;
 
   const _PlayHeader({
     required this.mapId,
@@ -436,6 +521,7 @@ class _PlayHeader extends StatelessWidget {
     required this.achievedStars,
     required this.maxStars,
     required this.hasBeenPlayed,
+    required this.starKey,
     this.compact = false,
   });
 
@@ -463,13 +549,11 @@ class _PlayHeader extends StatelessWidget {
                 ),
               ],
             ),
-            // ClipRRect hides the title as it slides up out of the header
             child: ClipRect(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Title slides up and out when compact ─────────────────
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
@@ -493,7 +577,6 @@ class _PlayHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // ── Stars + progress always visible ──────────────────────
                   Padding(
                     padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
                     child: Column(
@@ -502,17 +585,28 @@ class _PlayHeader extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.star_rounded,
-                                size: 17, color: Color(0xFFf59e0b)),
+                            // ── Keyed star icon: landing target ───────────
+                            Icon(
+                              key: starKey,
+                              Icons.star_rounded,
+                              size: 17,
+                              color: const Color(0xFFf59e0b),
+                            ),
                             const SizedBox(width: 4),
-                            Text(
-                              hasBeenPlayed
-                                  ? '$achievedStars / $maxStars'
-                                  : '$maxStars',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF555555),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              transitionBuilder: (child, anim) =>
+                                  ScaleTransition(scale: anim, child: child),
+                              child: Text(
+                                key: ValueKey(achievedStars),
+                                hasBeenPlayed
+                                    ? '$achievedStars / $maxStars'
+                                    : '$maxStars',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF555555),
+                                ),
                               ),
                             ),
                           ],
@@ -539,6 +633,139 @@ class _PlayHeader extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Flying stars overlay ──────────────────────────────────────────────────────
+
+class _FlyingStarsOverlay extends StatefulWidget {
+  final Offset from;
+  final Offset to;
+  final int starCount;
+  final void Function(int landedCount) onStarLanded;
+  final VoidCallback onComplete;
+
+  const _FlyingStarsOverlay({
+    required this.from,
+    required this.to,
+    required this.starCount,
+    required this.onStarLanded,
+    required this.onComplete,
+  });
+
+  @override
+  State<_FlyingStarsOverlay> createState() => _FlyingStarsOverlayState();
+}
+
+class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
+    with TickerProviderStateMixin {
+  final List<AnimationController> _controllers = [];
+  final List<Animation<Offset>> _positions = [];
+  final List<Animation<double>> _scales = [];
+  final List<Animation<double>> _opacities = [];
+  int _landed = 0;
+
+  // Stagger between each star
+  static const _staggerMs = 180;
+  // Flight duration per star
+  static const _flightMs = 500;
+
+  @override
+  void initState() {
+    super.initState();
+
+    for (int i = 0; i < widget.starCount; i++) {
+      final ctrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: _flightMs),
+      );
+
+      _positions.add(
+        Tween<Offset>(begin: widget.from, end: widget.to).animate(
+          CurvedAnimation(parent: ctrl, curve: Curves.easeInCubic),
+        ),
+      );
+
+      _scales.add(
+        TweenSequence([
+          TweenSequenceItem(
+              tween: Tween(begin: 1.0, end: 1.4), weight: 20),
+          TweenSequenceItem(
+              tween: Tween(begin: 1.4, end: 0.6), weight: 80),
+        ]).animate(CurvedAnimation(parent: ctrl, curve: Curves.easeIn)),
+      );
+
+      _opacities.add(
+        TweenSequence([
+          TweenSequenceItem(
+              tween: Tween(begin: 1.0, end: 1.0), weight: 70),
+          TweenSequenceItem(
+              tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+        ]).animate(ctrl),
+      );
+
+      ctrl.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _landed++;
+          widget.onStarLanded(_landed);
+          if (_landed == widget.starCount) {
+            // Small pause so the last +1 is visible before cleanup
+            Future.delayed(const Duration(milliseconds: 300), () {
+              if (mounted) widget.onComplete();
+            });
+          }
+        }
+      });
+
+      _controllers.add(ctrl);
+
+      // Stagger launch
+      Future.delayed(Duration(milliseconds: i * _staggerMs), () {
+        if (mounted) ctrl.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: List.generate(widget.starCount, (i) {
+        return AnimatedBuilder(
+          animation: _controllers[i],
+          builder: (_, __) {
+            return Positioned(
+              left: _positions[i].value.dx - 14,
+              top: _positions[i].value.dy - 14,
+              child: Opacity(
+                opacity: _opacities[i].value,
+                child: Transform.scale(
+                  scale: _scales[i].value,
+                  child: const Icon(
+                    Icons.star_rounded,
+                    size: 28,
+                    color: Color(0xFFE8C840),
+                    shadows: [
+                      Shadow(
+                        color: Colors.white,
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }
