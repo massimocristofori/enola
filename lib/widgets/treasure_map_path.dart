@@ -1,3 +1,5 @@
+// ── treasure_map_path.dart ────────────────────────────────────────────────────
+
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -19,11 +21,13 @@ class TreasureMapPath extends ConsumerWidget {
   final List<int> riddleStars;
   final Uint8List? imageBytes;
   final bool immediateActivation;
+  final Map<int, GlobalKey> nodeKeys;
 
   const TreasureMapPath({
     super.key,
     required this.riddles,
     required this.mapId,
+    required this.nodeKeys,
     this.onCurrentNodeTap,
     this.onCompletedNodeTap,
     this.lastCompletedIndex,
@@ -57,7 +61,11 @@ class TreasureMapPath extends ConsumerWidget {
 
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
+        // Ensure a GlobalKey exists for every node index
+        nodeKeys.putIfAbsent(index, () => GlobalKey());
+
         final nodeWidget = _RiddleNode(
+          key: nodeKeys[index],
           riddleIndex: index,
           index: index + 1,
           status: status,
@@ -137,6 +145,7 @@ class _RiddleNode extends StatefulWidget {
   final bool immediateActivation;
 
   const _RiddleNode({
+    super.key,
     required this.riddleIndex,
     required this.index,
     required this.status,
