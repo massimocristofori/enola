@@ -188,43 +188,57 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<void> _onRiddleComplete(
-      List<Riddle> riddles, int riddleIndex, int errorCount) async {
+    List<Riddle> riddles, int riddleIndex, int errorCount) async {
 
-    // Compute stars before state updates
-    final earnedStars = starsForErrors(errorCount);
+  final earnedStars = starsForErrors(errorCount);
+  // Capture display base BEFORE state updates
+  final baseStars = ref.read(playStateProvider)?.totalStars ?? 0;
 
-    await ref
-        .read(playStateProvider.notifier)
-        .completeRiddle(riddleIndex, errorCount);
+  await ref
+      .read(playStateProvider.notifier)
+      .completeRiddle(riddleIndex, errorCount);
 
-    ref.invalidate(latestSessionProvider(widget.mapId));
+  ref.invalidate(latestSessionProvider(widget.mapId));
 
-    if (riddleIndex == riddles.length - 1) {
-      final totalStars = ref.read(playStateProvider)?.totalStars ?? 0;
-      final maxStars = riddles.length * 3;
-      await ref.read(playStateProvider.notifier).finish();
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultScreen(
-              mapId: widget.mapId,
-              correct: riddles.length,
-              total: riddles.length,
-              totalStars: totalStars,
-              maxStars: maxStars,
-            ),
+  if (riddleIndex == riddles.length - 1) {
+    final totalStars = ref.read(playStateProvider)?.totalStars ?? 0;
+    final maxStars = riddles.length * 3;
+    await ref.read(playStateProvider.notifier).finish();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResultScreen(
+            mapId: widget.mapId,
+            correct: riddles.length,
+            total: riddles.length,
+            totalStars: totalStars,
+            maxStars: maxStars,
           ),
-        );
-      }
+        ),
+      );
+    }
+  } else {
+    if (earnedStars > 0) {
+      // Freeze display at pre-completion value immediately
+      setState(() {
+        _activeRiddleIndex = null;
+        _animatedStars = baseStars;
+      });
+      _scheduleStarAnimation(riddleIndex, earnedStars, baseStars);
     } else {
-      // Dismiss riddle first, then schedule the star animation
       setState(() => _activeRiddleIndex = null);
-      if (earnedStars > 0) {
-        _scheduleStarAnimation(riddleIndex, earnedStars);
-      }
     }
   }
+}
+
+void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
+  Future.delayed(const Duration(milliseconds: 1700), () {
+    if (!mounted) return;
+    _runStarAnimation(riddleIndex, starCount, baseStars);
+  });
+}
+
 
   void _scheduleStarAnimation(int riddleIndex, int starCount) {
     // AnimatedSwitcher: 300ms
@@ -236,49 +250,44 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     });
   }
 
-  void _runStarAnimation(int riddleIndex, int starCount) {
-    if (!mounted) return;
+  void _runStarAnimation(int riddleIndex, int starCount, int baseStars) {
+  if (!mounted) return;
 
-    final nodeKey = _nodeKeys[riddleIndex];
-    if (nodeKey == null) return;
+  final nodeKey = _nodeKeys[riddleIndex];
+  if (nodeKey == null) return;
 
-    final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
-    final headerBox =
-        _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
-    if (nodeBox == null || headerBox == null) return;
+  final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
+  final headerBox =
+      _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
+  if (nodeBox == null || headerBox == null) return;
 
-    final nodePos = nodeBox.localToGlobal(
-      Offset(nodeBox.size.width / 2, nodeBox.size.height / 2),
-    );
-    final headerPos = headerBox.localToGlobal(
-      Offset(headerBox.size.width / 2, headerBox.size.height / 2),
-    );
+  final nodePos = nodeBox.localToGlobal(
+    Offset(nodeBox.size.width / 2, nodeBox.size.height / 2),
+  );
+  final headerPos = headerBox.localToGlobal(
+    Offset(headerBox.size.width / 2, headerBox.size.height / 2),
+  );
 
-    // Capture the stars value right before animation starts
-    final baseStars =
-        (ref.read(playStateProvider)?.totalStars ?? 0) - starCount;
+  _starOverlay?.remove();
+  _starOverlay = OverlayEntry(
+    builder: (_) => _FlyingStarsOverlay(
+      from: nodePos,
+      to: headerPos,
+      starCount: starCount,
+      onStarLanded: (landedCount) {
+        if (mounted) setState(() => _animatedStars = baseStars + landedCount);
+      },
+      onComplete: () {
+        _starOverlay?.remove();
+        _starOverlay = null;
+        if (mounted) setState(() => _animatedStars = null);
+      },
+    ),
+  );
 
-    setState(() => _animatedStars = baseStars);
+  Overlay.of(context).insert(_starOverlay!);
+}
 
-    _starOverlay?.remove();
-    _starOverlay = OverlayEntry(
-      builder: (_) => _FlyingStarsOverlay(
-        from: nodePos,
-        to: headerPos,
-        starCount: starCount,
-        onStarLanded: (landedCount) {
-          if (mounted) setState(() => _animatedStars = baseStars + landedCount);
-        },
-        onComplete: () {
-          _starOverlay?.remove();
-          _starOverlay = null;
-          if (mounted) setState(() => _animatedStars = null);
-        },
-      ),
-    );
-
-    Overlay.of(context).insert(_starOverlay!);
-  }
 
   Future<void> _playAgain() async {
     final db = DriftService.instance.db;
