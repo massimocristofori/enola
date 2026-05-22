@@ -240,15 +240,7 @@ void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
 }
 
 
-  void _scheduleStarAnimation(int riddleIndex, int starCount) {
-    // AnimatedSwitcher: 300ms
-    // _StarsRow last star animates at: 400ms delay + 800ms duration = 1200ms
-    // Add 200ms buffer → 1700ms total
-    Future.delayed(const Duration(milliseconds: 1700), () {
-      if (!mounted) return;
-      _runStarAnimation(riddleIndex, starCount);
-    });
-  }
+
 
   void _runStarAnimation(int riddleIndex, int starCount, int baseStars) {
   if (!mounted) return;
