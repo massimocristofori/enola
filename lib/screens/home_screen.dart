@@ -426,8 +426,8 @@ class _RankOverlay extends StatelessWidget {
         Positioned.fill(
           child: CustomPaint(
             painter: SunburstPainter(
-              rayCount: 20, 
-              alphas: [0.18, 0.35, 0.10, 0.26], 
+              rayCount: 16, 
+              alphas: [0.36, 0.70, 0.20, 0.52], 
             ),
           ),
         ),
@@ -693,7 +693,7 @@ class SunburstPainter extends CustomPainter {
   final int rayCount;
   final List<double> alphas;
 
-  SunburstPainter({this.rayCount = 20, required this.alphas});
+  SunburstPainter({this.rayCount = 16, required this.alphas});
 
   @override
   void paint(Canvas canvas, Size size) {
