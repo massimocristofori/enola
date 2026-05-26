@@ -428,13 +428,13 @@ class _RankOverlay extends StatelessWidget {
             Positioned.fill(
               child: CustomPaint(
                 painter: SunburstPainter(
-                  rayCount: 20, // Increased ray count for total backdrop coverage
-                  alphas: [0.18, 0.35, 0.10, 0.26], // Bold, high-contrast opacities
+                  rayCount: 20, // Bold layout density
+                  alphas: [0.18, 0.35, 0.10, 0.26], // High-contrast alternating alphas
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(48.0), // Deep padding allows rays to claim the whole shell
+              padding: const EdgeInsets.all(48.0), // Expands layout bounds so rays canvas the full image shell area
               child: Text(
                 _rankEmoji(starRatio), 
                 style: const TextStyle(
@@ -445,7 +445,7 @@ class _RankOverlay extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        // Hidden cleanly from the UI for now without code breaks
+        // Hidden cleanly from view but preserved structurally to maintain zero logic breakages
         Visibility(
           visible: false,
           maintainState: true,
@@ -730,7 +730,7 @@ class SunburstPainter extends CustomPainter {
       paint.color = Colors.white.withValues(alpha: alpha);
 
       final startAngle = i * angleStep;
-      // Multiplying angleStep by 0.68 stretches the ray width, making them bolder
+      // Multiplying angleStep by 0.68 stretches the ray arcs to make them significantly bolder
       final endAngle = startAngle + (angleStep * 0.68); 
 
       final path = Path()
