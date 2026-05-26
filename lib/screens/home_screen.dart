@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'dart:math' as math;
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -421,38 +423,28 @@ class _RankOverlay extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          _rankEmoji(starRatio),
-          style: TextStyle(
-            fontSize: 64,
-            shadows: [
-              Shadow(
-                color: Colors.white.withValues(alpha: 0.95),
-                blurRadius: 4,
-                offset: const Offset(0, 0),
+        // Using a Stack ensures the rays sit directly behind the emoji
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: SunburstPainter(
+                  rayCount: 16, 
+                  alphas: [0.12, 0.28, 0.06, 0.20], // Alternating opacities
+                ),
               ),
-              Shadow(
-                color: Colors.white.withValues(alpha: 0.85),
-                blurRadius: 15,
-                offset: const Offset(0, 0),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24.0), // Gives the rays space to shine out
+              child: Text(
+                _rankEmoji(starRatio), // 👈 Calls your existing function perfectly
+                style: const TextStyle(
+                  fontSize: 64, // Bigger emoji
+                ),
               ),
-              Shadow(
-                color: Colors.white.withValues(alpha: 0.65),
-                blurRadius: 35,
-                offset: const Offset(0, 0),
-              ),
-              Shadow(
-                color: Colors.white.withValues(alpha: 0.45),
-                blurRadius: 60,
-                offset: const Offset(0, 0),
-              ),
-							Shadow(
-     color: Colors.black.withValues(alpha: 0.25),
-     blurRadius: 80,
-     offset: const Offset(0, 0),
-   ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         Container(
@@ -462,7 +454,7 @@ class _RankOverlay extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            _rankName(starRatio),
+            _rankName(starRatio), // 👈 Calls your existing function perfectly
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -475,6 +467,7 @@ class _RankOverlay extends StatelessWidget {
     );
   }
 }
+
 
 
 // ── Card Shell ────────────────────────────────────────────────────────────────
@@ -714,3 +707,47 @@ class _CreateFab extends StatelessWidget {
     );
   }
 }
+
+class SunburstPainter extends CustomPainter {
+  final int rayCount;
+  final List<double> alphas;
+
+  SunburstPainter({this.rayCount = 16, required this.alphas});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.sqrt(size.width * size.width + size.height * size.height);
+    
+    final angleStep = (2 * math.pi) / rayCount;
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    for (int i = 0; i < rayCount; i++) {
+      final alpha = alphas[i % alphas.length];
+      paint.color = Colors.white.withValues(alpha: alpha);
+
+      final startAngle = i * angleStep;
+      final endAngle = startAngle + (angleStep / 2); 
+
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(
+          center.dx + radius * math.cos(startAngle),
+          center.dy + radius * math.sin(startAngle),
+        )
+        ..lineTo(
+          center.dx + radius * math.cos(endAngle),
+          center.dy + radius * math.sin(endAngle),
+        )
+        ..close();
+
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SunburstPainter oldDelegate) {
+    return oldDelegate.rayCount != rayCount || oldDelegate.alphas != alphas;
+  }
+}
+
