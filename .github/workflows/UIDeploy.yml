@@ -1,7 +1,7 @@
 name: Flutter Web Build & Deploy
 
 on:
-  workflow_dispatch:   # This allows you to run it manually
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,12 +12,12 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history so git push doesn't complain about shallow clones
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-      
-          
           flutter-version: '3.x'
           channel: 'stable'
           cache: true
@@ -34,19 +34,31 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add lib/database/database.g.dart
-          git diff --staged --quiet || git commit -m "chore: update generated drift files"
-          git push
+          
+          # Only stage if the file exists to prevent pathspec errors
+          if [ -f lib/database/database.g.dart ]; then
+            git add lib/database/database.g.dart
+          fi
+          
+          # Commit and push only if there are actual changes
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update generated drift files [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes detected in generated files. Skipping commit."
+          fi
 
       - name: Build Web
         run: |
-          # Add the --no-wasm-dry-run flag here
-          flutter build web --release --no-wasm-dry-run --base-href /${{ github.event.repository.name }}/
+          # Build Flutter web targeting canvas kit / html cleanly
+          flutter build web --release --no-wasm-dry-run --base-href "/${{ github.event.repository.name }}/"
 
-          # 2. THE FIX: Force the bootstrap script to ignore WASM
-          sed -i 's/engineConfiguration: {/engineConfiguration: { useWasm: false,/g' build/web/flutter_bootstrap.js
+          # Force the bootstrap script to ignore WASM
+          if [ -f build/web/flutter_bootstrap.js ]; then
+            sed -i 's/engineConfiguration: {/engineConfiguration: { useWasm: false,/g' build/web/flutter_bootstrap.js
+          fi
 
-          # 3. Cleanup and Jekyll fix
+          # Cleanup and Jekyll fix
           rm -f build/web/main.dart.wasm
           touch build/web/.nojekyll
           
