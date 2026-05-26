@@ -419,52 +419,29 @@ class _RankOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    // Standardizing to Stack alignment center and clipping bounds
+    return Stack(
+      alignment: Alignment.center,
       children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: SunburstPainter(
-                  rayCount: 20, // Bold layout density
-                  alphas: [0.18, 0.35, 0.10, 0.26], // High-contrast alternating alphas
-                ),
-              ),
+        Positioned.fill(
+          child: CustomPaint(
+            painter: SunburstPainter(
+              rayCount: 20, 
+              alphas: [0.18, 0.35, 0.10, 0.26], 
             ),
-            Padding(
-              padding: const EdgeInsets.all(48.0), // Expands layout bounds so rays canvas the full image shell area
-              child: Text(
-                _rankEmoji(starRatio), 
-                style: const TextStyle(
-                  fontSize: 64, 
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 4),
-        // Hidden cleanly from view but preserved structurally to maintain zero logic breakages
+        Text(
+          _rankEmoji(starRatio), 
+          style: const TextStyle(
+            fontSize: 64, 
+          ),
+        ),
+        // Preserved structurally to avoid breaking your signature layout parameters
         Visibility(
           visible: false,
           maintainState: true,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              _rankName(starRatio), 
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
+          child: Text(_rankName(starRatio)),
         ),
       ],
     );
@@ -512,19 +489,20 @@ class _CardShell extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: imageBytes != null
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10), // Ensures the rays get sliced at the image edges!
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    imageBytes != null
                         ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                        : Image.asset('assets/images/0.jpeg',
-                            fit: BoxFit.cover),
-                  ),
-                  if (isComplete)
-                    Center(child: _RankOverlay(starRatio: starRatio)),
-                ],
+                        : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                    if (isComplete)
+                      Positioned.fill(
+                        child: _RankOverlay(starRatio: starRatio),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -730,7 +708,6 @@ class SunburstPainter extends CustomPainter {
       paint.color = Colors.white.withValues(alpha: alpha);
 
       final startAngle = i * angleStep;
-      // Multiplying angleStep by 0.68 stretches the ray arcs to make them significantly bolder
       final endAngle = startAngle + (angleStep * 0.68); 
 
       final path = Path()
