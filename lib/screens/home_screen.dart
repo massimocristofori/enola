@@ -424,31 +424,31 @@ class _RankOverlay extends StatelessWidget {
         Text(
           _rankEmoji(starRatio),
           style: TextStyle(
-            fontSize: 48,
+            fontSize: 64,
             shadows: [
               Shadow(
                 color: Colors.white.withValues(alpha: 0.95),
-                blurRadius: 2,
+                blurRadius: 4,
                 offset: const Offset(0, 0),
               ),
               Shadow(
                 color: Colors.white.withValues(alpha: 0.85),
-                blurRadius: 8,
+                blurRadius: 15,
                 offset: const Offset(0, 0),
               ),
               Shadow(
                 color: Colors.white.withValues(alpha: 0.65),
-                blurRadius: 20,
+                blurRadius: 35,
                 offset: const Offset(0, 0),
               ),
               Shadow(
                 color: Colors.white.withValues(alpha: 0.45),
-                blurRadius: 40,
+                blurRadius: 60,
                 offset: const Offset(0, 0),
               ),
 							Shadow(
      color: Colors.black.withValues(alpha: 0.25),
-     blurRadius: 60,
+     blurRadius: 80,
      offset: const Offset(0, 0),
    ),
             ],
