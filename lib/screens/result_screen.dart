@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -21,7 +23,6 @@ class ResultScreen extends StatelessWidget {
     required this.maxStars,
   });
 
-  //double get _score => total == 0 ? 0 : correct / total;
   double get _starRatio => maxStars == 0 ? 0 : totalStars / maxStars;
 
   String get _rank {
@@ -45,35 +46,47 @@ class ResultScreen extends StatelessWidget {
     return 'The path to mastery begins with a single step.';
   }
 
-  // Happy, vibrant "video-game victory" colors based on performance tier
   Color get _scoreColor {
-    if (_starRatio >= 0.9) return const Color(0xFFFFD700); // Epic Gaming Gold
-    if (_starRatio >= 0.7) return const Color(0xFF00E676); // Vibrant Lime/Green
-    if (_starRatio >= 0.5) return const Color(0xFF00E5FF); // Bright Cyan Magic Blue
-    return const Color(0xFFFF9100); // Energetic Sunset Orange (instead of a sad red/wrong color)
+    if (_starRatio >= 0.9) return const Color(0xFFFFD700); 
+    if (_starRatio >= 0.7) return const Color(0xFF00E676); 
+    if (_starRatio >= 0.5) return const Color(0xFF00E5FF); 
+    return const Color(0xFFFF9100); 
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: FantasyBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              children: [
-                const Spacer(),
-                _buildCrest(),
-                const SizedBox(height: 28),
-                const RuneDivider(),
-                const SizedBox(height: 24),
-                _buildStats(),
-                const Spacer(),
-                _buildActions(context),
-                const SizedBox(height: 20),
-              ],
+        child: Stack(
+          children: [
+            // Full-screen ambient sunburst rays sitting behind the content
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _ResultSunburstPainter(
+                  rayCount: 24, // High density full-screen distribution
+                  alphas: [0.03, 0.07, 0.02, 0.05], // Ultra-soft elegant ambient glow values
+                ),
+              ),
             ),
-          ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  children: [
+                    const Spacer(),
+                    _buildCrest(),
+                    const SizedBox(height: 28),
+                    const RuneDivider(),
+                    const SizedBox(height: 24),
+                    _buildStats(),
+                    const Spacer(),
+                    _buildActions(context),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -109,9 +122,9 @@ class ResultScreen extends StatelessWidget {
             fontWeight: FontWeight.w900,
             color: _scoreColor,
             letterSpacing: 1,
-            shadows:  [
+            shadows: [
               Shadow(
-                color: _scoreColor.withValues(alpha: 0.4), // Increased alpha for a glowing achievement pop
+                color: _scoreColor.withValues(alpha: 0.4), 
                 blurRadius: 25,
               ),
             ],
@@ -131,78 +144,6 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  // ── Compact star summary ───────────────────────────────────────────────────
-
-  Widget _buildStarSummary() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: _scoreColor.withValues(alpha: 0.1), // Matches the rank tier energy
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Animated star icon
-          Icon(Icons.star_rounded, color: _scoreColor, size: 32)
-              .animate()
-              .scale(
-                begin: const Offset(0, 0),
-                end: const Offset(1, 1),
-                duration: 500.ms,
-                curve: Curves.elasticOut,
-                delay: 700.ms,
-              ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Big number
-              Text(
-                '$totalStars / $maxStars',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: _scoreColor,
-                ),
-              ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
-              // Progress bar
-              const SizedBox(height: 6),
-              SizedBox(
-                width: 140,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _starRatio,
-                    minHeight: 6,
-                    backgroundColor: EnolaTheme.border,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(_scoreColor),
-                  ),
-                ),
-              ).animate().fadeIn(delay: 900.ms),
-              const SizedBox(height: 4),
-              const Text(
-                'stars collected',
-                style:  TextStyle(
-                  fontSize: 11,
-                  color: EnolaTheme.textSecond,
-                ),
-              ).animate().fadeIn(delay: 900.ms),
-            ],
-          ),
-        ],
-      ),
-    ).animate().scale(
-          begin: const Offset(0.8, 0.8),
-          end: const Offset(1, 1),
-          duration: 400.ms,
-          curve: Curves.easeOut,
-          delay: 700.ms,
-        );
-  }
-
   Widget _buildStats() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -211,21 +152,21 @@ class ResultScreen extends StatelessWidget {
           icon: Icons.menu_book_rounded,
           value: '$total',
           label: 'Riddles',
-          color: const Color(0xFFFF7043), // Fun, cheerful Coral Orange for books
+          color: const Color(0xFFFF7043), 
         ),
         const SizedBox(width: 16),
         _StatBox(
           icon: Icons.star_rounded,
           value: '$totalStars',
           label: 'Stars',
-          color: const Color(0xFFFFCA28), // Bright, happy Amber Gold for Stars
+          color: const Color(0xFFFFCA28), 
         ),
         const SizedBox(width: 16),
         _StatBox(
           icon: Icons.emoji_events_rounded,
           value: '${((_starRatio) * 100).round()}%',
           label: 'Score',
-          color: _scoreColor, // Stays mapped to their overall tier color
+          color: _scoreColor, 
         ),
       ],
     ).animate().fadeIn(delay: 1000.ms, duration: 400.ms);
@@ -241,9 +182,8 @@ class ResultScreen extends StatelessWidget {
             icon: const Icon(Icons.replay_rounded),
             label: const Text('Play Again'),
             style: ElevatedButton.styleFrom(
-              // Using the primary score color to give the button a rewarding theme
               backgroundColor: _scoreColor,
-              foregroundColor: Colors.black87, // High contrast text readability
+              foregroundColor: Colors.black87, 
               elevation: 4,
             ),
           ),
@@ -293,13 +233,13 @@ class _StatBox extends StatelessWidget {
       width: 90,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12), // Slightly bumped alpha for richer box backgrounds
+        color: color.withValues(alpha: 0.12), 
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5), // Noticeable glowing trim
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5), 
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24), // Bumped icon size slightly for game layout feel
+          Icon(icon, color: color, size: 24), 
           const SizedBox(height: 6),
           Text(
             value,
@@ -319,5 +259,50 @@ class _StatBox extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Full-Screen Custom Painter ────────────────────────────────────────────────
+
+class _ResultSunburstPainter extends CustomPainter {
+  final int rayCount;
+  final List<double> alphas;
+
+  _ResultSunburstPainter({this.rayCount = 24, required this.alphas});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.sqrt(size.width * size.width + size.height * size.height);
+    
+    final angleStep = (2 * math.pi) / rayCount;
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    for (int i = 0; i < rayCount; i++) {
+      final alpha = alphas[i % alphas.length];
+      paint.color = Colors.white.withValues(alpha: alpha);
+
+      final startAngle = i * angleStep;
+      final endAngle = startAngle + (angleStep * 0.65); 
+
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(
+          center.dx + radius * math.cos(startAngle),
+          center.dy + radius * math.sin(startAngle),
+        )
+        ..lineTo(
+          center.dx + radius * math.cos(endAngle),
+          center.dy + radius * math.sin(endAngle),
+        )
+        ..close();
+
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ResultSunburstPainter oldDelegate) {
+    return oldDelegate.rayCount != rayCount || oldDelegate.alphas != alphas;
   }
 }
