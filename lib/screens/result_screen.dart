@@ -57,36 +57,41 @@ class ResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FantasyBackground(
-        child: Stack(
-          children: [
-            // Full-screen ambient sunburst rays sitting behind the content
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _ResultSunburstPainter(
-                  rayCount: 24, // High density full-screen distribution
-                  alphas: [0.03, 0.07, 0.02, 0.05], // Ultra-soft elegant ambient glow values
+        child: Container(
+          // Subtle grey-blue base color so the white ambient rays contrast cleanly
+          color: const Color(0xFFEBF0F5),
+          child: Stack(
+            children: [
+              // Full-screen ambient sunburst rays sitting behind the content
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _ResultSunburstPainter(
+                    rayCount: 24, 
+                    // Bumped alphas slightly so they track visibly over the grey background
+                    alphas: [0.22, 0.38, 0.15, 0.28], 
+                  ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  children: [
-                    const Spacer(),
-                    _buildCrest(),
-                    const SizedBox(height: 28),
-                    const RuneDivider(),
-                    const SizedBox(height: 24),
-                    _buildStats(),
-                    const Spacer(),
-                    _buildActions(context),
-                    const SizedBox(height: 20),
-                  ],
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    children: [
+                      const Spacer(),
+                      _buildCrest(),
+                      const SizedBox(height: 28),
+                      const RuneDivider(),
+                      const SizedBox(height: 24),
+                      _buildStats(),
+                      const Spacer(),
+                      _buildActions(context),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
