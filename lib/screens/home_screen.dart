@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:math' as math;
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -423,43 +422,47 @@ class _RankOverlay extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Using a Stack ensures the rays sit directly behind the emoji
         Stack(
           alignment: Alignment.center,
           children: [
             Positioned.fill(
               child: CustomPaint(
                 painter: SunburstPainter(
-                  rayCount: 16, 
-                  alphas: [0.12, 0.28, 0.06, 0.20], // Alternating opacities
+                  rayCount: 20, // Increased ray count for total backdrop coverage
+                  alphas: [0.18, 0.35, 0.10, 0.26], // Bold, high-contrast opacities
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(24.0), // Gives the rays space to shine out
+              padding: const EdgeInsets.all(48.0), // Deep padding allows rays to claim the whole shell
               child: Text(
-                _rankEmoji(starRatio), // 👈 Calls your existing function perfectly
+                _rankEmoji(starRatio), 
                 style: const TextStyle(
-                  fontSize: 64, // Bigger emoji
+                  fontSize: 64, 
                 ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.45),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            _rankName(starRatio), // 👈 Calls your existing function perfectly
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 0.5,
+        // Hidden cleanly from the UI for now without code breaks
+        Visibility(
+          visible: false,
+          maintainState: true,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _rankName(starRatio), 
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
@@ -467,8 +470,6 @@ class _RankOverlay extends StatelessWidget {
     );
   }
 }
-
-
 
 // ── Card Shell ────────────────────────────────────────────────────────────────
 
@@ -708,11 +709,13 @@ class _CreateFab extends StatelessWidget {
   }
 }
 
+// ── Custom Painter ────────────────────────────────────────────────────────────
+
 class SunburstPainter extends CustomPainter {
   final int rayCount;
   final List<double> alphas;
 
-  SunburstPainter({this.rayCount = 16, required this.alphas});
+  SunburstPainter({this.rayCount = 20, required this.alphas});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -727,7 +730,8 @@ class SunburstPainter extends CustomPainter {
       paint.color = Colors.white.withValues(alpha: alpha);
 
       final startAngle = i * angleStep;
-      final endAngle = startAngle + (angleStep / 2); 
+      // Multiplying angleStep by 0.68 stretches the ray width, making them bolder
+      final endAngle = startAngle + (angleStep * 0.68); 
 
       final path = Path()
         ..moveTo(center.dx, center.dy)
@@ -750,4 +754,3 @@ class SunburstPainter extends CustomPainter {
     return oldDelegate.rayCount != rayCount || oldDelegate.alphas != alphas;
   }
 }
-
