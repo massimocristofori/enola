@@ -1,10 +1,10 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
-// Forward declaration — main.dart defines the actual top-level function
-// and passes it to init(). Stored here so the background isolate can
-// write to a shared static slot.
+const String _kPendingPayloadKey = 'pending_notification_payload';
+
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
   NotificationService._internal();
@@ -14,17 +14,18 @@ class NotificationService {
 
   bool _initialised = false;
 
-  // Holds a response that arrived while the app was backgrounded or
-  // cold-started via notification tap.
-  static NotificationResponse? _pendingResponse;
-
   // ── Temporary debug ───────────────────────────────────────────────────────
   static String lastPayload = 'never fired';
 
-  // Called from the top-level background handler in main.dart
-  static void setPendingBackground(NotificationResponse response) {
-    _pendingResponse = response;
-    lastPayload = 'background set: "${response.payload}"';
+  // ── Called from top-level background handler in main.dart ────────────────
+  // Runs on a background isolate — can only do synchronous or simple async
+  // work. shared_preferences is safe here.
+  static Future<void> setPendingBackground(NotificationResponse response) async {
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+    lastPayload = 'background wrote: "$payload"';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kPendingPayloadKey, payload);
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -55,26 +56,40 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: onBackground,
     );
 
-    // ── Cold-Start Check ─────────────────────────────────────────────────────
-    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
-    if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
-      final response = launchDetails.notificationResponse;
-      if (response != null) {
-        _pendingResponse = response;
-        lastPayload = 'cold-start set: "${response.payload}"';
-      }
-    }
-
     _initialised = true;
   }
 
   // ── Drain ─────────────────────────────────────────────────────────────────
+  // Call this after all callbacks are wired. Checks both:
+  //   1. shared_preferences (background isolate tap or cold start via background)
+  //   2. getNotificationAppLaunchDetails (cold start via notification)
 
-  void drainPendingLaunchNotification() {
-    final response = _pendingResponse;
-    if (response != null) {
-      _pendingResponse = null;
-      _onNotificationTap(response);
+  Future<void> drainPendingLaunchNotification() async {
+    // Check shared_preferences first (covers background tap → foreground)
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_kPendingPayloadKey);
+    if (stored != null && stored.isNotEmpty) {
+      await prefs.remove(_kPendingPayloadKey);
+      lastPayload = 'drained from prefs: "$stored"';
+      _firePayload(stored);
+      return;
+    }
+
+    // Fallback: cold start via notification launch details
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
+      final payload = launchDetails.notificationResponse?.payload;
+      if (payload != null && payload.isNotEmpty) {
+        lastPayload = 'drained from launchDetails: "$payload"';
+        _firePayload(payload);
+        return;
+      }
+    }
+  }
+
+  void _firePayload(String payload) {
+    if (onNotificationTap != null) {
+      onNotificationTap!(payload);
     }
   }
 
@@ -140,14 +155,14 @@ class NotificationService {
   Future<List<PendingNotificationRequest>> getPendingNotifications() =>
       _plugin.pendingNotificationRequests();
 
-  // ── Tap handler ───────────────────────────────────────────────────────────
+  // ── Tap handler (foreground only) ─────────────────────────────────────────
 
   void Function(String payload)? onNotificationTap;
 
   void _onNotificationTap(NotificationResponse response) {
-    lastPayload = 'payload: "${response.payload}", handler null: ${onNotificationTap == null}';
+    lastPayload = 'foreground: "${response.payload}"';
     final payload = response.payload;
-    if (payload != null && onNotificationTap != null) {
+    if (payload != null && payload.isNotEmpty && onNotificationTap != null) {
       onNotificationTap!(payload);
     }
   }
