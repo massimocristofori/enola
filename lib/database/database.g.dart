@@ -477,18 +477,158 @@ return map;
 @override
 String toString() {return (StringBuffer('PlaySessionsCompanion(')..write('id: $id, ')..write('publicId: $publicId, ')..write('mapId: $mapId, ')..write('lastCompletedIndex: $lastCompletedIndex, ')..write('startedAt: $startedAt, ')..write('completedAt: $completedAt, ')..write('totalRiddles: $totalRiddles, ')..write('correctAnswers: $correctAnswers, ')..write('riddleStarsJson: $riddleStarsJson, ')..write('riddlesVersion: $riddlesVersion')..write(')')).toString();}
 }
+class $TrainingSessionsTable extends TrainingSessions with TableInfo<$TrainingSessionsTable, TrainingSession>{
+@override final GeneratedDatabase attachedDatabase;
+final String? _alias;
+$TrainingSessionsTable(this.attachedDatabase, [this._alias]);
+static const VerificationMeta _idMeta = const VerificationMeta('id');
+@override
+late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+static const VerificationMeta _mapIdMeta = const VerificationMeta('mapId');
+@override
+late final GeneratedColumn<String> mapId = GeneratedColumn<String>('map_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES riddle_maps (id) ON DELETE CASCADE'));
+static const VerificationMeta _startedAtMeta = const VerificationMeta('startedAt');
+@override
+late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>('started_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+static const VerificationMeta _endsAtMeta = const VerificationMeta('endsAt');
+@override
+late final GeneratedColumn<DateTime> endsAt = GeneratedColumn<DateTime>('ends_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: true);
+static const VerificationMeta _poolJsonMeta = const VerificationMeta('poolJson');
+@override
+late final GeneratedColumn<String> poolJson = GeneratedColumn<String>('pool_json', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: false, defaultValue: const Constant('[]'));
+static const VerificationMeta _scheduledJsonMeta = const VerificationMeta('scheduledJson');
+@override
+late final GeneratedColumn<String> scheduledJson = GeneratedColumn<String>('scheduled_json', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: false, defaultValue: const Constant('[]'));
+static const VerificationMeta _completedAtMeta = const VerificationMeta('completedAt');
+@override
+late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>('completed_at', aliasedName, true, type: DriftSqlType.dateTime, requiredDuringInsert: false);
+@override
+List<GeneratedColumn> get $columns => [id, mapId, startedAt, endsAt, poolJson, scheduledJson, completedAt];
+@override
+String get aliasedName => _alias ?? actualTableName;
+@override
+ String get actualTableName => $name;
+static const String $name = 'training_sessions';
+@override
+VerificationContext validateIntegrity(Insertable<TrainingSession> instance, {bool isInserting = false}) {
+final context = VerificationContext();
+final data = instance.toColumns(true);
+if (data.containsKey('id')) {
+context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));}if (data.containsKey('map_id')) {
+context.handle(_mapIdMeta, mapId.isAcceptableOrUnknown(data['map_id']!, _mapIdMeta));} else if (isInserting) {
+context.missing(_mapIdMeta);
+}
+if (data.containsKey('started_at')) {
+context.handle(_startedAtMeta, startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta));}if (data.containsKey('ends_at')) {
+context.handle(_endsAtMeta, endsAt.isAcceptableOrUnknown(data['ends_at']!, _endsAtMeta));} else if (isInserting) {
+context.missing(_endsAtMeta);
+}
+if (data.containsKey('pool_json')) {
+context.handle(_poolJsonMeta, poolJson.isAcceptableOrUnknown(data['pool_json']!, _poolJsonMeta));}if (data.containsKey('scheduled_json')) {
+context.handle(_scheduledJsonMeta, scheduledJson.isAcceptableOrUnknown(data['scheduled_json']!, _scheduledJsonMeta));}if (data.containsKey('completed_at')) {
+context.handle(_completedAtMeta, completedAt.isAcceptableOrUnknown(data['completed_at']!, _completedAtMeta));}return context;
+}
+@override
+Set<GeneratedColumn> get $primaryKey => {id};
+@override TrainingSession map(Map<String, dynamic> data, {String? tablePrefix})  {
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return TrainingSession(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, mapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}map_id'])!, startedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!, endsAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}ends_at'])!, poolJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}pool_json'])!, scheduledJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}scheduled_json'])!, completedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']), );
+}
+@override
+$TrainingSessionsTable createAlias(String alias) {
+return $TrainingSessionsTable(attachedDatabase, alias);}}class TrainingSession extends DataClass implements Insertable<TrainingSession> 
+{
+final int id;
+final String mapId;
+final DateTime startedAt;
+final DateTime endsAt;
+final String poolJson;
+final String scheduledJson;
+final DateTime? completedAt;
+const TrainingSession({required this.id, required this.mapId, required this.startedAt, required this.endsAt, required this.poolJson, required this.scheduledJson, this.completedAt});@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};map['id'] = Variable<int>(id);
+map['map_id'] = Variable<String>(mapId);
+map['started_at'] = Variable<DateTime>(startedAt);
+map['ends_at'] = Variable<DateTime>(endsAt);
+map['pool_json'] = Variable<String>(poolJson);
+map['scheduled_json'] = Variable<String>(scheduledJson);
+if (!nullToAbsent || completedAt != null){map['completed_at'] = Variable<DateTime>(completedAt);
+}return map; 
+}
+TrainingSessionsCompanion toCompanion(bool nullToAbsent) {
+return TrainingSessionsCompanion(id: Value(id),mapId: Value(mapId),startedAt: Value(startedAt),endsAt: Value(endsAt),poolJson: Value(poolJson),scheduledJson: Value(scheduledJson),completedAt: completedAt == null && nullToAbsent ? const Value.absent() : Value(completedAt),);
+}
+factory TrainingSession.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return TrainingSession(id: serializer.fromJson<int>(json['id']),mapId: serializer.fromJson<String>(json['mapId']),startedAt: serializer.fromJson<DateTime>(json['startedAt']),endsAt: serializer.fromJson<DateTime>(json['endsAt']),poolJson: serializer.fromJson<String>(json['poolJson']),scheduledJson: serializer.fromJson<String>(json['scheduledJson']),completedAt: serializer.fromJson<DateTime?>(json['completedAt']),);}
+@override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return <String, dynamic>{
+'id': serializer.toJson<int>(id),'mapId': serializer.toJson<String>(mapId),'startedAt': serializer.toJson<DateTime>(startedAt),'endsAt': serializer.toJson<DateTime>(endsAt),'poolJson': serializer.toJson<String>(poolJson),'scheduledJson': serializer.toJson<String>(scheduledJson),'completedAt': serializer.toJson<DateTime?>(completedAt),};}TrainingSession copyWith({int? id,String? mapId,DateTime? startedAt,DateTime? endsAt,String? poolJson,String? scheduledJson,Value<DateTime?> completedAt = const Value.absent()}) => TrainingSession(id: id ?? this.id,mapId: mapId ?? this.mapId,startedAt: startedAt ?? this.startedAt,endsAt: endsAt ?? this.endsAt,poolJson: poolJson ?? this.poolJson,scheduledJson: scheduledJson ?? this.scheduledJson,completedAt: completedAt.present ? completedAt.value : this.completedAt,);TrainingSession copyWithCompanion(TrainingSessionsCompanion data) {
+return TrainingSession(
+id: data.id.present ? data.id.value : this.id,mapId: data.mapId.present ? data.mapId.value : this.mapId,startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,endsAt: data.endsAt.present ? data.endsAt.value : this.endsAt,poolJson: data.poolJson.present ? data.poolJson.value : this.poolJson,scheduledJson: data.scheduledJson.present ? data.scheduledJson.value : this.scheduledJson,completedAt: data.completedAt.present ? data.completedAt.value : this.completedAt,);
+}
+@override
+String toString() {return (StringBuffer('TrainingSession(')..write('id: $id, ')..write('mapId: $mapId, ')..write('startedAt: $startedAt, ')..write('endsAt: $endsAt, ')..write('poolJson: $poolJson, ')..write('scheduledJson: $scheduledJson, ')..write('completedAt: $completedAt')..write(')')).toString();}
+@override
+ int get hashCode => Object.hash(id, mapId, startedAt, endsAt, poolJson, scheduledJson, completedAt);@override
+bool operator ==(Object other) => identical(this, other) || (other is TrainingSession && other.id == this.id && other.mapId == this.mapId && other.startedAt == this.startedAt && other.endsAt == this.endsAt && other.poolJson == this.poolJson && other.scheduledJson == this.scheduledJson && other.completedAt == this.completedAt);
+}class TrainingSessionsCompanion extends UpdateCompanion<TrainingSession> {
+final Value<int> id;
+final Value<String> mapId;
+final Value<DateTime> startedAt;
+final Value<DateTime> endsAt;
+final Value<String> poolJson;
+final Value<String> scheduledJson;
+final Value<DateTime?> completedAt;
+const TrainingSessionsCompanion({this.id = const Value.absent(),this.mapId = const Value.absent(),this.startedAt = const Value.absent(),this.endsAt = const Value.absent(),this.poolJson = const Value.absent(),this.scheduledJson = const Value.absent(),this.completedAt = const Value.absent(),});
+TrainingSessionsCompanion.insert({this.id = const Value.absent(),required String mapId,this.startedAt = const Value.absent(),required DateTime endsAt,this.poolJson = const Value.absent(),this.scheduledJson = const Value.absent(),this.completedAt = const Value.absent(),}): mapId = Value(mapId), endsAt = Value(endsAt);
+static Insertable<TrainingSession> custom({Expression<int>? id, 
+Expression<String>? mapId, 
+Expression<DateTime>? startedAt, 
+Expression<DateTime>? endsAt, 
+Expression<String>? poolJson, 
+Expression<String>? scheduledJson, 
+Expression<DateTime>? completedAt, 
+}) {
+return RawValuesInsertable({if (id != null)'id': id,if (mapId != null)'map_id': mapId,if (startedAt != null)'started_at': startedAt,if (endsAt != null)'ends_at': endsAt,if (poolJson != null)'pool_json': poolJson,if (scheduledJson != null)'scheduled_json': scheduledJson,if (completedAt != null)'completed_at': completedAt,});
+}TrainingSessionsCompanion copyWith({Value<int>? id, Value<String>? mapId, Value<DateTime>? startedAt, Value<DateTime>? endsAt, Value<String>? poolJson, Value<String>? scheduledJson, Value<DateTime?>? completedAt}) {
+return TrainingSessionsCompanion(id: id ?? this.id,mapId: mapId ?? this.mapId,startedAt: startedAt ?? this.startedAt,endsAt: endsAt ?? this.endsAt,poolJson: poolJson ?? this.poolJson,scheduledJson: scheduledJson ?? this.scheduledJson,completedAt: completedAt ?? this.completedAt,);
+}
+@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};if (id.present) {
+map['id'] = Variable<int>(id.value);}
+if (mapId.present) {
+map['map_id'] = Variable<String>(mapId.value);}
+if (startedAt.present) {
+map['started_at'] = Variable<DateTime>(startedAt.value);}
+if (endsAt.present) {
+map['ends_at'] = Variable<DateTime>(endsAt.value);}
+if (poolJson.present) {
+map['pool_json'] = Variable<String>(poolJson.value);}
+if (scheduledJson.present) {
+map['scheduled_json'] = Variable<String>(scheduledJson.value);}
+if (completedAt.present) {
+map['completed_at'] = Variable<DateTime>(completedAt.value);}
+return map; 
+}
+@override
+String toString() {return (StringBuffer('TrainingSessionsCompanion(')..write('id: $id, ')..write('mapId: $mapId, ')..write('startedAt: $startedAt, ')..write('endsAt: $endsAt, ')..write('poolJson: $poolJson, ')..write('scheduledJson: $scheduledJson, ')..write('completedAt: $completedAt')..write(')')).toString();}
+}
 abstract class _$AppDatabase extends GeneratedDatabase{
 _$AppDatabase(QueryExecutor e): super(e);
 $AppDatabaseManager get managers => $AppDatabaseManager(this);
 late final $RiddleMapsTable riddleMaps = $RiddleMapsTable(this);
 late final $RiddlesTable riddles = $RiddlesTable(this);
 late final $PlaySessionsTable playSessions = $PlaySessionsTable(this);
+late final $TrainingSessionsTable trainingSessions = $TrainingSessionsTable(this);
 @override
 Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
 @override
-List<DatabaseSchemaEntity> get allSchemaEntities => [riddleMaps, riddles, playSessions];
+List<DatabaseSchemaEntity> get allSchemaEntities => [riddleMaps, riddles, playSessions, trainingSessions];
 @override
-StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), ],);
+StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), ],);
 }
 typedef $$RiddleMapsTableCreateCompanionBuilder = RiddleMapsCompanion Function({required String id,required String title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
 typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({Value<String> id,Value<String> title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
@@ -547,6 +687,33 @@ typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({
           );
 
           final cache = $_typedResult.readTableOrNull(_playSessionsRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
+          
+                  static MultiTypedResultKey<
+          $TrainingSessionsTable,
+          List<TrainingSession>
+        > _trainingSessionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.trainingSessions, 
+          aliasName: $_aliasNameGenerator(
+            db.riddleMaps.id,
+            db.trainingSessions.mapId)
+        );
+
+          $$TrainingSessionsTableProcessedTableManager get trainingSessionsRefs {
+        final manager = $$TrainingSessionsTableTableManager(
+            $_db, $_db.trainingSessions
+            ).filter(
+              (f) => f.mapId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_trainingSessionsRefsTable($_db));
           return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
 
 
@@ -630,6 +797,26 @@ ColumnFilters<int> get riddlesVersion => $composableBuilder(
       $$PlaySessionsTableFilterComposer(
               $db: $db,
               $table: $db.playSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        Expression<bool> trainingSessionsRefs(
+          Expression<bool> Function( $$TrainingSessionsTableFilterComposer f) f
+        ) {
+                final $$TrainingSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.mapId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -763,6 +950,26 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
           return f(composer);
         }
 
+        Expression<T> trainingSessionsRefs<T extends Object>(
+          Expression<T> Function( $$TrainingSessionsTableAnnotationComposer a) f
+        ) {
+                final $$TrainingSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.mapId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
         }
       class $$RiddleMapsTableTableManager extends RootTableManager    <_$AppDatabase,
     $RiddleMapsTable,
@@ -774,7 +981,7 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
     $$RiddleMapsTableUpdateCompanionBuilder,
     (RiddleMap,$$RiddleMapsTableReferences),
     RiddleMap,
-    PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs})
+    PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs,bool trainingSessionsRefs})
     > {
     $$RiddleMapsTableTableManager(_$AppDatabase db, $RiddleMapsTable table) : super(
       TableManagerState(
@@ -791,11 +998,11 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
                      (e.readTable(table), $$RiddleMapsTableReferences(db, table, e))
                   )
               .toList(),
-        prefetchHooksCallback:         ({riddlesRefs = false,playSessionsRefs = false}){
+        prefetchHooksCallback:         ({riddlesRefs = false,playSessionsRefs = false,trainingSessionsRefs = false}){
           return PrefetchHooks(
             db: db,
             explicitlyWatchedTables: [
-             if (riddlesRefs) db.riddles,if (playSessionsRefs) db.playSessions
+             if (riddlesRefs) db.riddles,if (playSessionsRefs) db.playSessions,if (trainingSessionsRefs) db.trainingSessions
             ],
             addJoins: null,
             getPrefetchedDataCallback: (items) async {
@@ -818,6 +1025,15 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
                   referencedItemsForCurrentItem: (item, referencedItems) =>
                       referencedItems.where((e) => e.mapId == item.id),
                   typedResults: items)
+            ,          if (trainingSessionsRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$RiddleMapsTableReferences._trainingSessionsRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$RiddleMapsTableReferences(db, table, p0).trainingSessionsRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.mapId == item.id),
+                  typedResults: items)
             
                 ];
               },
@@ -836,7 +1052,7 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
     $$RiddleMapsTableUpdateCompanionBuilder,
     (RiddleMap,$$RiddleMapsTableReferences),
     RiddleMap,
-    PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs})
+    PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs,bool trainingSessionsRefs})
     >;typedef $$RiddlesTableCreateCompanionBuilder = RiddlesCompanion Function({Value<int> id,required String mapId,required String question,required int typeIndex,required int orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,Value<String?> sourceExcerpt,});
 typedef $$RiddlesTableUpdateCompanionBuilder = RiddlesCompanion Function({Value<int> id,Value<String> mapId,Value<String> question,Value<int> typeIndex,Value<int> orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,Value<String?> sourceExcerpt,});
       final class $$RiddlesTableReferences extends BaseReferences<
@@ -1429,10 +1645,272 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
     (PlaySession,$$PlaySessionsTableReferences),
     PlaySession,
     PrefetchHooks Function({bool mapId})
+    >;typedef $$TrainingSessionsTableCreateCompanionBuilder = TrainingSessionsCompanion Function({Value<int> id,required String mapId,Value<DateTime> startedAt,required DateTime endsAt,Value<String> poolJson,Value<String> scheduledJson,Value<DateTime?> completedAt,});
+typedef $$TrainingSessionsTableUpdateCompanionBuilder = TrainingSessionsCompanion Function({Value<int> id,Value<String> mapId,Value<DateTime> startedAt,Value<DateTime> endsAt,Value<String> poolJson,Value<String> scheduledJson,Value<DateTime?> completedAt,});
+      final class $$TrainingSessionsTableReferences extends BaseReferences<
+        _$AppDatabase,
+        $TrainingSessionsTable,
+        TrainingSession> {
+        $$TrainingSessionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+        
+                          static $RiddleMapsTable _mapIdTable(_$AppDatabase db) => 
+            db.riddleMaps.createAlias($_aliasNameGenerator(
+            db.trainingSessions.mapId,
+            db.riddleMaps.id));
+          
+
+        $$RiddleMapsTableProcessedTableManager? get mapId {
+          if ($_item.mapId == null) return null;
+          final manager = $$RiddleMapsTableTableManager($_db, $_db.riddleMaps).filter((f) => f.id($_item.mapId!));
+          final item = $_typedResult.readTableOrNull(_mapIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+
+      }class $$TrainingSessionsTableFilterComposer extends Composer<
+        _$AppDatabase,
+        $TrainingSessionsTable> {
+        $$TrainingSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get startedAt => $composableBuilder(
+      column: $table.startedAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get endsAt => $composableBuilder(
+      column: $table.endsAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get poolJson => $composableBuilder(
+      column: $table.poolJson,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get scheduledJson => $composableBuilder(
+      column: $table.scheduledJson,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get completedAt => $composableBuilder(
+      column: $table.completedAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+        $$RiddleMapsTableFilterComposer get mapId {
+                final $$RiddleMapsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.mapId,
+      referencedTable: $db.riddleMaps,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddleMapsTableFilterComposer(
+              $db: $db,
+              $table: $db.riddleMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingSessionsTableOrderingComposer extends Composer<
+        _$AppDatabase,
+        $TrainingSessionsTable> {
+        $$TrainingSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+      column: $table.startedAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get endsAt => $composableBuilder(
+      column: $table.endsAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get poolJson => $composableBuilder(
+      column: $table.poolJson,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get scheduledJson => $composableBuilder(
+      column: $table.scheduledJson,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+      column: $table.completedAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+        $$RiddleMapsTableOrderingComposer get mapId {
+                final $$RiddleMapsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.mapId,
+      referencedTable: $db.riddleMaps,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddleMapsTableOrderingComposer(
+              $db: $db,
+              $table: $db.riddleMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingSessionsTableAnnotationComposer extends Composer<
+        _$AppDatabase,
+        $TrainingSessionsTable> {
+        $$TrainingSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          GeneratedColumn<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get startedAt => $composableBuilder(
+      column: $table.startedAt,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get endsAt => $composableBuilder(
+      column: $table.endsAt,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get poolJson => $composableBuilder(
+      column: $table.poolJson,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get scheduledJson => $composableBuilder(
+      column: $table.scheduledJson,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+      column: $table.completedAt,
+      builder: (column) => column);
+      
+        $$RiddleMapsTableAnnotationComposer get mapId {
+                final $$RiddleMapsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.mapId,
+      referencedTable: $db.riddleMaps,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddleMapsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.riddleMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingSessionsTableTableManager extends RootTableManager    <_$AppDatabase,
+    $TrainingSessionsTable,
+    TrainingSession,
+    $$TrainingSessionsTableFilterComposer,
+    $$TrainingSessionsTableOrderingComposer,
+    $$TrainingSessionsTableAnnotationComposer,
+    $$TrainingSessionsTableCreateCompanionBuilder,
+    $$TrainingSessionsTableUpdateCompanionBuilder,
+    (TrainingSession,$$TrainingSessionsTableReferences),
+    TrainingSession,
+    PrefetchHooks Function({bool mapId})
+    > {
+    $$TrainingSessionsTableTableManager(_$AppDatabase db, $TrainingSessionsTable table) : super(
+      TableManagerState(
+        db: db,
+        table: table,
+        createFilteringComposer: () => $$TrainingSessionsTableFilterComposer($db: db,$table:table),
+        createOrderingComposer: () => $$TrainingSessionsTableOrderingComposer($db: db,$table:table),
+        createComputedFieldComposer: () => $$TrainingSessionsTableAnnotationComposer($db: db,$table:table),
+        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> mapId = const Value.absent(),Value<DateTime> startedAt = const Value.absent(),Value<DateTime> endsAt = const Value.absent(),Value<String> poolJson = const Value.absent(),Value<String> scheduledJson = const Value.absent(),Value<DateTime?> completedAt = const Value.absent(),})=> TrainingSessionsCompanion(id: id,mapId: mapId,startedAt: startedAt,endsAt: endsAt,poolJson: poolJson,scheduledJson: scheduledJson,completedAt: completedAt,),
+        createCompanionCallback: ({Value<int> id = const Value.absent(),required String mapId,Value<DateTime> startedAt = const Value.absent(),required DateTime endsAt,Value<String> poolJson = const Value.absent(),Value<String> scheduledJson = const Value.absent(),Value<DateTime?> completedAt = const Value.absent(),})=> TrainingSessionsCompanion.insert(id: id,mapId: mapId,startedAt: startedAt,endsAt: endsAt,poolJson: poolJson,scheduledJson: scheduledJson,completedAt: completedAt,),
+        withReferenceMapper: (p0) => p0
+              .map(
+                  (e) =>
+                     (e.readTable(table), $$TrainingSessionsTableReferences(db, table, e))
+                  )
+              .toList(),
+        prefetchHooksCallback:         ({mapId = false}){
+          return PrefetchHooks(
+            db: db,
+            explicitlyWatchedTables: [
+             
+            ],
+            addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
+
+                                  if (mapId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.mapId,
+                    referencedTable:
+                        $$TrainingSessionsTableReferences._mapIdTable(db),
+                    referencedColumn:
+                        $$TrainingSessionsTableReferences._mapIdTable(db).id,
+                  ) as T;
+               }
+
+                return state;
+              }
+,
+            getPrefetchedDataCallback: (items) async {
+            return [
+            
+                ];
+              },
+          );
+        }
+,
+        ));
+        }
+    typedef $$TrainingSessionsTableProcessedTableManager = ProcessedTableManager    <_$AppDatabase,
+    $TrainingSessionsTable,
+    TrainingSession,
+    $$TrainingSessionsTableFilterComposer,
+    $$TrainingSessionsTableOrderingComposer,
+    $$TrainingSessionsTableAnnotationComposer,
+    $$TrainingSessionsTableCreateCompanionBuilder,
+    $$TrainingSessionsTableUpdateCompanionBuilder,
+    (TrainingSession,$$TrainingSessionsTableReferences),
+    TrainingSession,
+    PrefetchHooks Function({bool mapId})
     >;class $AppDatabaseManager {
 final _$AppDatabase _db;
 $AppDatabaseManager(this._db);
 $$RiddleMapsTableTableManager get riddleMaps => $$RiddleMapsTableTableManager(_db, _db.riddleMaps);
 $$RiddlesTableTableManager get riddles => $$RiddlesTableTableManager(_db, _db.riddles);
 $$PlaySessionsTableTableManager get playSessions => $$PlaySessionsTableTableManager(_db, _db.playSessions);
+$$TrainingSessionsTableTableManager get trainingSessions => $$TrainingSessionsTableTableManager(_db, _db.trainingSessions);
 }
