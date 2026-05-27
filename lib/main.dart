@@ -2,33 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Import removed: isar_service
 import 'services/gemini_service.dart';
+import 'services/notification_service.dart';
+import 'services/training_service.dart';
 import 'theme/enola_theme.dart';
 import 'screens/home_screen.dart';
+
+// Navigation key for warm-start notification taps
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock to portrait
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
 
-  // Immersive fantasy feel — hide status bar tint
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
 
-  // REMOVED: IsarService.instance.init(); 
-  // DriftService manages the database connection automatically upon first use.
-
-  // Gemini API key setup
   GeminiService.instance.apiKey = const String.fromEnvironment(
     'GEMINI_API_KEY',
     defaultValue: '',
   );
+
+  // ── Notification + Training init ─────────────────────────────────────────
+  await NotificationService.instance.init();
+  TrainingService.instance.init();
 
   runApp(const ProviderScope(child: EnolaApp()));
 }
@@ -42,6 +44,7 @@ class EnolaApp extends StatelessWidget {
       title: 'Enola',
       debugShowCheckedModeBanner: false,
       theme: EnolaTheme.theme,
+      navigatorKey: navigatorKey,
       home: const HomeScreen(),
     );
   }
