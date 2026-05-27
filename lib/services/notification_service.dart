@@ -1,119 +1,132 @@
+import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
 class NotificationService {
- static final NotificationService instance = NotificationService._internal();
- NotificationService._internal();
+  static final NotificationService instance = NotificationService._internal();
+  NotificationService._internal();
 
- final FlutterLocalNotificationsPlugin _plugin =
-     FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
 
- bool _initialised = false;
+  bool _initialised = false;
 
- // ── Temporary debug ───────────────────────────────────────────────────────
- static String lastPayload = 'never fired';
+  // ── Temporary debug ───────────────────────────────────────────────────────
+  static String lastPayload = 'never fired';
 
- // ── Init ──────────────────────────────────────────────────────────────────
+  // ── Init ──────────────────────────────────────────────────────────────────
 
- Future<void> init() async {
-   if (_initialised) return;
+  Future<void> init() async {
+    if (_initialised) return;
 
-   tz_data.initializeTimeZones();
+    tz_data.initializeTimeZones();
 
-   const androidSettings =
-       AndroidInitializationSettings('@mipmap/ic_launcher');
-   const iosSettings = DarwinInitializationSettings(
-     requestAlertPermission: false,
-     requestBadgePermission: false,
-     requestSoundPermission: false,
-   );
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
 
-   const initSettings = InitializationSettings(
-     android: androidSettings,
-     iOS: iosSettings,
-   );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
 
-   await _plugin.initialize(
-     initSettings,
-     onDidReceiveNotificationResponse: _onNotificationTap,
-   );
+    // This catches foreground and warm-start background taps on the main isolate
+    await _plugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _onNotificationTap,
+    );
 
-   _initialised = true;
- }
+    // ── Cold-Start Check ─────────────────────────────────────────────────────
+    // Query the native layer to see if a notification payload booted the app
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
+      final response = launchDetails.notificationResponse;
+      if (response != null) {
+        // Run it through the microtask queue to allow main.dart callbacks to finish mounting
+        Future.microtask(() => _onNotificationTap(response));
+      }
+    }
 
- // ── Permissions ───────────────────────────────────────────────────────────
+    _initialised = true;
+  }
 
- Future<bool> requestPermissions() async {
-   final ios = _plugin.resolvePlatformSpecificImplementation<
-       IOSFlutterLocalNotificationsPlugin>();
-   if (ios != null) {
-     final granted = await ios.requestPermissions(
-       alert: true,
-       badge: true,
-       sound: true,
-     );
-     return granted ?? false;
-   }
-   return true;
- }
+  // ── Permissions ───────────────────────────────────────────────────────────
 
- // ── Schedule ──────────────────────────────────────────────────────────────
+  Future<bool> requestPermissions() async {
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      final granted = await ios.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      return granted ?? false;
+    }
+    return true;
+  }
 
- Future<void> scheduleRiddleNotification({
-   required int id,
-   required String title,
-   required String body,
-   required DateTime scheduledAt,
-   required String payload,
- }) async {
-   await _plugin.zonedSchedule(
-     id,
-     title,
-     body,
-     tz.TZDateTime.from(scheduledAt, tz.local),
-     const NotificationDetails(
-       iOS: DarwinNotificationDetails(
-         presentAlert: true,
-         presentBadge: true,
-         presentSound: true,
-       ),
-       android: AndroidNotificationDetails(
-         'training_channel',
-         'Training Reminders',
-         channelDescription: 'Riddle training notifications',
-         importance: Importance.high,
-         priority: Priority.high,
-       ),
-     ),
-     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-     uiLocalNotificationDateInterpretation:
-         UILocalNotificationDateInterpretation.absoluteTime,
-     payload: payload,
-   );
- }
+  // ── Schedule ──────────────────────────────────────────────────────────────
 
- // ── Cancel ────────────────────────────────────────────────────────────────
+  Future<void> scheduleRiddleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledAt,
+    required String payload,
+  }) async {
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledAt, tz.local),
+      const NotificationDetails(
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+        android: AndroidNotificationDetails(
+          'training_channel',
+          'Training Reminders',
+          channelDescription: 'Riddle training notifications',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
 
- Future<void> cancelNotification(int id) => _plugin.cancel(id);
+  // ── Cancel ────────────────────────────────────────────────────────────────
 
- Future<void> cancelAllNotifications() => _plugin.cancelAll();
+  Future<void> cancelNotification(int id) => _plugin.cancel(id);
 
- // ── Pending ───────────────────────────────────────────────────────────────
+  Future<void> cancelAllNotifications() => _plugin.cancelAll();
 
- Future<List<PendingNotificationRequest>> getPendingNotifications() =>
-     _plugin.pendingNotificationRequests();
+  // ── Pending ───────────────────────────────────────────────────────────────
 
- // ── Tap handler ───────────────────────────────────────────────────────────
+  Future<List<PendingNotificationRequest>> getPendingNotifications() =>
+      _plugin.pendingNotificationRequests();
 
- void Function(String payload)? onNotificationTap;
+  // ── Tap handler ───────────────────────────────────────────────────────────
 
- void _onNotificationTap(NotificationResponse response) {
-   lastPayload =
-       'payload: "${response.payload}", handler null: ${onNotificationTap == null}';
-   final payload = response.payload;
-   if (payload != null && onNotificationTap != null) {
-     onNotificationTap!(payload);
-   }
- }
+  void Function(String payload)? onNotificationTap;
+
+  void _onNotificationTap(NotificationResponse response) {
+    lastPayload =
+        'payload: "${response.payload}", handler null: ${onNotificationTap == null}';
+    final payload = response.payload;
+    if (payload != null && onNotificationTap != null) {
+      onNotificationTap!(payload);
+    }
+  }
 }
