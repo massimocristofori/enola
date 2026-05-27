@@ -11,6 +11,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialised = false;
+  NotificationResponse? _pendingLaunchResponse;
 
   // ── Temporary debug ───────────────────────────────────────────────────────
   static String lastPayload = 'never fired';
@@ -35,24 +36,31 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    // This catches foreground and warm-start background taps on the main isolate
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
     // ── Cold-Start Check ─────────────────────────────────────────────────────
-    // Query the native layer to see if a notification payload booted the app
+    // Store the response rather than firing it immediately.
+    // TrainingService will drain this after all callbacks are wired in main.dart.
     final launchDetails = await _plugin.getNotificationAppLaunchDetails();
     if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
-      final response = launchDetails.notificationResponse;
-      if (response != null) {
-        // Run it through the microtask queue to allow main.dart callbacks to finish mounting
-        Future.microtask(() => _onNotificationTap(response));
-      }
+      _pendingLaunchResponse = launchDetails.notificationResponse;
     }
 
     _initialised = true;
+  }
+
+  // ── Drain pending cold-start notification ─────────────────────────────────
+  // Call this after all tap-handler callbacks are fully wired.
+
+  void drainPendingLaunchNotification() {
+    final response = _pendingLaunchResponse;
+    if (response != null) {
+      _pendingLaunchResponse = null;
+      _onNotificationTap(response);
+    }
   }
 
   // ── Permissions ───────────────────────────────────────────────────────────
