@@ -708,7 +708,7 @@ class SunburstPainter extends CustomPainter {
       paint.color = Colors.white.withValues(alpha: alpha);
 
       final startAngle = i * angleStep;
-      final endAngle = startAngle + (angleStep * 0.68); 
+      final endAngle = startAngle + (angleStep * 1); 
 
       final path = Path()
         ..moveTo(center.dx, center.dy)
