@@ -376,7 +376,7 @@ class _MapCard extends ConsumerWidget {
               left: -6,
               child: _EarButton(
                 icon: Icons.edit_rounded,
-                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.5),
+                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.7),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -392,7 +392,7 @@ class _MapCard extends ConsumerWidget {
               right: -6,
               child: _EarButton(
                 icon: Icons.delete_forever_rounded,
-                iconColor: Colors.redAccent.withValues(alpha: 0.5),
+                iconColor: Colors.redAccent.withValues(alpha: 0.7),
                 onTap: () => _confirmDelete(context, ref),
               ),
             ),
