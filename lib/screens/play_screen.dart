@@ -12,6 +12,8 @@ import 'package:enola/widgets/treasure_map_path.dart';
 import 'package:enola/screens/riddle_screen.dart';
 import 'package:enola/screens/result_screen.dart';
 import 'package:enola/services/drift_service.dart';
+import 'package:enola/services/training_service.dart';
+import 'package:enola/services/notification_service.dart';
 
 import 'package:drift/drift.dart' as drift;
 
@@ -33,21 +35,26 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   int? _activeRiddleIndex;
   bool _activeRiddleReadOnly = false;
+  bool _activeRiddleTraining = false;
+  int? _activeRiddleId;
+
+  // ── Training state ─────────────────────────────────────────────────────────
+  bool _trainingActive = false;
 
   // ── Star animation state ───────────────────────────────────────────────────
-  // GlobalKey on the header star icon — landing target
   final GlobalKey _headerStarKey = GlobalKey();
-  // GlobalKey per node — flying origin; populated by TreasureMapPath
   final Map<int, GlobalKey> _nodeKeys = {};
-  // Stars to display in header during animation (null = use real state value)
   int? _animatedStars;
-  // Overlay entry for flying stars
   OverlayEntry? _starOverlay;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSession());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadSession();
+      await _loadTrainingState();
+      _registerTrainingTapHandler();
+    });
   }
 
   @override
@@ -56,6 +63,173 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     _starOverlay = null;
     super.dispose();
   }
+
+  // ── Training ───────────────────────────────────────────────────────────────
+
+  Future<void> _loadTrainingState() async {
+    final active =
+        await TrainingService.instance.isTrainingActive(widget.mapId);
+    if (mounted) setState(() => _trainingActive = active);
+  }
+
+  void _registerTrainingTapHandler() {
+    TrainingService.instance.onTrainingNotificationTap = (mapId, riddleId) {
+      if (mapId != widget.mapId) return;
+      final riddles = ref.read(riddlesForMapProvider(widget.mapId)).valueOrNull;
+      if (riddles == null) return;
+      final index = riddles.indexWhere((r) => r.id == riddleId);
+      if (index == -1) return;
+      if (mounted) {
+        setState(() {
+          _activeRiddleIndex = index;
+          _activeRiddleReadOnly = false;
+          _activeRiddleTraining = true;
+          _activeRiddleId = riddleId;
+        });
+      }
+    };
+  }
+
+  Future<void> _onToggleTraining(List<Riddle> riddles) async {
+    if (_trainingActive) {
+      // Stop training
+      final confirm = await _showStopTrainingDialog();
+      if (!confirm) return;
+      await TrainingService.instance.stopTraining(widget.mapId);
+      if (mounted) setState(() => _trainingActive = false);
+    } else {
+      // Start training
+      final hours = await _showStartTrainingDialog();
+      if (hours == null) return;
+
+      final granted = await NotificationService.instance.requestPermissions();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Notification permission is required for training mode.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      await TrainingService.instance.startTraining(
+        mapId: widget.mapId,
+        riddles: riddles,
+        durationHours: hours,
+      );
+      if (mounted) setState(() => _trainingActive = true);
+    }
+  }
+
+  Future<bool> _showStopTrainingDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Stop Training?'),
+            content: const Text(
+                'This will cancel all scheduled training notifications for this map.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Stop',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<int?> _showStartTrainingDialog() async {
+    int selectedHours = 24;
+    return await showDialog<int>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Start Training'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The app will send you riddle notifications over the chosen period to help you study.',
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Training duration',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [6, 12, 24, 48, 72].map((h) {
+                  final selected = selectedHours == h;
+                  return GestureDetector(
+                    onTap: () => setDialogState(() => selectedHours = h),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? EnolaTheme.accent
+                            : EnolaTheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected
+                              ? EnolaTheme.accent
+                              : EnolaTheme.border,
+                        ),
+                      ),
+                      child: Text(
+                        '${h}h',
+                        style: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : EnolaTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, selectedHours),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EnolaTheme.accent,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Session loading ────────────────────────────────────────────────────────
 
   Future<void> _loadSession() async {
     if (mounted) {
@@ -151,7 +325,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       }
 
       ref.read(playStateProvider.notifier).init(
-            sessionId, lastCompleted, correctAnswers, riddleStars);
+          sessionId, lastCompleted, correctAnswers, riddleStars);
 
       if (mounted) setState(() => _isCompleted = isCompleted);
     } catch (e, stackTrace) {
@@ -169,10 +343,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     if (mounted) setState(() => _initialising = false);
   }
 
+  // ── Node taps ──────────────────────────────────────────────────────────────
+
   void _onNodeTap(int riddleIndex) {
     setState(() {
       _activeRiddleIndex = riddleIndex;
       _activeRiddleReadOnly = false;
+      _activeRiddleTraining = false;
+      _activeRiddleId = null;
     });
   }
 
@@ -180,111 +358,130 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     setState(() {
       _activeRiddleIndex = riddleIndex;
       _activeRiddleReadOnly = true;
+      _activeRiddleTraining = false;
+      _activeRiddleId = null;
     });
   }
 
   void _dismissRiddle() {
-    setState(() => _activeRiddleIndex = null);
-  }
-
-  Future<void> _onRiddleComplete(
-    List<Riddle> riddles, int riddleIndex, int errorCount) async {
-
-  final earnedStars = starsForErrors(errorCount);
-  final baseStars = ref.read(playStateProvider)?.totalStars ?? 0;
-
-  // If stars to animate: freeze header and dismiss first,
-  // then update state so the header never sees the jump
-  if (earnedStars > 0 && riddleIndex < riddles.length - 1) {
     setState(() {
       _activeRiddleIndex = null;
-      _animatedStars = baseStars;
+      _activeRiddleTraining = false;
+      _activeRiddleId = null;
     });
   }
 
-  await ref
-      .read(playStateProvider.notifier)
-      .completeRiddle(riddleIndex, errorCount);
+  // ── Riddle complete ────────────────────────────────────────────────────────
 
-  ref.invalidate(latestSessionProvider(widget.mapId));
-
-  if (riddleIndex == riddles.length - 1) {
-    final totalStars = ref.read(playStateProvider)?.totalStars ?? 0;
-    final maxStars = riddles.length * 3;
-    await ref.read(playStateProvider.notifier).finish();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResultScreen(
-            mapId: widget.mapId,
-            correct: riddles.length,
-            total: riddles.length,
-            totalStars: totalStars,
-            maxStars: maxStars,
-          ),
-        ),
+  Future<void> _onRiddleComplete(
+      List<Riddle> riddles, int riddleIndex, int errorCount) async {
+    // Training mode: notify service and dismiss — no stars, no session update
+    if (_activeRiddleTraining && _activeRiddleId != null) {
+      final correct = errorCount == 0;
+      await TrainingService.instance.onRiddleAnswered(
+        mapId: widget.mapId,
+        riddleId: _activeRiddleId!,
+        correct: correct,
+        riddles: riddles,
       );
+      _dismissRiddle();
+      return;
     }
-  } else {
-    if (earnedStars > 0) {
-      _scheduleStarAnimation(riddleIndex, earnedStars, baseStars);
+
+    // Normal play mode
+    final earnedStars = starsForErrors(errorCount);
+    final baseStars = ref.read(playStateProvider)?.totalStars ?? 0;
+
+    if (earnedStars > 0 && riddleIndex < riddles.length - 1) {
+      setState(() {
+        _activeRiddleIndex = null;
+        _animatedStars = baseStars;
+      });
+    }
+
+    await ref
+        .read(playStateProvider.notifier)
+        .completeRiddle(riddleIndex, errorCount);
+
+    ref.invalidate(latestSessionProvider(widget.mapId));
+
+    if (riddleIndex == riddles.length - 1) {
+      final totalStars = ref.read(playStateProvider)?.totalStars ?? 0;
+      final maxStars = riddles.length * 3;
+      await ref.read(playStateProvider.notifier).finish();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultScreen(
+              mapId: widget.mapId,
+              correct: riddles.length,
+              total: riddles.length,
+              totalStars: totalStars,
+              maxStars: maxStars,
+            ),
+          ),
+        );
+      }
     } else {
-      // 0 stars: just dismiss normally (not done above)
-      setState(() => _activeRiddleIndex = null);
+      if (earnedStars > 0) {
+        _scheduleStarAnimation(riddleIndex, earnedStars, baseStars);
+      } else {
+        setState(() => _activeRiddleIndex = null);
+      }
     }
   }
-}
 
+  // ── Star animation ─────────────────────────────────────────────────────────
 
-void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
-  Future.delayed(const Duration(milliseconds: 1700), () {
-    if (!mounted) return;
-    _runStarAnimation(riddleIndex, starCount, baseStars);
-  });
-}
-
-
-
+  void _scheduleStarAnimation(
+      int riddleIndex, int starCount, int baseStars) {
+    Future.delayed(const Duration(milliseconds: 1700), () {
+      if (!mounted) return;
+      _runStarAnimation(riddleIndex, starCount, baseStars);
+    });
+  }
 
   void _runStarAnimation(int riddleIndex, int starCount, int baseStars) {
-  if (!mounted) return;
+    if (!mounted) return;
 
-  final nodeKey = _nodeKeys[riddleIndex];
-  if (nodeKey == null) return;
+    final nodeKey = _nodeKeys[riddleIndex];
+    if (nodeKey == null) return;
 
-  final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
-  final headerBox =
-      _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
-  if (nodeBox == null || headerBox == null) return;
+    final nodeBox =
+        nodeKey.currentContext?.findRenderObject() as RenderBox?;
+    final headerBox =
+        _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (nodeBox == null || headerBox == null) return;
 
-  final nodePos = nodeBox.localToGlobal(
-    Offset(nodeBox.size.width / 2, nodeBox.size.height / 2),
-  );
-  final headerPos = headerBox.localToGlobal(
-    Offset(headerBox.size.width / 2, headerBox.size.height / 2),
-  );
+    final nodePos = nodeBox.localToGlobal(
+      Offset(nodeBox.size.width / 2, nodeBox.size.height / 2),
+    );
+    final headerPos = headerBox.localToGlobal(
+      Offset(headerBox.size.width / 2, headerBox.size.height / 2),
+    );
 
-  _starOverlay?.remove();
-  _starOverlay = OverlayEntry(
-    builder: (_) => _FlyingStarsOverlay(
-      from: nodePos,
-      to: headerPos,
-      starCount: starCount,
-      onStarLanded: (landedCount) {
-        if (mounted) setState(() => _animatedStars = baseStars + landedCount);
-      },
-      onComplete: () {
-        _starOverlay?.remove();
-        _starOverlay = null;
-        if (mounted) setState(() => _animatedStars = null);
-      },
-    ),
-  );
+    _starOverlay?.remove();
+    _starOverlay = OverlayEntry(
+      builder: (_) => _FlyingStarsOverlay(
+        from: nodePos,
+        to: headerPos,
+        starCount: starCount,
+        onStarLanded: (landedCount) {
+          if (mounted) setState(() => _animatedStars = baseStars + landedCount);
+        },
+        onComplete: () {
+          _starOverlay?.remove();
+          _starOverlay = null;
+          if (mounted) setState(() => _animatedStars = null);
+        },
+      ),
+    );
 
-  Overlay.of(context).insert(_starOverlay!);
-}
+    Overlay.of(context).insert(_starOverlay!);
+  }
 
+  // ── Play again ─────────────────────────────────────────────────────────────
 
   Future<void> _playAgain() async {
     final db = DriftService.instance.db;
@@ -294,6 +491,8 @@ void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
     ref.invalidate(latestSessionProvider(widget.mapId));
     await _loadSession();
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -375,6 +574,7 @@ void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
                                             riddles[_activeRiddleIndex!],
                                         riddleIndex: _activeRiddleIndex!,
                                         readOnly: _activeRiddleReadOnly,
+                                        trainingMode: _activeRiddleTraining,
                                         onDismiss: _dismissRiddle,
                                         onComplete: (errorCount) =>
                                             _onRiddleComplete(
@@ -394,9 +594,12 @@ void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
                                         isCompleted: _isCompleted,
                                         imageBytes: map?.imageBytes,
                                         nodeKeys: _nodeKeys,
+                                        trainingActive: _trainingActive,
                                         onNodeTap: _onNodeTap,
                                         onCompletedNodeTap:
                                             _onCompletedNodeTap,
+                                        onToggleTraining: () =>
+                                            _onToggleTraining(riddles),
                                       ),
                               );
                             },
@@ -436,8 +639,10 @@ class _MapView extends StatelessWidget {
   final bool isCompleted;
   final dynamic imageBytes;
   final Map<int, GlobalKey> nodeKeys;
+  final bool trainingActive;
   final void Function(int) onNodeTap;
   final void Function(int) onCompletedNodeTap;
+  final VoidCallback onToggleTraining;
 
   const _MapView({
     super.key,
@@ -447,14 +652,81 @@ class _MapView extends StatelessWidget {
     required this.isCompleted,
     required this.imageBytes,
     required this.nodeKeys,
+    required this.trainingActive,
     required this.onNodeTap,
     required this.onCompletedNodeTap,
+    required this.onToggleTraining,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // ── Training toggle bar ─────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+          child: GestureDetector(
+            onTap: onToggleTraining,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: trainingActive
+                    ? EnolaTheme.accent.withAlpha(20)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: trainingActive
+                      ? EnolaTheme.accent
+                      : EnolaTheme.border,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    trainingActive
+                        ? Icons.school_rounded
+                        : Icons.school_outlined,
+                    size: 18,
+                    color: trainingActive
+                        ? EnolaTheme.accent
+                        : EnolaTheme.textSecond,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      trainingActive
+                          ? 'Training mode is ON'
+                          : 'Training mode is OFF',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: trainingActive
+                            ? EnolaTheme.accent
+                            : EnolaTheme.textSecond,
+                      ),
+                    ),
+                  ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      key: ValueKey(trainingActive),
+                      trainingActive
+                          ? Icons.toggle_on_rounded
+                          : Icons.toggle_off_rounded,
+                      size: 32,
+                      color: trainingActive
+                          ? EnolaTheme.accent
+                          : EnolaTheme.textSecond,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
         if (isCompleted)
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
@@ -479,6 +751,7 @@ class _MapView extends StatelessWidget {
               ),
             ).animate().fadeIn(delay: 400.ms),
           ),
+
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
@@ -591,7 +864,6 @@ class _PlayHeader extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            // ── Keyed star icon: landing target ───────────
                             Icon(
                               key: starKey,
                               Icons.star_rounded,
@@ -672,9 +944,7 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
   final List<Animation<double>> _opacities = [];
   int _landed = 0;
 
-  // Stagger between each star
   static const _staggerMs = 180;
-  // Flight duration per star
   static const _flightMs = 500;
 
   @override
@@ -716,7 +986,6 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
           _landed++;
           widget.onStarLanded(_landed);
           if (_landed == widget.starCount) {
-            // Small pause so the last +1 is visible before cleanup
             Future.delayed(const Duration(milliseconds: 300), () {
               if (mounted) widget.onComplete();
             });
@@ -726,7 +995,6 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
 
       _controllers.add(ctrl);
 
-      // Stagger launch
       Future.delayed(Duration(milliseconds: i * _staggerMs), () {
         if (mounted) ctrl.forward();
       });
