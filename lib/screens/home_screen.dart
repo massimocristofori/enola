@@ -427,7 +427,7 @@ class _RankOverlay extends StatelessWidget {
           child: CustomPaint(
             painter: SunburstPainter(
               rayCount: 16, 
-              alphas: [0.36, 0.70, 0.20, 0.52], 
+              alphas: [0.46, 0.70, 0.40, 0.67], 
             ),
           ),
         ),
