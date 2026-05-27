@@ -35,31 +35,22 @@ void main() async {
     try {
       final Map<String, dynamic> data = jsonDecode(rawPayload);
       
-      // Safe type conversion to match TrainingService signature requirements
+      // Extract properties safely. Supports keys whether encoded as Strings or ints.
       final rawMapId = data['mapId'];
       final String mapIdString = rawMapId?.toString() ?? ''; 
-      final int riddleId = data['riddleId'] as int;
+      
+      final rawRiddleId = data['riddleId'];
+      final int riddleId = rawRiddleId is int 
+          ? rawRiddleId 
+          : int.tryParse(rawRiddleId?.toString() ?? '') ?? 0;
 
-      // Safely pass to training logic if it exists
+      // Handoff to your training service workflow to safely look up 
+      // the Riddle model in the database and transition the view smoothly.
       if (TrainingService.instance.onTrainingNotificationTap != null) {
         TrainingService.instance.onTrainingNotificationTap!(mapIdString, riddleId);
       }
-
-      // Route using addPostFrameCallback to guarantee context stability
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final context = navigatorKey.currentContext;
-        if (context == null) return;
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            // Matches constructor parameters: RiddleScreen(riddleId: ...)
-            builder: (context) => RiddleScreen(riddleId: riddleId),
-          ),
-        );
-      });
     } catch (e) {
-      // Graceful fallback to prevent app crashes if payload structure shifts
+      // Graceful fallback debug notification to protect production users from hard crashes
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = navigatorKey.currentContext;
         if (context == null) return;
