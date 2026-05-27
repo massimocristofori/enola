@@ -68,7 +68,7 @@ class ResultScreen extends StatelessWidget {
                   painter: _ResultSunburstPainter(
                     rayCount: 16, 
                     // Bumped alphas slightly so they track visibly over the grey background
-                    alphas: [0.22, 0.38, 0.15, 0.28], 
+                    alphas: [0.44, 0.68, 0.30, 0.56], 
                   ),
                 ),
               ),
