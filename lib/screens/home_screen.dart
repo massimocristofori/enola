@@ -13,6 +13,7 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
 import 'package:enola/services/drift_service.dart';
+import 'package:enola/services/notification_service.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -52,7 +53,14 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: _CreateFab(onTap: () => _openCreate(context)),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _DebugFab(),
+          const SizedBox(height: 12),
+          _CreateFab(onTap: () => _openCreate(context)),
+        ],
+      ),
     );
   }
 
@@ -419,25 +427,21 @@ class _RankOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Standardizing to Stack alignment center and clipping bounds
     return Stack(
       alignment: Alignment.center,
       children: [
         Positioned.fill(
           child: CustomPaint(
             painter: SunburstPainter(
-              rayCount: 16, 
-              alphas: [0.46, 0.74, 0.59, 0.67], 
+              rayCount: 16,
+              alphas: [0.46, 0.74, 0.59, 0.67],
             ),
           ),
         ),
         Text(
-          _rankEmoji(starRatio), 
-          style: const TextStyle(
-            fontSize: 64, 
-          ),
+          _rankEmoji(starRatio),
+          style: const TextStyle(fontSize: 64),
         ),
-        // Preserved structurally to avoid breaking your signature layout parameters
         Visibility(
           visible: false,
           maintainState: true,
@@ -490,13 +494,14 @@ class _CardShell extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10), // Ensures the rays get sliced at the image edges!
+                borderRadius: BorderRadius.circular(10),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     imageBytes != null
                         ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                        : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                        : Image.asset('assets/images/0.jpeg',
+                            fit: BoxFit.cover),
                     if (isComplete)
                       Positioned.fill(
                         child: _RankOverlay(starRatio: starRatio),
@@ -585,8 +590,8 @@ class _CardInfoBar extends StatelessWidget {
                   : 0,
               minHeight: 5,
               backgroundColor: const Color(0xFFE5E7EB),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(Color(0xFFf59e0b)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFFf59e0b)),
             ),
           ),
         ],
@@ -687,6 +692,34 @@ class _CreateFab extends StatelessWidget {
   }
 }
 
+// ── Debug FAB ─────────────────────────────────────────────────────────────────
+
+class _DebugFab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton.small(
+      heroTag: 'debug_fab',
+      backgroundColor: Colors.grey.shade700,
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Last notification tap'),
+            content: Text(NotificationService.lastPayload),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      },
+      child: const Icon(Icons.bug_report_rounded, color: Colors.white),
+    );
+  }
+}
+
 // ── Custom Painter ────────────────────────────────────────────────────────────
 
 class SunburstPainter extends CustomPainter {
@@ -698,8 +731,9 @@ class SunburstPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.sqrt(size.width * size.width + size.height * size.height);
-    
+    final radius = math.sqrt(
+        size.width * size.width + size.height * size.height);
+
     final angleStep = (2 * math.pi) / rayCount;
     final paint = Paint()..style = PaintingStyle.fill;
 
@@ -708,7 +742,7 @@ class SunburstPainter extends CustomPainter {
       paint.color = Colors.white.withValues(alpha: alpha);
 
       final startAngle = i * angleStep;
-      final endAngle = startAngle + (angleStep * 1); 
+      final endAngle = startAngle + (angleStep * 1);
 
       final path = Path()
         ..moveTo(center.dx, center.dy)
