@@ -13,80 +13,58 @@ import 'services/drift_service.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+ WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+ await SystemChrome.setPreferredOrientations([
+   DeviceOrientation.portraitUp,
+ ]);
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ));
+ SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+   statusBarColor: Colors.transparent,
+   statusBarIconBrightness: Brightness.light,
+ ));
 
-  GeminiService.instance.apiKey = const String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: '',
-  );
+ GeminiService.instance.apiKey = const String.fromEnvironment(
+   'GEMINI_API_KEY',
+   defaultValue: '',
+ );
 
-  await NotificationService.instance.init();
-  TrainingService.instance.init();
+ await NotificationService.instance.init();
+ TrainingService.instance.init();
 
-  // ── Warm-start notification tap handler ───────────────────────────────────
-  TrainingService.instance.onTrainingNotificationTap = (mapId, riddleId) async {
-    final db = DriftService.instance.db;
-    await DriftService.instance.ensureReady();
+ // ── Warm-start notification tap handler ───────────────────────────────────
+ TrainingService.instance.onTrainingNotificationTap = (mapId, riddleId) async {
+   final context = navigatorKey.currentContext;
+   if (context == null) return;
+   showDialog(
+     context: context,
+     builder: (_) => AlertDialog(
+       title: const Text('TAP RECEIVED'),
+       content: Text('mapId: $mapId\nriddleId: $riddleId\ncontext: OK'),
+       actions: [
+         TextButton(
+           onPressed: () => Navigator.pop(context),
+           child: const Text('OK'),
+         ),
+       ],
+     ),
+   );
+ };
 
-    final riddles = await db.getRiddlesForMap(mapId);
-    final index = riddles.indexWhere((r) => r.id == riddleId);
-    if (index == -1) return;
-    final riddle = riddles[index];
-
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    // Push riddle on top of whatever is currently showing
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: const Color(0xFFF1F4F8),
-          body: SafeArea(
-            child: RiddleScreen(
-              riddle: riddle,
-              riddleIndex: index,
-              trainingMode: true,
-              onDismiss: () => Navigator.of(context).pop(),
-              onComplete: (errorCount) async {
-                await TrainingService.instance.onRiddleAnswered(
-                  mapId: mapId,
-                  riddleId: riddleId,
-                  correct: errorCount == 0,
-                  riddles: riddles,
-                );
-                Navigator.of(context).pop();
-              },
-              onSkip: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ),
-      ),
-    );
-  };
-
-  runApp(const ProviderScope(child: EnolaApp()));
+ runApp(const ProviderScope(child: EnolaApp()));
 }
 
 class EnolaApp extends StatelessWidget {
-  const EnolaApp({super.key});
+ const EnolaApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Enola',
-      debugShowCheckedModeBanner: false,
-      theme: EnolaTheme.theme,
-      navigatorKey: navigatorKey,
-      home: const HomeScreen(),
-    );
-  }
+ @override
+ Widget build(BuildContext context) {
+   return MaterialApp(
+     title: 'Enola',
+     debugShowCheckedModeBanner: false,
+     theme: EnolaTheme.theme,
+     navigatorKey: navigatorKey,
+     home: const HomeScreen(),
+   );
+ }
 }
