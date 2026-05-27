@@ -36,23 +36,31 @@ void main() async {
 
   // ── 2. Bind the screen route to the TrainingService callback ───────────────
   TrainingService.instance.onTrainingNotificationTap = (String mapId, int riddleId) {
-    // addPostFrameCallback ensures the UI layout engine is responsive 
-    // and ready after waking up from a background or cold-start state.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final context = navigatorKey.currentContext;
-      if (context == null) return;
+
+      // If context is null the app may still be mounting after resume — retry
+      // on the next frame rather than silently bailing.
+      if (context == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          TrainingService.instance.onTrainingNotificationTap?.call(mapId, riddleId);
+        });
+        return;
+      }
 
       try {
         final db = DriftService.instance.db;
 
-        // Fetch the actual database entities required by RiddleScreen
-        final riddle = await (db.select(db.riddles)..where((r) => r.id.equals(riddleId))).getSingle();
-        final allRiddles = await (db.select(db.riddles)..where((r) => r.mapId.equals(mapId))).get();
+        final riddle = await (db.select(db.riddles)
+              ..where((r) => r.id.equals(riddleId)))
+            .getSingle();
+        final allRiddles = await (db.select(db.riddles)
+              ..where((r) => r.mapId.equals(mapId)))
+            .get();
         final int targetIndex = allRiddles.indexWhere((r) => r.id == riddleId);
 
         if (!context.mounted) return;
 
-        // Push RiddleScreen using the exact parameter mappings from your source file
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -74,7 +82,6 @@ void main() async {
                     Navigator.pop(context);
                   },
                   onComplete: (int errorCount) {
-                    // Training mode maps zero errors to a clean pass
                     final bool isCorrect = errorCount == 0;
                     TrainingService.instance.onRiddleAnswered(
                       mapId: mapId,
@@ -90,13 +97,13 @@ void main() async {
           ),
         );
       } catch (e) {
-        // Safe operational fallback modal for troubleshooting local database states
         if (!context.mounted) return;
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
             title: const Text('Training Route Sync Failed'),
-            content: Text('Could not safely fetch riddle details from database.\nDetails: $e'),
+            content: Text(
+                'Could not safely fetch riddle details from database.\nDetails: $e'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -109,7 +116,16 @@ void main() async {
     });
   };
 
+  // ── 3. Launch app, then drain any cold-start notification ──────────────────
+  // runApp is called first so the widget tree and navigator are mounted.
+  // The post-frame callback then fires the pending tap if the app was
+  // launched by a notification, at which point navigatorKey.currentContext
+  // is guaranteed to be available.
   runApp(const ProviderScope(child: EnolaApp()));
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    NotificationService.instance.drainPendingLaunchNotification();
+  });
 }
 
 class EnolaApp extends StatelessWidget {
