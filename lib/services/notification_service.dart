@@ -1,8 +1,10 @@
-import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
+// Forward declaration — main.dart defines the actual top-level function
+// and passes it to init(). Stored here so the background isolate can
+// write to a shared static slot.
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
   NotificationService._internal();
@@ -11,14 +13,25 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialised = false;
-  NotificationResponse? _pendingLaunchResponse;
+
+  // Holds a response that arrived while the app was backgrounded or
+  // cold-started via notification tap.
+  static NotificationResponse? _pendingResponse;
 
   // ── Temporary debug ───────────────────────────────────────────────────────
   static String lastPayload = 'never fired';
 
+  // Called from the top-level background handler in main.dart
+  static void setPendingBackground(NotificationResponse response) {
+    _pendingResponse = response;
+    lastPayload = 'background set: "${response.payload}"';
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
 
-  Future<void> init() async {
+  Future<void> init({
+    void Function(NotificationResponse)? onBackground,
+  }) async {
     if (_initialised) return;
 
     tz_data.initializeTimeZones();
@@ -39,26 +52,28 @@ class NotificationService {
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: onBackground,
     );
 
     // ── Cold-Start Check ─────────────────────────────────────────────────────
-    // Store the response rather than firing it immediately.
-    // TrainingService will drain this after all callbacks are wired in main.dart.
     final launchDetails = await _plugin.getNotificationAppLaunchDetails();
     if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
-      _pendingLaunchResponse = launchDetails.notificationResponse;
+      final response = launchDetails.notificationResponse;
+      if (response != null) {
+        _pendingResponse = response;
+        lastPayload = 'cold-start set: "${response.payload}"';
+      }
     }
 
     _initialised = true;
   }
 
-  // ── Drain pending cold-start notification ─────────────────────────────────
-  // Call this after all tap-handler callbacks are fully wired.
+  // ── Drain ─────────────────────────────────────────────────────────────────
 
   void drainPendingLaunchNotification() {
-    final response = _pendingLaunchResponse;
+    final response = _pendingResponse;
     if (response != null) {
-      _pendingLaunchResponse = null;
+      _pendingResponse = null;
       _onNotificationTap(response);
     }
   }
@@ -130,8 +145,7 @@ class NotificationService {
   void Function(String payload)? onNotificationTap;
 
   void _onNotificationTap(NotificationResponse response) {
-    lastPayload =
-        'payload: "${response.payload}", handler null: ${onNotificationTap == null}';
+    lastPayload = 'payload: "${response.payload}", handler null: ${onNotificationTap == null}';
     final payload = response.payload;
     if (payload != null && onNotificationTap != null) {
       onNotificationTap!(payload);
