@@ -45,6 +45,19 @@ class PlaySessions extends Table {
 	IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
 }
 
+// Add this new table class alongside the existing ones
+
+class TrainingSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get mapId => text().references(RiddleMaps, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get startedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get endsAt => dateTime()();
+  TextColumn get poolJson => text().withDefault(const Constant('[]'))();
+  TextColumn get scheduledJson => text().withDefault(const Constant('[]'))();
+  DateTimeColumn get completedAt => dateTime().nullable()();
+}
+
+
 // ---
 
 sealed class RiddlePayload {
@@ -104,12 +117,12 @@ class OrderingPayload extends RiddlePayload {
 
 // ---
 
-@DriftDatabase(tables: [RiddleMaps, Riddles, PlaySessions])
+@DriftDatabase(tables: [RiddleMaps, Riddles, PlaySessions, TrainingSessions])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +143,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(riddleMaps, riddleMaps.riddlesVersion);
         await m.addColumn(playSessions, playSessions.riddlesVersion);
       }
+			if (from < 7) {
+  				await m.createTable(trainingSessions);
+			}
+
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
