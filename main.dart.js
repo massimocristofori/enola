@@ -53085,34 +53085,34 @@ return A.eA(A.yq(A.hk(A.fp(new A.bm(B.pE,A.bP(A.b([B.cs,A.bg("No quest maps yet"
 A.Zi.prototype={
 I(a){return A.aSx(B.r,B.i,B.qr,B.a08,this.c)}}
 A.WE.prototype={
-aR(a,b){var s,r,q,p,o,n,m,l,k,j,i,h=b.a,g=h/2,f=b.b,e=f/2,d=Math.sqrt(h*h+f*f)
-f=this.b
-s=6.283185307179586/f
-h=$.a9()
+aR(a,b){var s,r,q,p,o,n,m,l,k,j,i=b.a,h=i/2,g=b.b,f=g/2,e=Math.sqrt(i*i+g*g)
+g=this.b
+s=6.283185307179586/g
+i=$.a9()
 r=A.bb()
 r.b=B.bC
-for(q=this.c,p=s*0.68,o=0;o<f;++o){r.r=B.i.dc(q[B.e.bo(o,4)]).gv()
-n=o*s
-m=n+p
-l=A.cd(h.r)
-k=new A.h_(g,e)
-j=l.e
-j.push(k)
-i=l.d
-if(i!=null)k.dU(i)
-k=new A.ct(g+d*Math.cos(n),e+d*Math.sin(n))
-j.push(k)
-i=l.d
-if(i!=null)k.dU(i)
-k=new A.ct(g+d*Math.cos(m),e+d*Math.sin(m))
-j.push(k)
-i=l.d
-if(i!=null)k.dU(i)
-k=new A.oH()
-j.push(k)
-j=l.d
-if(j!=null)k.dU(j)
-a.iv(l,r)}},
+for(q=this.c,p=0;p<g;++p){r.r=B.i.dc(q[B.e.bo(p,4)]).gv()
+o=p*s
+n=o+s
+m=A.cd(i.r)
+l=new A.h_(h,f)
+k=m.e
+k.push(l)
+j=m.d
+if(j!=null)l.dU(j)
+l=new A.ct(h+e*Math.cos(o),f+e*Math.sin(o))
+k.push(l)
+j=m.d
+if(j!=null)l.dU(j)
+l=new A.ct(h+e*Math.cos(n),f+e*Math.sin(n))
+k.push(l)
+j=m.d
+if(j!=null)l.dU(j)
+l=new A.oH()
+k.push(l)
+k=m.d
+if(k!=null)l.dU(k)
+a.iv(m,r)}},
 em(a){return a.b!==this.b||a.c!==this.c}}
 A.u4.prototype={
 ai(){return new A.KC(new A.br(null,t.A),A.w(t.S,t.yi))}}
