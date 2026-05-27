@@ -66,7 +66,7 @@ class ResultScreen extends StatelessWidget {
               Positioned.fill(
                 child: CustomPaint(
                   painter: _ResultSunburstPainter(
-                    rayCount: 24, 
+                    rayCount: 16, 
                     // Bumped alphas slightly so they track visibly over the grey background
                     alphas: [0.22, 0.38, 0.15, 0.28], 
                   ),
@@ -288,7 +288,7 @@ class _ResultSunburstPainter extends CustomPainter {
       paint.color = Colors.white.withValues(alpha: alpha);
 
       final startAngle = i * angleStep;
-      final endAngle = startAngle + (angleStep * 0.65); 
+      final endAngle = startAngle + (angleStep * 1); 
 
       final path = Path()
         ..moveTo(center.dx, center.dy)
