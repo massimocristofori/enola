@@ -10,6 +10,7 @@ class RiddleScreen extends StatefulWidget {
   final Riddle riddle;
   final int riddleIndex;
   final bool readOnly;
+  final bool trainingMode;
   final VoidCallback onDismiss;
   final void Function(int errorCount) onComplete;
   final VoidCallback onSkip;
@@ -22,6 +23,7 @@ class RiddleScreen extends StatefulWidget {
     required this.onComplete,
     required this.onSkip,
     this.readOnly = false,
+    this.trainingMode = false,
   });
 
   @override
@@ -54,7 +56,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
           ? _hasHint
           : widget.riddle.sourceExcerpt != null &&
               widget.riddle.sourceExcerpt!.isNotEmpty &&
-              (_solvedCorrectly || _errorCount >= 3);
+              (_solvedCorrectly || _errorCount >= 1 || widget.trainingMode);
 
   bool get _hasHint =>
       widget.riddle.sourceExcerpt != null &&
@@ -72,6 +74,8 @@ class _RiddleScreenState extends State<RiddleScreen> {
         _solvedCorrectly = true;
       } else {
         _errorCount++;
+        // In training mode failure is terminal — no retry
+        if (widget.trainingMode) _solvedCorrectly = false;
       }
     });
   }
@@ -221,7 +225,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // ── Hint button (scrolls with content) ───────────────────
+                  // ── Hint button ───────────────────────────────────────────
                   if (_hasHint) ...[
                     Align(
                       alignment: Alignment.centerRight,
@@ -329,6 +333,13 @@ class _RiddleScreenState extends State<RiddleScreen> {
           // ── Feedback bar ──────────────────────────────────────────────────
           if (widget.readOnly)
             _ReadOnlyFeedbackBar(onDismiss: widget.onDismiss)
+          else if (_showingFeedback && widget.trainingMode)
+            _TrainingFeedback(
+              isCorrect: _lastAnswerCorrect ?? false,
+              riddle: widget.riddle,
+              orderedItems: _orderedItems,
+              onDismiss: widget.onDismiss,
+            ).animate().slideY(begin: 1, end: 0).fadeIn()
           else if (_showingFeedback)
             _AnswerFeedback(
               isCorrect: _lastAnswerCorrect ?? false,
@@ -710,6 +721,221 @@ class _AnswerFeedback extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Training feedback bar ─────────────────────────────────────────────────────
+
+class _TrainingFeedback extends StatelessWidget {
+  final bool isCorrect;
+  final Riddle riddle;
+  final List<String> orderedItems;
+  final VoidCallback onDismiss;
+
+  const _TrainingFeedback({
+    required this.isCorrect,
+    required this.riddle,
+    required this.orderedItems,
+    required this.onDismiss,
+  });
+
+  bool get _hasHint =>
+      riddle.sourceExcerpt != null && riddle.sourceExcerpt!.isNotEmpty;
+
+  bool get _isOrdering => riddle.type == RiddleType.ordering;
+
+  List<String> get _correctOrder =>
+      riddle.asOrdering?.items ?? riddle.choices;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isCorrect) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        decoration: BoxDecoration(
+          color: EnolaTheme.correct.withAlpha(20),
+          border: const Border(
+            top: BorderSide(color: EnolaTheme.correct, width: 2),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: EnolaTheme.correct, size: 28),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Perfect! Riddle mastered.',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: EnolaTheme.correct,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: onDismiss,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EnolaTheme.correct,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                'Done',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Failure ───────────────────────────────────────────────────────────
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        decoration: BoxDecoration(
+          color: EnolaTheme.wrong.withAlpha(20),
+          border: const Border(
+            top: BorderSide(color: EnolaTheme.wrong, width: 2),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Wrong indicator ───────────────────────────────────────────
+            Row(
+              children: [
+                const Icon(Icons.cancel_rounded,
+                    color: EnolaTheme.wrong, size: 28),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Not quite — you\'ll see this one again.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: EnolaTheme.wrong,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // ── Correct order (ordering only) ─────────────────────────────
+            if (_isOrdering) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Correct order:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: EnolaTheme.textSecond,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...List.generate(_correctOrder.length, (i) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: EnolaTheme.correct.withAlpha(60),
+                        child: Text(
+                          '${i + 1}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: EnolaTheme.correct,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _correctOrder[i],
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: EnolaTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+
+            // ── Hint ──────────────────────────────────────────────────────
+            if (_hasHint) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Icon(Icons.menu_book_rounded,
+                      color: EnolaTheme.accent, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Source',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: EnolaTheme.accent,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: EnolaTheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: EnolaTheme.border),
+                ),
+                child: Text(
+                  riddle.sourceExcerpt!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.6,
+                    fontStyle: FontStyle.italic,
+                    color: EnolaTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // ── Dismiss ───────────────────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onDismiss,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: EnolaTheme.wrong,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Got it',
+                  style:
+                      TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
