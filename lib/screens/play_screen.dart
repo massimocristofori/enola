@@ -630,9 +630,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 }
 
-// ── Map view ──────────────────────────────────────────────────────────────────
+// ── Map view (Stateful to support Auto-Centering) ───────────────────────────
 
-class _MapView extends StatelessWidget {
+class _MapView extends StatefulWidget {
   final List<Riddle> riddles;
   final String mapId;
   final dynamic playState;
@@ -659,6 +659,80 @@ class _MapView extends StatelessWidget {
   });
 
   @override
+  State<_MapView> createState() => _MapViewState();
+}
+
+class _MapViewState extends State<_MapView> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    
+    // Auto-scroll on initial load
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToActiveNode(immediate: true));
+  }
+
+  @override
+  void didUpdateWidget(covariant _MapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Smooth scroll if the target active index shifted
+    if (oldWidget.playState.lastCompletedIndex != widget.playState.lastCompletedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToActiveNode(immediate: false));
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToActiveNode({bool immediate = false}) {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    // Determine target index: next unresolved node, or last node if completed
+    int targetIndex = widget.playState.lastCompletedIndex + 1;
+    if (targetIndex >= widget.riddles.length || widget.isCompleted) {
+      targetIndex = widget.riddles.length - 1;
+    }
+    if (targetIndex < 0) targetIndex = 0;
+
+    final nodeKey = widget.nodeKeys[targetIndex];
+    if (nodeKey == null) return;
+
+    final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
+    final scrollBox = context.findRenderObject() as RenderBox?;
+
+    if (nodeBox == null || scrollBox == null) return;
+
+    // Find local position of the node relative to the entire _MapView viewport
+    final nodeOffset = nodeBox.localToGlobal(Offset.zero, ancestor: scrollBox);
+    final nodeCenterY = nodeOffset.dy + (nodeBox.size.height / 2);
+    final viewportCenterY = scrollBox.size.height / 2;
+
+    // Determine how much we need to adjust the current scroll position
+    final targetScrollOffset = _scrollController.offset + (nodeCenterY - viewportCenterY);
+    
+    // Clamp target offset within valid scrollable boundaries
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final minScroll = _scrollController.position.minScrollExtent;
+    final clampedOffset = targetScrollOffset.clamp(minScroll, maxScroll);
+
+    if (immediate) {
+      _scrollController.jumpTo(clampedOffset);
+    } else {
+      _scrollController.animateTo(
+        clampedOffset,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
@@ -666,18 +740,17 @@ class _MapView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
           child: GestureDetector(
-            onTap: onToggleTraining,
+            onTap: widget.onToggleTraining,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: trainingActive
+                color: widget.trainingActive
                     ? EnolaTheme.accent.withAlpha(20)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: trainingActive
+                  color: widget.trainingActive
                       ? EnolaTheme.accent
                       : EnolaTheme.border,
                 ),
@@ -685,24 +758,24 @@ class _MapView extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    trainingActive
+                    widget.trainingActive
                         ? Icons.school_rounded
                         : Icons.school_outlined,
                     size: 18,
-                    color: trainingActive
+                    color: widget.trainingActive
                         ? EnolaTheme.accent
                         : EnolaTheme.textSecond,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      trainingActive
+                      widget.trainingActive
                           ? 'Training mode is ON'
                           : 'Training mode is OFF',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: trainingActive
+                        color: widget.trainingActive
                             ? EnolaTheme.accent
                             : EnolaTheme.textSecond,
                       ),
@@ -711,12 +784,12 @@ class _MapView extends StatelessWidget {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
-                      key: ValueKey(trainingActive),
-                      trainingActive
+                      key: ValueKey(widget.trainingActive),
+                      widget.trainingActive
                           ? Icons.toggle_on_rounded
                           : Icons.toggle_off_rounded,
                       size: 32,
-                      color: trainingActive
+                      color: widget.trainingActive
                           ? EnolaTheme.accent
                           : EnolaTheme.textSecond,
                     ),
@@ -727,7 +800,7 @@ class _MapView extends StatelessWidget {
           ),
         ),
 
-        if (isCompleted)
+        if (widget.isCompleted)
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
             child: Text(
@@ -739,7 +812,7 @@ class _MapView extends StatelessWidget {
               ),
             ).animate().fadeIn(delay: 400.ms),
           )
-        else if (playState.lastCompletedIndex < riddles.length - 1)
+        else if (widget.playState.lastCompletedIndex < widget.riddles.length - 1)
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
             child: Text(
@@ -754,25 +827,25 @@ class _MapView extends StatelessWidget {
 
         Expanded(
           child: SingleChildScrollView(
+            controller: _scrollController, // ATTENTION: Attached the controller here
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: TreasureMapPath(
-                  riddles: riddles,
-                  mapId: mapId,
-                  lastCompletedIndex: playState.lastCompletedIndex,
-                  riddleStars: playState.riddleStars,
-                  imageBytes: imageBytes,
-                  nodeKeys: nodeKeys,
-                  immediateActivation: playState.lastCompletedIndex == -1,
-                  onCurrentNodeTap: isCompleted
+                  riddles: widget.riddles,
+                  mapId: widget.mapId,
+                  lastCompletedIndex: widget.playState.lastCompletedIndex,
+                  riddleStars: widget.playState.riddleStars,
+                  imageBytes: widget.imageBytes,
+                  nodeKeys: widget.nodeKeys,
+                  immediateActivation: widget.playState.lastCompletedIndex == -1,
+                  onCurrentNodeTap: widget.isCompleted
                       ? null
-                      : playState.lastCompletedIndex < riddles.length - 1
-                          ? () =>
-                              onNodeTap(playState.lastCompletedIndex + 1)
+                      : widget.playState.lastCompletedIndex < widget.riddles.length - 1
+                          ? () => widget.onNodeTap(widget.playState.lastCompletedIndex + 1)
                           : null,
-                  onCompletedNodeTap: onCompletedNodeTap,
+                  onCompletedNodeTap: widget.onCompletedNodeTap,
                 ),
               ),
             ),
@@ -782,6 +855,7 @@ class _MapView extends StatelessWidget {
     );
   }
 }
+
 
 // ── Play Header ───────────────────────────────────────────────────────────────
 
