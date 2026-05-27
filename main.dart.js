@@ -53065,7 +53065,7 @@ $0(){return this.a.afN(this.b,this.c)},
 $S:0}
 A.a2f.prototype={
 I(a){var s=null,r=this.c
-return A.fd(B.a1,A.b([A.amF(0,A.iF(s,s,s,new A.WE(16,A.b([0.36,0.7,0.2,0.52],t.n),s),B.H)),A.bg(A.bcG(r),s,s,s,s,B.Yj,s,s),new A.Xv(A.bg(A.bcH(r),s,s,s,s,s,s,s),!1,!0,s)],t.p),B.C,B.ba,s)}}
+return A.fd(B.a1,A.b([A.amF(0,A.iF(s,s,s,new A.WE(16,A.b([0.46,0.7,0.4,0.67],t.n),s),B.H)),A.bg(A.bcG(r),s,s,s,s,B.Yj,s,s),new A.Xv(A.bg(A.bcH(r),s,s,s,s,s,s,s),!1,!0,s)],t.p),B.C,B.ba,s)}}
 A.YO.prototype={
 I(a){var s,r=this,q=null,p=r.r,o=p>0?r.f/p:0,n=A.ba(16),m=A.b([new A.dA(0,B.bQ,A.ax(15,B.l.B()>>>16&255,B.l.B()>>>8&255,B.l.B()&255),B.dA,12)],t.sq),l=A.ba(10),k=r.c
 k=k!=null?A.agm(k,B.cM):A.aNH("assets/images/0.jpeg",B.cM)
