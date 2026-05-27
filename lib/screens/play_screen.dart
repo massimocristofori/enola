@@ -53,7 +53,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadSession();
       await _loadTrainingState();
-      _registerTrainingTapHandler();
+
     });
   }
 
@@ -72,37 +72,20 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     if (mounted) setState(() => _trainingActive = active);
   }
 
-  void _registerTrainingTapHandler() {
-    TrainingService.instance.onTrainingNotificationTap = (mapId, riddleId) {
-      if (mapId != widget.mapId) return;
-      final riddles = ref.read(riddlesForMapProvider(widget.mapId)).valueOrNull;
-      if (riddles == null) return;
-      final index = riddles.indexWhere((r) => r.id == riddleId);
-      if (index == -1) return;
-      if (mounted) {
-        setState(() {
-          _activeRiddleIndex = index;
-          _activeRiddleReadOnly = false;
-          _activeRiddleTraining = true;
-          _activeRiddleId = riddleId;
-        });
-      }
-    };
-  }
 
-  Future<void> _onToggleTraining(List<Riddle> riddles) async {
+
+    Future<void> _onToggleTraining(List<Riddle> riddles) async {
     if (_trainingActive) {
-      // Stop training
       final confirm = await _showStopTrainingDialog();
       if (!confirm) return;
       await TrainingService.instance.stopTraining(widget.mapId);
       if (mounted) setState(() => _trainingActive = false);
     } else {
-      // Start training
-      final hours = await _showStartTrainingDialog();
-      if (hours == null) return;
+      final minutes = await _showStartTrainingDialog();
+      if (minutes == null) return;
 
-      final granted = await NotificationService.instance.requestPermissions();
+      final granted =
+          await NotificationService.instance.requestPermissions();
       if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -118,11 +101,103 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       await TrainingService.instance.startTraining(
         mapId: widget.mapId,
         riddles: riddles,
-        durationHours: hours,
+        durationMinutes: minutes,
       );
       if (mounted) setState(() => _trainingActive = true);
     }
   }
+
+  Future<int?> _showStartTrainingDialog() async {
+    // Options: (label, minutes)
+    const options = [
+      ('1 hour', 60),
+      ('3 hours', 180),
+      ('6 hours', 360),
+      ('12 hours', 720),
+      ('24 hours', 1440),
+      ('48 hours', 2880),
+    ];
+
+    int selectedMinutes = 1440; // default 24h
+
+    return await showDialog<int>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Start Training'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'How much time do you have to learn this?',
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Riddles will be delivered as notifications. Failed ones will be repeated.',
+                style: TextStyle(fontSize: 12, height: 1.5, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: options.map((opt) {
+                  final (label, minutes) = opt;
+                  final selected = selectedMinutes == minutes;
+                  return GestureDetector(
+                    onTap: () =>
+                        setDialogState(() => selectedMinutes = minutes),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? EnolaTheme.accent
+                            : EnolaTheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected
+                              ? EnolaTheme.accent
+                              : EnolaTheme.border,
+                        ),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : EnolaTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, selectedMinutes),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EnolaTheme.accent,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Start'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Future<bool> _showStopTrainingDialog() async {
     return await showDialog<bool>(
@@ -149,85 +224,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         false;
   }
 
-  Future<int?> _showStartTrainingDialog() async {
-    int selectedHours = 24;
-    return await showDialog<int>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Start Training'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'The app will send you riddle notifications over the chosen period to help you study.',
-                style: TextStyle(fontSize: 14, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Training duration',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children: [6, 12, 24, 48, 72].map((h) {
-                  final selected = selectedHours == h;
-                  return GestureDetector(
-                    onTap: () => setDialogState(() => selectedHours = h),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? EnolaTheme.accent
-                            : EnolaTheme.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: selected
-                              ? EnolaTheme.accent
-                              : EnolaTheme.border,
-                        ),
-                      ),
-                      child: Text(
-                        '${h}h',
-                        style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : EnolaTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, selectedHours),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: EnolaTheme.accent,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Start'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  
 
   // ── Session loading ────────────────────────────────────────────────────────
 
