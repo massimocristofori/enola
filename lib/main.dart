@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'services/gemini_service.dart';
 import 'services/notification_service.dart';
@@ -12,6 +13,16 @@ import 'screens/riddle_screen.dart';
 import 'services/drift_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+// ── Must be a top-level function, not a method or closure ─────────────────────
+// iOS calls this when the app is in the background and the user taps a
+// notification. It runs on a separate isolate so we cannot touch the UI here —
+// we just store the payload so the main isolate can pick it up on resume.
+@pragma('vm:entry-point')
+void onBackgroundNotificationResponse(NotificationResponse response) {
+  // Store via the service so drainPendingLaunchNotification picks it up.
+  NotificationService.setPendingBackground(response);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,17 +41,15 @@ void main() async {
     defaultValue: '',
   );
 
-  // ── 1. Initialize Services in correct sequence ─────────────────────────────
-  await NotificationService.instance.init();
-  TrainingService.instance.init(); // Sets up internal payload parsing listener
+  // ── 1. Initialize Services ─────────────────────────────────────────────────
+  await NotificationService.instance.init(onBackground: onBackgroundNotificationResponse,);
+  TrainingService.instance.init();
 
-  // ── 2. Bind the screen route to the TrainingService callback ───────────────
+  // ── 2. Bind the screen route ───────────────────────────────────────────────
   TrainingService.instance.onTrainingNotificationTap = (String mapId, int riddleId) {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final context = navigatorKey.currentContext;
 
-      // If context is null the app may still be mounting after resume — retry
-      // on the next frame rather than silently bailing.
       if (context == null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           TrainingService.instance.onTrainingNotificationTap?.call(mapId, riddleId);
@@ -116,11 +125,7 @@ void main() async {
     });
   };
 
-  // ── 3. Launch app, then drain any cold-start notification ──────────────────
-  // runApp is called first so the widget tree and navigator are mounted.
-  // The post-frame callback then fires the pending tap if the app was
-  // launched by a notification, at which point navigatorKey.currentContext
-  // is guaranteed to be available.
+  // ── 3. Launch app, then drain any pending notification ─────────────────────
   runApp(const ProviderScope(child: EnolaApp()));
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
