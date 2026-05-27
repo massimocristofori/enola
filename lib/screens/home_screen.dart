@@ -258,7 +258,7 @@ class _MapCard extends ConsumerWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(15),
@@ -278,7 +278,7 @@ class _MapCard extends ConsumerWidget {
                                 padding:
                                     const EdgeInsets.fromLTRB(8, 8, 8, 0),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(8),
                                   child: imageBytes != null
                                       ? Image.memory(imageBytes,
                                           fit: BoxFit.cover)
