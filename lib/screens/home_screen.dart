@@ -700,12 +700,35 @@ class _DebugFab extends StatelessWidget {
     return FloatingActionButton.small(
       heroTag: 'debug_fab',
       backgroundColor: Colors.grey.shade700,
-      onPressed: () {
+      onPressed: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final stored = prefs.getString('pending_notification_payload') ?? 'nothing in prefs';
+        final pending = await NotificationService.instance.getPendingNotifications();
+        final pendingStr = pending.isEmpty
+            ? 'no pending notifications'
+            : pending.map((p) => 'id=${p.id} payload=${p.payload}').join('\n');
+
+        if (!context.mounted) return;
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Last notification tap'),
-            content: Text(NotificationService.lastPayload),
+            title: const Text('Debug'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('lastPayload:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(NotificationService.lastPayload),
+                  const SizedBox(height: 12),
+                  const Text('prefs payload:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(stored),
+                  const SizedBox(height: 12),
+                  const Text('pending notifications:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(pendingStr),
+                ],
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -719,6 +742,7 @@ class _DebugFab extends StatelessWidget {
     );
   }
 }
+
 
 // ── Custom Painter ────────────────────────────────────────────────────────────
 
