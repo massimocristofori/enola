@@ -33,17 +33,19 @@ void main() async {
   // ── 1. Bind Native Taps to your Training Logic ─────────────────────────────
   NotificationService.instance.onNotificationTap = (String rawPayload) {
     try {
-      // Assuming your payload is stored as a JSON string containing IDs
       final Map<String, dynamic> data = jsonDecode(rawPayload);
-      final mapId = data['mapId'] as int;
-      final riddleId = data['riddleId'] as int;
+      
+      // Safe type conversion to match TrainingService signature requirements
+      final rawMapId = data['mapId'];
+      final String mapIdString = rawMapId?.toString() ?? ''; 
+      final int riddleId = data['riddleId'] as int;
 
-      // Pass it to your local training service workflow if required
+      // Safely pass to training logic if it exists
       if (TrainingService.instance.onTrainingNotificationTap != null) {
-        TrainingService.instance.onTrainingNotificationTap!(mapId, riddleId);
+        TrainingService.instance.onTrainingNotificationTap!(mapIdString, riddleId);
       }
 
-      // Execute navigation safely outside the render process cycle
+      // Route using addPostFrameCallback to guarantee context stability
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = navigatorKey.currentContext;
         if (context == null) return;
@@ -51,20 +53,21 @@ void main() async {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RiddleScreen(mapId: mapId, riddleId: riddleId),
+            // Matches constructor parameters: RiddleScreen(riddleId: ...)
+            builder: (context) => RiddleScreen(riddleId: riddleId),
           ),
         );
       });
     } catch (e) {
-      // Fallback debug validation if json parsing or parsing types mismatch
+      // Graceful fallback to prevent app crashes if payload structure shifts
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = navigatorKey.currentContext;
         if (context == null) return;
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Error Reading Payload'),
-            content: Text('Raw: $rawPayload\nException: $e'),
+            title: const Text('Notification Payload Alert'),
+            content: Text('Raw data incoming: $rawPayload\nDetails: $e'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -77,7 +80,7 @@ void main() async {
     }
   };
 
-  // ── 2. Run initializations with the listener hooked in ────────────────────
+  // ── 2. Run initializations with listeners securely hooked in ───────────────
   await NotificationService.instance.init();
   TrainingService.instance.init();
 
