@@ -159,30 +159,38 @@ class TrainingService {
     final db = DriftService.instance.db;
     List<int> pool = _parsePoolJson(session.poolJson);
     List<TrainingSlot> slots = _parseSlotsJson(session.scheduledJson);
+    List<TrainingSlot> slotsToCancel = [];
+    TrainingSlot? newSlot;
 
     if (correct) {
-      // Remove from pool permanently
       pool.remove(riddleId);
-
-      // Cancel any future notifications for this riddle
-      final toCancel = slots.where((s) =>
-          s.riddleId == riddleId && s.scheduledAt.isAfter(now));
-      for (final slot in toCancel) {
-        await NotificationService.instance
-            .cancelNotification(slot.notificationId);
-      }
+      
+      // Identify slots to cancel without awaiting yet
+      slotsToCancel = slots.where((s) =>
+          s.riddleId == riddleId && s.scheduledAt.isAfter(now)).toList();
+      
       slots.removeWhere(
           (s) => s.riddleId == riddleId && s.scheduledAt.isAfter(now));
 
-      // Pool empty → training complete
       if (pool.isEmpty) {
+        // Save terminal state directly
+        await (db.update(db.trainingSessions)
+              ..where((t) => t.id.equals(session.id)))
+            .write(TrainingSessionsCompanion(
+          poolJson: drift.Value(jsonEncode(pool)),
+          scheduledJson: drift.Value(jsonEncode(slots.map((s) => s.toJson()).toList())),
+          completedAt: drift.Value(DateTime.now()),
+        ));
+
+        // Fire and clear notifications last
         await _scheduleCompletionNotification();
-        await _completeSession(session.id);
+        for (final slot in slotsToCancel) {
+          await NotificationService.instance.cancelNotification(slot.notificationId);
+        }
         return;
       }
     } else {
-      // Failed — schedule a new slot in the back half of remaining time
-      final newSlot = _scheduleFailureSlot(
+      newSlot = _scheduleFailureSlot(
         mapId: mapId,
         riddleId: riddleId,
         existingSlots: slots,
@@ -192,19 +200,10 @@ class TrainingService {
 
       if (newSlot != null) {
         slots.add(newSlot);
-        final riddle = riddles.firstWhere((r) => r.id == riddleId);
-        await NotificationService.instance.scheduleRiddleNotification(
-          id: newSlot.notificationId,
-          title: '🧠 Training time!',
-          body: riddle.question.length > 80
-              ? '${riddle.question.substring(0, 80)}…'
-              : riddle.question,
-          scheduledAt: newSlot.scheduledAt,
-          payload: '$mapId:$riddleId',
-        );
       }
     }
 
+    // CRITICAL FIX: Update DB state immediately before performing awaited notifications
     await (db.update(db.trainingSessions)
           ..where((t) => t.id.equals(session.id)))
         .write(TrainingSessionsCompanion(
@@ -213,6 +212,24 @@ class TrainingService {
         jsonEncode(slots.map((s) => s.toJson()).toList()),
       ),
     ));
+
+    // Perform notification mutations safely now that DB reflects current state
+    if (correct) {
+      for (final slot in slotsToCancel) {
+        await NotificationService.instance.cancelNotification(slot.notificationId);
+      }
+    } else if (newSlot != null) {
+      final riddle = riddles.firstWhere((r) => r.id == riddleId);
+      await NotificationService.instance.scheduleRiddleNotification(
+        id: newSlot.notificationId,
+        title: '🧠 Training time!',
+        body: riddle.question.length > 80
+            ? '${riddle.question.substring(0, 80)}…'
+            : riddle.question,
+        scheduledAt: newSlot.scheduledAt,
+        payload: '$mapId:$riddleId',
+      );
+    }
   }
 
   // ── Build initial slots (first 50% of window) ─────────────────────────────
@@ -235,9 +252,12 @@ class TrainingService {
     final slots = <TrainingSlot>[];
     final shuffled = List<int>.from(pool)..shuffle(Random());
 
+    // Safe padding buffer (10 seconds) ensuring first slots fall strictly in the future
+    final baseTime = from.add(const Duration(seconds: 10));
+
     for (int i = 0; i < shuffled.length; i++) {
       final scheduledAt =
-          from.add(Duration(minutes: intervalMinutes * (i + 1)));
+          baseTime.add(Duration(minutes: intervalMinutes * (i + 1)));
       if (scheduledAt.isAfter(to)) break;
 
       slots.add(TrainingSlot(
@@ -259,7 +279,6 @@ class TrainingService {
     required DateTime sessionEndsAt,
     required DateTime now,
   }) {
-    // Find the last already-scheduled future slot
     final futureSlots = existingSlots
         .where((s) => s.scheduledAt.isAfter(now))
         .toList()
@@ -270,12 +289,10 @@ class TrainingService {
       candidate =
           now.add(Duration(minutes: kTrainingMinGapMinutes));
     } else {
-      // Place after the last future slot with minimum gap
       candidate = futureSlots.last.scheduledAt
           .add(Duration(minutes: kTrainingMinGapMinutes));
     }
 
-    // Don't schedule past the session end
     if (candidate.isAfter(sessionEndsAt)) return null;
 
     return TrainingSlot(
