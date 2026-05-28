@@ -41,12 +41,6 @@ class NotificationService {
 
   Future<List<PendingNotificationRequest>> getPendingNotifications() async => [];
 
-	// Add this inside the NotificationService class in your _web file
-	void simulateNotificationTap(String payload) {
-		if (onNotificationTap != null) {
-			onNotificationTap!(payload);
-  		}
-	}
 
 
 }
