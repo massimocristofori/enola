@@ -1,9 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
-
-const String _kPendingPayloadKey = 'pending_notification_payload';
 
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
@@ -14,25 +11,14 @@ class NotificationService {
 
   bool _initialised = false;
 
-  // ── Temporary debug ───────────────────────────────────────────────────────
-  static String lastPayload = 'never fired';
+  // Buffers a tap that arrived before onNotificationTap was wired
+  String? _bufferedPayload;
 
-  // ── Called from top-level background handler in main.dart ────────────────
-  // Runs on a background isolate — can only do synchronous or simple async
-  // work. shared_preferences is safe here.
-  static Future<void> setPendingBackground(NotificationResponse response) async {
-    final payload = response.payload;
-    if (payload == null || payload.isEmpty) return;
-    lastPayload = 'background wrote: "$payload"';
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kPendingPayloadKey, payload);
-  }
+  static String lastPayload = 'never fired';
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
-  Future<void> init({
-    void Function(NotificationResponse)? onBackground,
-  }) async {
+  Future<void> init() async {
     if (_initialised) return;
 
     tz_data.initializeTimeZones();
@@ -53,43 +39,49 @@ class NotificationService {
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
-      onDidReceiveBackgroundNotificationResponse: onBackground,
+      // No background handler — we handle everything in the main isolate
     );
 
-    _initialised = true;
-  }
-
-  // ── Drain ─────────────────────────────────────────────────────────────────
-  // Call this after all callbacks are wired. Checks both:
-  //   1. shared_preferences (background isolate tap or cold start via background)
-  //   2. getNotificationAppLaunchDetails (cold start via notification)
-
-  Future<void> drainPendingLaunchNotification() async {
-    // Check shared_preferences first (covers background tap → foreground)
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString(_kPendingPayloadKey);
-    if (stored != null && stored.isNotEmpty) {
-      await prefs.remove(_kPendingPayloadKey);
-      lastPayload = 'drained from prefs: "$stored"';
-      _firePayload(stored);
-      return;
-    }
-
-    // Fallback: cold start via notification launch details
+    // Cold start: app was launched by tapping a notification
     final launchDetails = await _plugin.getNotificationAppLaunchDetails();
     if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
       final payload = launchDetails.notificationResponse?.payload;
       if (payload != null && payload.isNotEmpty) {
-        lastPayload = 'drained from launchDetails: "$payload"';
-        _firePayload(payload);
-        return;
+        lastPayload = 'cold-start buffered: "$payload"';
+        _bufferedPayload = payload;
       }
+    }
+
+    _initialised = true;
+  }
+
+  // ── Wire the tap callback ─────────────────────────────────────────────────
+  // Call this after setting onNotificationTap to flush any buffered payload.
+
+  void Function(String payload)? _onNotificationTap_handler;
+
+  void Function(String payload)? get onNotificationTap =>
+      _onNotificationTap_handler;
+
+  set onNotificationTap(void Function(String payload)? handler) {
+    _onNotificationTap_handler = handler;
+    // Flush any payload that arrived before the handler was ready
+    if (handler != null && _bufferedPayload != null) {
+      final payload = _bufferedPayload!;
+      _bufferedPayload = null;
+      lastPayload = 'flushed buffer: "$payload"';
+      Future.microtask(() => handler(payload));
     }
   }
 
-  void _firePayload(String payload) {
-    if (onNotificationTap != null) {
-      onNotificationTap!(payload);
+  // ── Drain (call after runApp for belt-and-suspenders) ─────────────────────
+
+  void drainPendingLaunchNotification() {
+    final payload = _bufferedPayload;
+    if (payload != null && _onNotificationTap_handler != null) {
+      _bufferedPayload = null;
+      lastPayload = 'drained: "$payload"';
+      _onNotificationTap_handler!(payload);
     }
   }
 
@@ -155,15 +147,17 @@ class NotificationService {
   Future<List<PendingNotificationRequest>> getPendingNotifications() =>
       _plugin.pendingNotificationRequests();
 
-  // ── Tap handler (foreground only) ─────────────────────────────────────────
-
-  void Function(String payload)? onNotificationTap;
+  // ── Internal tap handler ──────────────────────────────────────────────────
 
   void _onNotificationTap(NotificationResponse response) {
-    lastPayload = 'foreground: "${response.payload}"';
     final payload = response.payload;
-    if (payload != null && payload.isNotEmpty && onNotificationTap != null) {
-      onNotificationTap!(payload);
+    if (payload == null || payload.isEmpty) return;
+    lastPayload = 'received: "$payload", handler null: ${_onNotificationTap_handler == null}';
+    if (_onNotificationTap_handler != null) {
+      _onNotificationTap_handler!(payload);
+    } else {
+      // Handler not wired yet — buffer it
+      _bufferedPayload = payload;
     }
   }
 }
