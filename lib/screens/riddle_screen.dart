@@ -74,7 +74,6 @@ class _RiddleScreenState extends State<RiddleScreen> {
         _solvedCorrectly = true;
       } else {
         _errorCount++;
-        // In training mode failure is terminal — no retry
         if (widget.trainingMode) _solvedCorrectly = false;
       }
     });
@@ -89,9 +88,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
   }
 
   void _confirm() {
-    if (_solvedCorrectly) {
-      widget.onComplete(_errorCount);
-    }
+    widget.onComplete(_errorCount);
   }
 
   void _onOrderingSubmit(List<String> correctOrder) {
@@ -105,6 +102,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
         _solvedCorrectly = true;
       } else {
         _errorCount++;
+        if (widget.trainingMode) _solvedCorrectly = false;
       }
     });
   }
@@ -162,11 +160,11 @@ class _RiddleScreenState extends State<RiddleScreen> {
             ),
             const SizedBox(height: 20),
             Row(
-              children: [
-                const Icon(Icons.menu_book_rounded,
+              children: const [
+                Icon(Icons.menu_book_rounded,
                     color: EnolaTheme.accent, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Source Passage',
                   style: TextStyle(
                     color: EnolaTheme.textPrimary,
@@ -338,7 +336,7 @@ class _RiddleScreenState extends State<RiddleScreen> {
               isCorrect: _lastAnswerCorrect ?? false,
               riddle: widget.riddle,
               orderedItems: _orderedItems,
-              onDismiss: widget.onDismiss,
+              onComplete: _confirm,
             ).animate().slideY(begin: 1, end: 0).fadeIn()
           else if (_showingFeedback)
             _AnswerFeedback(
@@ -732,13 +730,13 @@ class _TrainingFeedback extends StatelessWidget {
   final bool isCorrect;
   final Riddle riddle;
   final List<String> orderedItems;
-  final VoidCallback onDismiss;
+  final VoidCallback onComplete;
 
   const _TrainingFeedback({
     required this.isCorrect,
     required this.riddle,
     required this.orderedItems,
-    required this.onDismiss,
+    required this.onComplete,
   });
 
   bool get _hasHint =>
@@ -776,7 +774,7 @@ class _TrainingFeedback extends StatelessWidget {
               ),
             ),
             ElevatedButton(
-              onPressed: onDismiss,
+              onPressed: onComplete, // Redirects to onComplete so status flushes to Drift
               style: ElevatedButton.styleFrom(
                 backgroundColor: EnolaTheme.correct,
                 foregroundColor: Colors.white,
@@ -796,39 +794,41 @@ class _TrainingFeedback extends StatelessWidget {
     }
 
     // ── Failure ───────────────────────────────────────────────────────────
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        decoration: BoxDecoration(
-          color: EnolaTheme.wrong.withAlpha(20),
-          border: const Border(
-            top: BorderSide(color: EnolaTheme.wrong, width: 2),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.45,
+      ),
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          decoration: BoxDecoration(
+            color: EnolaTheme.wrong.withAlpha(20),
+            border: const Border(
+              top: BorderSide(color: EnolaTheme.wrong, width: 2),
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Wrong indicator ───────────────────────────────────────────
-            Row(
-              children: [
-                const Icon(Icons.cancel_rounded,
-                    color: EnolaTheme.wrong, size: 28),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'Not quite — you\'ll see this one again.',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: EnolaTheme.wrong,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.cancel_rounded,
+                      color: EnolaTheme.wrong, size: 28),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Not quite — you\'ll see this one again.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: EnolaTheme.wrong,
                     ),
                   ),
                 ),
               ],
             ),
 
-            // ── Correct order (ordering only) ─────────────────────────────
             if (_isOrdering) ...[
               const SizedBox(height: 16),
               const Text(
@@ -874,7 +874,6 @@ class _TrainingFeedback extends StatelessWidget {
               }),
             ],
 
-            // ── Hint ──────────────────────────────────────────────────────
             if (_hasHint) ...[
               const SizedBox(height: 16),
               Row(
@@ -915,11 +914,10 @@ class _TrainingFeedback extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // ── Dismiss ───────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: onDismiss,
+                onPressed: onComplete, // Redirects to onComplete so failure flushes to Drift
                 style: ElevatedButton.styleFrom(
                   backgroundColor: EnolaTheme.wrong,
                   foregroundColor: Colors.white,
@@ -937,6 +935,7 @@ class _TrainingFeedback extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+ }
 }
