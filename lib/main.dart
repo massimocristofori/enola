@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'services/gemini_service.dart';
 import 'services/notification_service.dart';
@@ -13,11 +12,6 @@ import 'screens/riddle_screen.dart';
 import 'services/drift_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-@pragma('vm:entry-point')
-void onBackgroundNotificationResponse(NotificationResponse response) {
-  NotificationService.setPendingBackground(response);
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,18 +31,19 @@ void main() async {
   );
 
   // ── 1. Initialize Services ─────────────────────────────────────────────────
-  await NotificationService.instance.init(
-    onBackground: onBackgroundNotificationResponse,
-  );
+  await NotificationService.instance.init();
   TrainingService.instance.init();
 
   // ── 2. Bind the screen route ───────────────────────────────────────────────
+  // Setting onNotificationTap automatically flushes any buffered cold-start
+  // or early-resume payload via the setter in NotificationService.
   TrainingService.instance.onTrainingNotificationTap =
       (String mapId, int riddleId) {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final context = navigatorKey.currentContext;
 
       if (context == null) {
+        // Navigator not mounted yet — retry next frame
         WidgetsBinding.instance.addPostFrameCallback((_) {
           TrainingService.instance.onTrainingNotificationTap
               ?.call(mapId, riddleId);
@@ -125,14 +120,12 @@ void main() async {
     });
   };
 
-  // ── 3. Launch app, then drain any pending notification ─────────────────────
-  // Two addPostFrameCallback calls ensure HomeScreen is fully mounted and
-  // the navigator is attached before we attempt to push a route.
+  // ── 3. Launch app then drain any cold-start payload ────────────────────────
   runApp(const ProviderScope(child: EnolaApp()));
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await NotificationService.instance.drainPendingLaunchNotification();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.drainPendingLaunchNotification();
     });
   });
 }
