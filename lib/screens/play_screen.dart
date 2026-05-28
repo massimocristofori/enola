@@ -53,7 +53,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadSession();
       await _loadTrainingState();
-
     });
   }
 
@@ -67,14 +66,11 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   // ── Training ───────────────────────────────────────────────────────────────
 
   Future<void> _loadTrainingState() async {
-    final active =
-        await TrainingService.instance.isTrainingActive(widget.mapId);
+    final active = await TrainingService.instance.isTrainingActive(widget.mapId);
     if (mounted) setState(() => _trainingActive = active);
   }
 
-
-
-    Future<void> _onToggleTraining(List<Riddle> riddles) async {
+  Future<void> _onToggleTraining(List<Riddle> riddles) async {
     if (_trainingActive) {
       final confirm = await _showStopTrainingDialog();
       if (!confirm) return;
@@ -84,14 +80,12 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       final minutes = await _showStartTrainingDialog();
       if (minutes == null) return;
 
-      final granted =
-          await NotificationService.instance.requestPermissions();
+      final granted = await NotificationService.instance.requestPermissions();
       if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                  'Notification permission is required for training mode.'),
+              content: Text('Notification permission is required for training mode.'),
             ),
           );
         }
@@ -108,7 +102,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<int?> _showStartTrainingDialog() async {
-    // Options: (label, minutes)
     const options = [
       ('1 hour', 60),
       ('3 hours', 180),
@@ -118,7 +111,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       ('48 hours', 2880),
     ];
 
-    int selectedMinutes = 1440; // default 24h
+    int selectedMinutes = 1440;
 
     return await showDialog<int>(
       context: context,
@@ -146,29 +139,21 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                   final (label, minutes) = opt;
                   final selected = selectedMinutes == minutes;
                   return GestureDetector(
-                    onTap: () =>
-                        setDialogState(() => selectedMinutes = minutes),
+                    onTap: () => setDialogState(() => selectedMinutes = minutes),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: selected
-                            ? EnolaTheme.accent
-                            : EnolaTheme.surface,
+                        color: selected ? EnolaTheme.accent : EnolaTheme.surface,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: selected
-                              ? EnolaTheme.accent
-                              : EnolaTheme.border,
+                          color: selected ? EnolaTheme.accent : EnolaTheme.border,
                         ),
                       ),
                       child: Text(
                         label,
                         style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : EnolaTheme.textPrimary,
+                          color: selected ? Colors.white : EnolaTheme.textPrimary,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -198,7 +183,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     );
   }
 
-
   Future<bool> _showStopTrainingDialog() async {
     return await showDialog<bool>(
           context: context,
@@ -213,18 +197,13 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  'Stop',
-                  style: TextStyle(color: Colors.red),
-                ),
+                child: const Text('Stop', style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
         ) ??
         false;
   }
-
-  
 
   // ── Session loading ────────────────────────────────────────────────────────
 
@@ -264,8 +243,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             ..limit(1))
           .get();
 
-      if (existing.isNotEmpty &&
-          existing.first.riddlesVersion != currentVersion) {
+      if (existing.isNotEmpty && existing.first.riddlesVersion != currentVersion) {
         debugPrint(
             "riddlesVersion mismatch (session=${existing.first.riddlesVersion} "
             "map=$currentVersion) — wiping sessions for ${widget.mapId}");
@@ -289,9 +267,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         final raw = existing.first.riddleStarsJson;
         List<int> tempStars = [];
         try {
-          if (raw != null) {
-            tempStars = (jsonDecode(raw) as List).cast<int>();
-          }
+          if (raw != null) tempStars = (jsonDecode(raw) as List).cast<int>();
         } catch (e) {
           debugPrint("JSON Decode error: $e");
         }
@@ -304,9 +280,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         final raw = existing.first.riddleStarsJson;
         List<int> tempStars = [];
         try {
-          if (raw != null) {
-            tempStars = (jsonDecode(raw) as List).cast<int>();
-          }
+          if (raw != null) tempStars = (jsonDecode(raw) as List).cast<int>();
         } catch (e) {
           debugPrint("JSON Decode error: $e");
         }
@@ -321,8 +295,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         riddleStars = [];
       }
 
-      ref.read(playStateProvider.notifier).init(
-          sessionId, lastCompleted, correctAnswers, riddleStars);
+      ref.read(playStateProvider.notifier).init(sessionId, lastCompleted, correctAnswers, riddleStars);
 
       if (mounted) setState(() => _isCompleted = isCompleted);
     } catch (e, stackTrace) {
@@ -372,7 +345,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   Future<void> _onRiddleComplete(
       List<Riddle> riddles, int riddleIndex, int errorCount) async {
-    // Training mode: notify service and dismiss — no stars, no session update
     if (_activeRiddleTraining && _activeRiddleId != null) {
       final correct = errorCount == 0;
       await TrainingService.instance.onRiddleAnswered(
@@ -385,7 +357,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       return;
     }
 
-    // Normal play mode
     final earnedStars = starsForErrors(errorCount);
     final baseStars = ref.read(playStateProvider)?.totalStars ?? 0;
 
@@ -396,9 +367,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       });
     }
 
-    await ref
-        .read(playStateProvider.notifier)
-        .completeRiddle(riddleIndex, errorCount);
+    await ref.read(playStateProvider.notifier).completeRiddle(riddleIndex, errorCount);
 
     ref.invalidate(latestSessionProvider(widget.mapId));
 
@@ -431,8 +400,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   // ── Star animation ─────────────────────────────────────────────────────────
 
-  void _scheduleStarAnimation(
-      int riddleIndex, int starCount, int baseStars) {
+  void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
     Future.delayed(const Duration(milliseconds: 1700), () {
       if (!mounted) return;
       _runStarAnimation(riddleIndex, starCount, baseStars);
@@ -445,10 +413,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     final nodeKey = _nodeKeys[riddleIndex];
     if (nodeKey == null) return;
 
-    final nodeBox =
-        nodeKey.currentContext?.findRenderObject() as RenderBox?;
-    final headerBox =
-        _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
+    final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
+    final headerBox = _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
     if (nodeBox == null || headerBox == null) return;
 
     final nodePos = nodeBox.localToGlobal(
@@ -482,9 +448,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   Future<void> _playAgain() async {
     final db = DriftService.instance.db;
-    await (db.delete(db.playSessions)
-          ..where((t) => t.mapId.equals(widget.mapId)))
-        .go();
+    await (db.delete(db.playSessions)..where((t) => t.mapId.equals(widget.mapId))).go();
     ref.invalidate(latestSessionProvider(widget.mapId));
     await _loadSession();
   }
@@ -548,40 +512,30 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                   bottom: 0,
                   child: showingLoader
                       ? const Center(
-                          child: CircularProgressIndicator(
-                              color: EnolaTheme.accent))
+                          child: CircularProgressIndicator(color: EnolaTheme.accent))
                       : mapAsync.when(
                           loading: () => const Center(
-                              child: CircularProgressIndicator(
-                                  color: EnolaTheme.accent)),
+                              child: CircularProgressIndicator(color: EnolaTheme.accent)),
                           error: (e, _) => Center(child: Text('$e')),
                           data: (map) => riddlesAsync.when(
                             loading: () => const Center(
-                                child: CircularProgressIndicator(
-                                    color: EnolaTheme.accent)),
+                                child: CircularProgressIndicator(color: EnolaTheme.accent)),
                             error: (e, _) => Center(child: Text('$e')),
                             data: (riddles) {
                               return AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
                                 child: riddleActive
                                     ? RiddleScreen(
-                                        key: ValueKey(
-                                            'riddle-$_activeRiddleIndex'),
-                                        riddle:
-                                            riddles[_activeRiddleIndex!],
+                                        key: ValueKey('riddle-$_activeRiddleIndex'),
+                                        riddle: riddles[_activeRiddleIndex!],
                                         riddleIndex: _activeRiddleIndex!,
                                         readOnly: _activeRiddleReadOnly,
                                         trainingMode: _activeRiddleTraining,
                                         onDismiss: _dismissRiddle,
-                                        onComplete: (errorCount) =>
-                                            _onRiddleComplete(
-                                                riddles,
-                                                _activeRiddleIndex!,
-                                                errorCount),
+                                        onComplete: (errorCount) => _onRiddleComplete(
+                                            riddles, _activeRiddleIndex!, errorCount),
                                         onSkip: () => _onRiddleComplete(
-                                            riddles,
-                                            _activeRiddleIndex!,
-                                            3),
+                                            riddles, _activeRiddleIndex!, 3),
                                       )
                                     : _MapView(
                                         key: const ValueKey('map'),
@@ -593,17 +547,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                         nodeKeys: _nodeKeys,
                                         trainingActive: _trainingActive,
                                         onNodeTap: _onNodeTap,
-                                        onCompletedNodeTap:
-                                            _onCompletedNodeTap,
-                                        onToggleTraining: () =>
-                                            _onToggleTraining(riddles),
+                                        onCompletedNodeTap: _onCompletedNodeTap,
+                                        onToggleTraining: () => _onToggleTraining(riddles),
                                       ),
                               );
                             },
                           ),
                         ),
                 ),
-
                 Positioned(
                   top: 0,
                   left: 0,
@@ -625,9 +576,9 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       ),
     );
   }
-}
+} // ← end of _PlayScreenState
 
-// ── Map view (Stateful to support Auto-Centering) ───────────────────────────
+// ── Map view ──────────────────────────────────────────────────────────────────
 
 class _MapView extends StatefulWidget {
   final List<Riddle> riddles;
@@ -666,18 +617,17 @@ class _MapViewState extends State<_MapView> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    
-    // Auto-scroll on initial load
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToActiveNode(immediate: true));
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollToActiveNode(immediate: true));
   }
 
   @override
   void didUpdateWidget(covariant _MapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    // Smooth scroll if the target active index shifted
-    if (oldWidget.playState.lastCompletedIndex != widget.playState.lastCompletedIndex) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToActiveNode(immediate: false));
+    if (oldWidget.playState.lastCompletedIndex !=
+        widget.playState.lastCompletedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _scrollToActiveNode(immediate: false));
     }
   }
 
@@ -690,7 +640,6 @@ class _MapViewState extends State<_MapView> {
   void _scrollToActiveNode({bool immediate = false}) {
     if (!mounted || !_scrollController.hasClients) return;
 
-    // Determine target index: next unresolved node, or last node if completed
     int targetIndex = widget.playState.lastCompletedIndex + 1;
     if (targetIndex >= widget.riddles.length || widget.isCompleted) {
       targetIndex = widget.riddles.length - 1;
@@ -702,18 +651,13 @@ class _MapViewState extends State<_MapView> {
 
     final nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
     final scrollBox = context.findRenderObject() as RenderBox?;
-
     if (nodeBox == null || scrollBox == null) return;
 
-    // Find local position of the node relative to the entire _MapView viewport
     final nodeOffset = nodeBox.localToGlobal(Offset.zero, ancestor: scrollBox);
     final nodeCenterY = nodeOffset.dy + (nodeBox.size.height / 2);
     final viewportCenterY = scrollBox.size.height / 2;
-
-    // Determine how much we need to adjust the current scroll position
-    final targetScrollOffset = _scrollController.offset + (nodeCenterY - viewportCenterY);
-    
-    // Clamp target offset within valid scrollable boundaries
+    final targetScrollOffset =
+        _scrollController.offset + (nodeCenterY - viewportCenterY);
     final maxScroll = _scrollController.position.maxScrollExtent;
     final minScroll = _scrollController.position.minScrollExtent;
     final clampedOffset = targetScrollOffset.clamp(minScroll, maxScroll);
@@ -730,154 +674,148 @@ class _MapViewState extends State<_MapView> {
   }
 
   @override
-Widget build(BuildContext context) {
-  // Measure the training bar height so we can pad the scroll content
-  // Training bar: padding 10+0 top, 10 bottom, icon ~18, text ~18 = ~56
-  // Hint text line: ~28. Use fixed values that match your padding.
-  const double trainingBarHeight = 56.0;
-  const double hintHeight = 28.0;
-  final double stickyHeight = trainingBarHeight +
-      (widget.isCompleted ||
-              widget.playState.lastCompletedIndex <
-                  widget.riddles.length - 1
-          ? hintHeight
-          : 0);
+  Widget build(BuildContext context) {
+    const double trainingBarHeight = 56.0;
+    const double hintHeight = 28.0;
+    final double stickyHeight = trainingBarHeight +
+        (widget.isCompleted ||
+                widget.playState.lastCompletedIndex < widget.riddles.length - 1
+            ? hintHeight
+            : 0);
 
-  return Stack(
-    children: [
-      // ── Scrollable map (goes under the sticky bar) ──────────────────
-      SingleChildScrollView(
-        controller: _scrollController,
-        padding: EdgeInsets.fromLTRB(24, stickyHeight + 16, 24, 100),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: TreasureMapPath(
-              riddles: widget.riddles,
-              mapId: widget.mapId,
-              lastCompletedIndex: widget.playState.lastCompletedIndex,
-              riddleStars: widget.playState.riddleStars,
-              imageBytes: widget.imageBytes,
-              nodeKeys: widget.nodeKeys,
-              immediateActivation:
-                  widget.playState.lastCompletedIndex == -1,
-              onCurrentNodeTap: widget.isCompleted
-                  ? null
-                  : widget.playState.lastCompletedIndex <
-                          widget.riddles.length - 1
-                      ? () => widget.onNodeTap(
-                          widget.playState.lastCompletedIndex + 1)
-                      : null,
-              onCompletedNodeTap: widget.onCompletedNodeTap,
+    return Stack(
+      children: [
+        // ── Scrollable map (slides under the sticky bar) ────────────────
+        SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.fromLTRB(24, stickyHeight + 16, 24, 100),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: TreasureMapPath(
+                riddles: widget.riddles,
+                mapId: widget.mapId,
+                lastCompletedIndex: widget.playState.lastCompletedIndex,
+                riddleStars: widget.playState.riddleStars,
+                imageBytes: widget.imageBytes,
+                nodeKeys: widget.nodeKeys,
+                immediateActivation: widget.playState.lastCompletedIndex == -1,
+                onCurrentNodeTap: widget.isCompleted
+                    ? null
+                    : widget.playState.lastCompletedIndex <
+                            widget.riddles.length - 1
+                        ? () => widget
+                            .onNodeTap(widget.playState.lastCompletedIndex + 1)
+                        : null,
+                onCompletedNodeTap: widget.onCompletedNodeTap,
+              ),
             ),
           ),
         ),
-      ),
 
-      // ── Sticky training bar + hint (floats on top) ──────────────────
-      Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-              child: GestureDetector(
-                onTap: widget.onToggleTraining,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: widget.trainingActive
-                        ? EnolaTheme.accent.withAlpha(20)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
+        // ── Sticky training bar + hint (floats on top) ──────────────────
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                child: GestureDetector(
+                  onTap: widget.onToggleTraining,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
                       color: widget.trainingActive
-                          ? EnolaTheme.accent
-                          : EnolaTheme.border,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        widget.trainingActive
-                            ? Icons.school_rounded
-                            : Icons.school_outlined,
-                        size: 18,
+                          ? EnolaTheme.accent.withAlpha(20)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
                         color: widget.trainingActive
                             ? EnolaTheme.accent
-                            : EnolaTheme.textSecond,
+                            : EnolaTheme.border,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
                           widget.trainingActive
-                              ? 'Training mode is ON'
-                              : 'Training mode is OFF',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                              ? Icons.school_rounded
+                              : Icons.school_outlined,
+                          size: 18,
+                          color: widget.trainingActive
+                              ? EnolaTheme.accent
+                              : EnolaTheme.textSecond,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            widget.trainingActive
+                                ? 'Training mode is ON'
+                                : 'Training mode is OFF',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: widget.trainingActive
+                                  ? EnolaTheme.accent
+                                  : EnolaTheme.textSecond,
+                            ),
+                          ),
+                        ),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            key: ValueKey(widget.trainingActive),
+                            widget.trainingActive
+                                ? Icons.toggle_on_rounded
+                                : Icons.toggle_off_rounded,
+                            size: 32,
                             color: widget.trainingActive
                                 ? EnolaTheme.accent
                                 : EnolaTheme.textSecond,
                           ),
                         ),
-                      ),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: Icon(
-                          key: ValueKey(widget.trainingActive),
-                          widget.trainingActive
-                              ? Icons.toggle_on_rounded
-                              : Icons.toggle_off_rounded,
-                          size: 32,
-                          color: widget.trainingActive
-                              ? EnolaTheme.accent
-                              : EnolaTheme.textSecond,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (widget.isCompleted)
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 4),
-                child: Text(
-                  'Quest complete! All riddles solved.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: EnolaTheme.accent.withAlpha(200),
-                  ),
-                ).animate().fadeIn(delay: 400.ms),
-              )
-            else if (widget.playState.lastCompletedIndex <
-                widget.riddles.length - 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 8, bottom: 4),
-                child: Text(
-                  'Tap the glowing node to answer the next riddle',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: EnolaTheme.textSecond.withAlpha(180),
-                  ),
-                ).animate().fadeIn(delay: 400.ms),
-              ),
-          ],
+              if (widget.isCompleted)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 4),
+                  child: Text(
+                    'Quest complete! All riddles solved.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: EnolaTheme.accent.withAlpha(200),
+                    ),
+                  ).animate().fadeIn(delay: 400.ms),
+                )
+              else if (widget.playState.lastCompletedIndex <
+                  widget.riddles.length - 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 4),
+                  child: Text(
+                    'Tap the glowing node to answer the next riddle',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: EnolaTheme.textSecond.withAlpha(180),
+                    ),
+                  ).animate().fadeIn(delay: 400.ms),
+                ),
+            ],
+          ),
         ),
-      ),
-    ],
-  );
-}
-
-
+      ],
+    );
+  }
+} // ← end of _MapViewState
 
 // ── Play Header ───────────────────────────────────────────────────────────────
 
@@ -914,8 +852,7 @@ class _PlayHeader extends StatelessWidget {
             height: compact ? kPlayHeaderCompact : kPlayHeaderHeight,
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(20)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
               boxShadow: [
                 BoxShadow(
                   color: Color(0x18000000),
@@ -1061,19 +998,15 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
 
       _scales.add(
         TweenSequence([
-          TweenSequenceItem(
-              tween: Tween(begin: 1.0, end: 1.4), weight: 20),
-          TweenSequenceItem(
-              tween: Tween(begin: 1.4, end: 0.6), weight: 80),
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 20),
+          TweenSequenceItem(tween: Tween(begin: 1.4, end: 0.6), weight: 80),
         ]).animate(CurvedAnimation(parent: ctrl, curve: Curves.easeIn)),
       );
 
       _opacities.add(
         TweenSequence([
-          TweenSequenceItem(
-              tween: Tween(begin: 1.0, end: 1.0), weight: 70),
-          TweenSequenceItem(
-              tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 70),
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
         ]).animate(ctrl),
       );
 
@@ -1124,10 +1057,7 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
                     size: 28,
                     color: Color(0xFFE8C840),
                     shadows: [
-                      Shadow(
-                        color: Colors.white,
-                        blurRadius: 6,
-                      ),
+                      Shadow(color: Colors.white, blurRadius: 6),
                     ],
                   ),
                 ),
@@ -1166,8 +1096,7 @@ class _BackFab extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: const [
-            Icon(Icons.chevron_left_rounded,
-                size: 22, color: EnolaTheme.textPrimary),
+            Icon(Icons.chevron_left_rounded, size: 22, color: EnolaTheme.textPrimary),
             SizedBox(width: 4),
             Text(
               'My Maps',
@@ -1199,8 +1128,7 @@ class _PlayAgainFab extends StatelessWidget {
         GestureDetector(
           onTap: onBack,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(30),
@@ -1215,8 +1143,7 @@ class _PlayAgainFab extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.chevron_left_rounded,
-                    size: 22, color: EnolaTheme.textPrimary),
+                Icon(Icons.chevron_left_rounded, size: 22, color: EnolaTheme.textPrimary),
                 SizedBox(width: 4),
                 Text(
                   'My Maps',
@@ -1234,8 +1161,7 @@ class _PlayAgainFab extends StatelessWidget {
         GestureDetector(
           onTap: onPlayAgain,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             decoration: BoxDecoration(
               color: EnolaTheme.accent,
               borderRadius: BorderRadius.circular(30),
