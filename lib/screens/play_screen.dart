@@ -730,128 +730,153 @@ class _MapViewState extends State<_MapView> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // ── Training toggle bar ─────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-          child: GestureDetector(
-            onTap: widget.onToggleTraining,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: widget.trainingActive
-                    ? EnolaTheme.accent.withAlpha(20)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: widget.trainingActive
-                      ? EnolaTheme.accent
-                      : EnolaTheme.border,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.trainingActive
-                        ? Icons.school_rounded
-                        : Icons.school_outlined,
-                    size: 18,
+Widget build(BuildContext context) {
+  // Measure the training bar height so we can pad the scroll content
+  // Training bar: padding 10+0 top, 10 bottom, icon ~18, text ~18 = ~56
+  // Hint text line: ~28. Use fixed values that match your padding.
+  const double trainingBarHeight = 56.0;
+  const double hintHeight = 28.0;
+  final double stickyHeight = trainingBarHeight +
+      (widget.isCompleted ||
+              widget.playState.lastCompletedIndex <
+                  widget.riddles.length - 1
+          ? hintHeight
+          : 0);
+
+  return Stack(
+    children: [
+      // ── Scrollable map (goes under the sticky bar) ──────────────────
+      SingleChildScrollView(
+        controller: _scrollController,
+        padding: EdgeInsets.fromLTRB(24, stickyHeight + 16, 24, 100),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: TreasureMapPath(
+              riddles: widget.riddles,
+              mapId: widget.mapId,
+              lastCompletedIndex: widget.playState.lastCompletedIndex,
+              riddleStars: widget.playState.riddleStars,
+              imageBytes: widget.imageBytes,
+              nodeKeys: widget.nodeKeys,
+              immediateActivation:
+                  widget.playState.lastCompletedIndex == -1,
+              onCurrentNodeTap: widget.isCompleted
+                  ? null
+                  : widget.playState.lastCompletedIndex <
+                          widget.riddles.length - 1
+                      ? () => widget.onNodeTap(
+                          widget.playState.lastCompletedIndex + 1)
+                      : null,
+              onCompletedNodeTap: widget.onCompletedNodeTap,
+            ),
+          ),
+        ),
+      ),
+
+      // ── Sticky training bar + hint (floats on top) ──────────────────
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+              child: GestureDetector(
+                onTap: widget.onToggleTraining,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
                     color: widget.trainingActive
-                        ? EnolaTheme.accent
-                        : EnolaTheme.textSecond,
+                        ? EnolaTheme.accent.withAlpha(20)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: widget.trainingActive
+                          ? EnolaTheme.accent
+                          : EnolaTheme.border,
+                    ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.trainingActive
-                          ? 'Training mode is ON'
-                          : 'Training mode is OFF',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                  child: Row(
+                    children: [
+                      Icon(
+                        widget.trainingActive
+                            ? Icons.school_rounded
+                            : Icons.school_outlined,
+                        size: 18,
                         color: widget.trainingActive
                             ? EnolaTheme.accent
                             : EnolaTheme.textSecond,
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          widget.trainingActive
+                              ? 'Training mode is ON'
+                              : 'Training mode is OFF',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: widget.trainingActive
+                                ? EnolaTheme.accent
+                                : EnolaTheme.textSecond,
+                          ),
+                        ),
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          key: ValueKey(widget.trainingActive),
+                          widget.trainingActive
+                              ? Icons.toggle_on_rounded
+                              : Icons.toggle_off_rounded,
+                          size: 32,
+                          color: widget.trainingActive
+                              ? EnolaTheme.accent
+                              : EnolaTheme.textSecond,
+                        ),
+                      ),
+                    ],
                   ),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      key: ValueKey(widget.trainingActive),
-                      widget.trainingActive
-                          ? Icons.toggle_on_rounded
-                          : Icons.toggle_off_rounded,
-                      size: 32,
-                      color: widget.trainingActive
-                          ? EnolaTheme.accent
-                          : EnolaTheme.textSecond,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        if (widget.isCompleted)
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 4),
-            child: Text(
-              'Quest complete! All riddles solved.',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: EnolaTheme.accent.withAlpha(200),
-              ),
-            ).animate().fadeIn(delay: 400.ms),
-          )
-        else if (widget.playState.lastCompletedIndex < widget.riddles.length - 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 4),
-            child: Text(
-              'Tap the glowing node to answer the next riddle',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: EnolaTheme.textSecond.withAlpha(180),
-              ),
-            ).animate().fadeIn(delay: 400.ms),
-          ),
-
-        Expanded(
-          child: SingleChildScrollView(
-            controller: _scrollController, // ATTENTION: Attached the controller here
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: TreasureMapPath(
-                  riddles: widget.riddles,
-                  mapId: widget.mapId,
-                  lastCompletedIndex: widget.playState.lastCompletedIndex,
-                  riddleStars: widget.playState.riddleStars,
-                  imageBytes: widget.imageBytes,
-                  nodeKeys: widget.nodeKeys,
-                  immediateActivation: widget.playState.lastCompletedIndex == -1,
-                  onCurrentNodeTap: widget.isCompleted
-                      ? null
-                      : widget.playState.lastCompletedIndex < widget.riddles.length - 1
-                          ? () => widget.onNodeTap(widget.playState.lastCompletedIndex + 1)
-                          : null,
-                  onCompletedNodeTap: widget.onCompletedNodeTap,
                 ),
               ),
             ),
-          ),
+            if (widget.isCompleted)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Text(
+                  'Quest complete! All riddles solved.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: EnolaTheme.accent.withAlpha(200),
+                  ),
+                ).animate().fadeIn(delay: 400.ms),
+              )
+            else if (widget.playState.lastCompletedIndex <
+                widget.riddles.length - 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Text(
+                  'Tap the glowing node to answer the next riddle',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: EnolaTheme.textSecond.withAlpha(180),
+                  ),
+                ).animate().fadeIn(delay: 400.ms),
+              ),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
+
 
 
 // ── Play Header ───────────────────────────────────────────────────────────────
