@@ -616,6 +616,250 @@ return map;
 @override
 String toString() {return (StringBuffer('TrainingSessionsCompanion(')..write('id: $id, ')..write('mapId: $mapId, ')..write('startedAt: $startedAt, ')..write('endsAt: $endsAt, ')..write('poolJson: $poolJson, ')..write('scheduledJson: $scheduledJson, ')..write('completedAt: $completedAt')..write(')')).toString();}
 }
+class $TrainingNotifiedRiddlesTable extends TrainingNotifiedRiddles with TableInfo<$TrainingNotifiedRiddlesTable, TrainingNotifiedRiddle>{
+@override final GeneratedDatabase attachedDatabase;
+final String? _alias;
+$TrainingNotifiedRiddlesTable(this.attachedDatabase, [this._alias]);
+static const VerificationMeta _idMeta = const VerificationMeta('id');
+@override
+late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+static const VerificationMeta _sessionIdMeta = const VerificationMeta('sessionId');
+@override
+late final GeneratedColumn<int> sessionId = GeneratedColumn<int>('session_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES training_sessions (id) ON DELETE CASCADE'));
+static const VerificationMeta _mapIdMeta = const VerificationMeta('mapId');
+@override
+late final GeneratedColumn<String> mapId = GeneratedColumn<String>('map_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _riddleIdMeta = const VerificationMeta('riddleId');
+@override
+late final GeneratedColumn<int> riddleId = GeneratedColumn<int>('riddle_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES riddles (id) ON DELETE CASCADE'));
+static const VerificationMeta _notifiedAtMeta = const VerificationMeta('notifiedAt');
+@override
+late final GeneratedColumn<DateTime> notifiedAt = GeneratedColumn<DateTime>('notified_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+@override
+List<GeneratedColumn> get $columns => [id, sessionId, mapId, riddleId, notifiedAt];
+@override
+String get aliasedName => _alias ?? actualTableName;
+@override
+ String get actualTableName => $name;
+static const String $name = 'training_notified_riddles';
+@override
+VerificationContext validateIntegrity(Insertable<TrainingNotifiedRiddle> instance, {bool isInserting = false}) {
+final context = VerificationContext();
+final data = instance.toColumns(true);
+if (data.containsKey('id')) {
+context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));}if (data.containsKey('session_id')) {
+context.handle(_sessionIdMeta, sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta));} else if (isInserting) {
+context.missing(_sessionIdMeta);
+}
+if (data.containsKey('map_id')) {
+context.handle(_mapIdMeta, mapId.isAcceptableOrUnknown(data['map_id']!, _mapIdMeta));} else if (isInserting) {
+context.missing(_mapIdMeta);
+}
+if (data.containsKey('riddle_id')) {
+context.handle(_riddleIdMeta, riddleId.isAcceptableOrUnknown(data['riddle_id']!, _riddleIdMeta));} else if (isInserting) {
+context.missing(_riddleIdMeta);
+}
+if (data.containsKey('notified_at')) {
+context.handle(_notifiedAtMeta, notifiedAt.isAcceptableOrUnknown(data['notified_at']!, _notifiedAtMeta));}return context;
+}
+@override
+Set<GeneratedColumn> get $primaryKey => {id};
+@override TrainingNotifiedRiddle map(Map<String, dynamic> data, {String? tablePrefix})  {
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return TrainingNotifiedRiddle(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, sessionId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}session_id'])!, mapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}map_id'])!, riddleId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}riddle_id'])!, notifiedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}notified_at'])!, );
+}
+@override
+$TrainingNotifiedRiddlesTable createAlias(String alias) {
+return $TrainingNotifiedRiddlesTable(attachedDatabase, alias);}}class TrainingNotifiedRiddle extends DataClass implements Insertable<TrainingNotifiedRiddle> 
+{
+final int id;
+final int sessionId;
+final String mapId;
+final int riddleId;
+final DateTime notifiedAt;
+const TrainingNotifiedRiddle({required this.id, required this.sessionId, required this.mapId, required this.riddleId, required this.notifiedAt});@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};map['id'] = Variable<int>(id);
+map['session_id'] = Variable<int>(sessionId);
+map['map_id'] = Variable<String>(mapId);
+map['riddle_id'] = Variable<int>(riddleId);
+map['notified_at'] = Variable<DateTime>(notifiedAt);
+return map; 
+}
+TrainingNotifiedRiddlesCompanion toCompanion(bool nullToAbsent) {
+return TrainingNotifiedRiddlesCompanion(id: Value(id),sessionId: Value(sessionId),mapId: Value(mapId),riddleId: Value(riddleId),notifiedAt: Value(notifiedAt),);
+}
+factory TrainingNotifiedRiddle.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return TrainingNotifiedRiddle(id: serializer.fromJson<int>(json['id']),sessionId: serializer.fromJson<int>(json['sessionId']),mapId: serializer.fromJson<String>(json['mapId']),riddleId: serializer.fromJson<int>(json['riddleId']),notifiedAt: serializer.fromJson<DateTime>(json['notifiedAt']),);}
+@override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return <String, dynamic>{
+'id': serializer.toJson<int>(id),'sessionId': serializer.toJson<int>(sessionId),'mapId': serializer.toJson<String>(mapId),'riddleId': serializer.toJson<int>(riddleId),'notifiedAt': serializer.toJson<DateTime>(notifiedAt),};}TrainingNotifiedRiddle copyWith({int? id,int? sessionId,String? mapId,int? riddleId,DateTime? notifiedAt}) => TrainingNotifiedRiddle(id: id ?? this.id,sessionId: sessionId ?? this.sessionId,mapId: mapId ?? this.mapId,riddleId: riddleId ?? this.riddleId,notifiedAt: notifiedAt ?? this.notifiedAt,);TrainingNotifiedRiddle copyWithCompanion(TrainingNotifiedRiddlesCompanion data) {
+return TrainingNotifiedRiddle(
+id: data.id.present ? data.id.value : this.id,sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,mapId: data.mapId.present ? data.mapId.value : this.mapId,riddleId: data.riddleId.present ? data.riddleId.value : this.riddleId,notifiedAt: data.notifiedAt.present ? data.notifiedAt.value : this.notifiedAt,);
+}
+@override
+String toString() {return (StringBuffer('TrainingNotifiedRiddle(')..write('id: $id, ')..write('sessionId: $sessionId, ')..write('mapId: $mapId, ')..write('riddleId: $riddleId, ')..write('notifiedAt: $notifiedAt')..write(')')).toString();}
+@override
+ int get hashCode => Object.hash(id, sessionId, mapId, riddleId, notifiedAt);@override
+bool operator ==(Object other) => identical(this, other) || (other is TrainingNotifiedRiddle && other.id == this.id && other.sessionId == this.sessionId && other.mapId == this.mapId && other.riddleId == this.riddleId && other.notifiedAt == this.notifiedAt);
+}class TrainingNotifiedRiddlesCompanion extends UpdateCompanion<TrainingNotifiedRiddle> {
+final Value<int> id;
+final Value<int> sessionId;
+final Value<String> mapId;
+final Value<int> riddleId;
+final Value<DateTime> notifiedAt;
+const TrainingNotifiedRiddlesCompanion({this.id = const Value.absent(),this.sessionId = const Value.absent(),this.mapId = const Value.absent(),this.riddleId = const Value.absent(),this.notifiedAt = const Value.absent(),});
+TrainingNotifiedRiddlesCompanion.insert({this.id = const Value.absent(),required int sessionId,required String mapId,required int riddleId,this.notifiedAt = const Value.absent(),}): sessionId = Value(sessionId), mapId = Value(mapId), riddleId = Value(riddleId);
+static Insertable<TrainingNotifiedRiddle> custom({Expression<int>? id, 
+Expression<int>? sessionId, 
+Expression<String>? mapId, 
+Expression<int>? riddleId, 
+Expression<DateTime>? notifiedAt, 
+}) {
+return RawValuesInsertable({if (id != null)'id': id,if (sessionId != null)'session_id': sessionId,if (mapId != null)'map_id': mapId,if (riddleId != null)'riddle_id': riddleId,if (notifiedAt != null)'notified_at': notifiedAt,});
+}TrainingNotifiedRiddlesCompanion copyWith({Value<int>? id, Value<int>? sessionId, Value<String>? mapId, Value<int>? riddleId, Value<DateTime>? notifiedAt}) {
+return TrainingNotifiedRiddlesCompanion(id: id ?? this.id,sessionId: sessionId ?? this.sessionId,mapId: mapId ?? this.mapId,riddleId: riddleId ?? this.riddleId,notifiedAt: notifiedAt ?? this.notifiedAt,);
+}
+@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};if (id.present) {
+map['id'] = Variable<int>(id.value);}
+if (sessionId.present) {
+map['session_id'] = Variable<int>(sessionId.value);}
+if (mapId.present) {
+map['map_id'] = Variable<String>(mapId.value);}
+if (riddleId.present) {
+map['riddle_id'] = Variable<int>(riddleId.value);}
+if (notifiedAt.present) {
+map['notified_at'] = Variable<DateTime>(notifiedAt.value);}
+return map; 
+}
+@override
+String toString() {return (StringBuffer('TrainingNotifiedRiddlesCompanion(')..write('id: $id, ')..write('sessionId: $sessionId, ')..write('mapId: $mapId, ')..write('riddleId: $riddleId, ')..write('notifiedAt: $notifiedAt')..write(')')).toString();}
+}
+class $TrainingAttemptsTable extends TrainingAttempts with TableInfo<$TrainingAttemptsTable, TrainingAttempt>{
+@override final GeneratedDatabase attachedDatabase;
+final String? _alias;
+$TrainingAttemptsTable(this.attachedDatabase, [this._alias]);
+static const VerificationMeta _idMeta = const VerificationMeta('id');
+@override
+late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+static const VerificationMeta _sessionIdMeta = const VerificationMeta('sessionId');
+@override
+late final GeneratedColumn<int> sessionId = GeneratedColumn<int>('session_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES training_sessions (id) ON DELETE CASCADE'));
+static const VerificationMeta _riddleIdMeta = const VerificationMeta('riddleId');
+@override
+late final GeneratedColumn<int> riddleId = GeneratedColumn<int>('riddle_id', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES riddles (id) ON DELETE CASCADE'));
+static const VerificationMeta _correctMeta = const VerificationMeta('correct');
+@override
+late final GeneratedColumn<bool> correct = GeneratedColumn<bool>('correct', aliasedName, false, type: DriftSqlType.bool, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("correct" IN (0, 1))'));
+static const VerificationMeta _answeredAtMeta = const VerificationMeta('answeredAt');
+@override
+late final GeneratedColumn<DateTime> answeredAt = GeneratedColumn<DateTime>('answered_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+@override
+List<GeneratedColumn> get $columns => [id, sessionId, riddleId, correct, answeredAt];
+@override
+String get aliasedName => _alias ?? actualTableName;
+@override
+ String get actualTableName => $name;
+static const String $name = 'training_attempts';
+@override
+VerificationContext validateIntegrity(Insertable<TrainingAttempt> instance, {bool isInserting = false}) {
+final context = VerificationContext();
+final data = instance.toColumns(true);
+if (data.containsKey('id')) {
+context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));}if (data.containsKey('session_id')) {
+context.handle(_sessionIdMeta, sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta));} else if (isInserting) {
+context.missing(_sessionIdMeta);
+}
+if (data.containsKey('riddle_id')) {
+context.handle(_riddleIdMeta, riddleId.isAcceptableOrUnknown(data['riddle_id']!, _riddleIdMeta));} else if (isInserting) {
+context.missing(_riddleIdMeta);
+}
+if (data.containsKey('correct')) {
+context.handle(_correctMeta, correct.isAcceptableOrUnknown(data['correct']!, _correctMeta));} else if (isInserting) {
+context.missing(_correctMeta);
+}
+if (data.containsKey('answered_at')) {
+context.handle(_answeredAtMeta, answeredAt.isAcceptableOrUnknown(data['answered_at']!, _answeredAtMeta));}return context;
+}
+@override
+Set<GeneratedColumn> get $primaryKey => {id};
+@override TrainingAttempt map(Map<String, dynamic> data, {String? tablePrefix})  {
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return TrainingAttempt(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, sessionId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}session_id'])!, riddleId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}riddle_id'])!, correct: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}correct'])!, answeredAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}answered_at'])!, );
+}
+@override
+$TrainingAttemptsTable createAlias(String alias) {
+return $TrainingAttemptsTable(attachedDatabase, alias);}}class TrainingAttempt extends DataClass implements Insertable<TrainingAttempt> 
+{
+final int id;
+final int sessionId;
+final int riddleId;
+final bool correct;
+final DateTime answeredAt;
+const TrainingAttempt({required this.id, required this.sessionId, required this.riddleId, required this.correct, required this.answeredAt});@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};map['id'] = Variable<int>(id);
+map['session_id'] = Variable<int>(sessionId);
+map['riddle_id'] = Variable<int>(riddleId);
+map['correct'] = Variable<bool>(correct);
+map['answered_at'] = Variable<DateTime>(answeredAt);
+return map; 
+}
+TrainingAttemptsCompanion toCompanion(bool nullToAbsent) {
+return TrainingAttemptsCompanion(id: Value(id),sessionId: Value(sessionId),riddleId: Value(riddleId),correct: Value(correct),answeredAt: Value(answeredAt),);
+}
+factory TrainingAttempt.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return TrainingAttempt(id: serializer.fromJson<int>(json['id']),sessionId: serializer.fromJson<int>(json['sessionId']),riddleId: serializer.fromJson<int>(json['riddleId']),correct: serializer.fromJson<bool>(json['correct']),answeredAt: serializer.fromJson<DateTime>(json['answeredAt']),);}
+@override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return <String, dynamic>{
+'id': serializer.toJson<int>(id),'sessionId': serializer.toJson<int>(sessionId),'riddleId': serializer.toJson<int>(riddleId),'correct': serializer.toJson<bool>(correct),'answeredAt': serializer.toJson<DateTime>(answeredAt),};}TrainingAttempt copyWith({int? id,int? sessionId,int? riddleId,bool? correct,DateTime? answeredAt}) => TrainingAttempt(id: id ?? this.id,sessionId: sessionId ?? this.sessionId,riddleId: riddleId ?? this.riddleId,correct: correct ?? this.correct,answeredAt: answeredAt ?? this.answeredAt,);TrainingAttempt copyWithCompanion(TrainingAttemptsCompanion data) {
+return TrainingAttempt(
+id: data.id.present ? data.id.value : this.id,sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,riddleId: data.riddleId.present ? data.riddleId.value : this.riddleId,correct: data.correct.present ? data.correct.value : this.correct,answeredAt: data.answeredAt.present ? data.answeredAt.value : this.answeredAt,);
+}
+@override
+String toString() {return (StringBuffer('TrainingAttempt(')..write('id: $id, ')..write('sessionId: $sessionId, ')..write('riddleId: $riddleId, ')..write('correct: $correct, ')..write('answeredAt: $answeredAt')..write(')')).toString();}
+@override
+ int get hashCode => Object.hash(id, sessionId, riddleId, correct, answeredAt);@override
+bool operator ==(Object other) => identical(this, other) || (other is TrainingAttempt && other.id == this.id && other.sessionId == this.sessionId && other.riddleId == this.riddleId && other.correct == this.correct && other.answeredAt == this.answeredAt);
+}class TrainingAttemptsCompanion extends UpdateCompanion<TrainingAttempt> {
+final Value<int> id;
+final Value<int> sessionId;
+final Value<int> riddleId;
+final Value<bool> correct;
+final Value<DateTime> answeredAt;
+const TrainingAttemptsCompanion({this.id = const Value.absent(),this.sessionId = const Value.absent(),this.riddleId = const Value.absent(),this.correct = const Value.absent(),this.answeredAt = const Value.absent(),});
+TrainingAttemptsCompanion.insert({this.id = const Value.absent(),required int sessionId,required int riddleId,required bool correct,this.answeredAt = const Value.absent(),}): sessionId = Value(sessionId), riddleId = Value(riddleId), correct = Value(correct);
+static Insertable<TrainingAttempt> custom({Expression<int>? id, 
+Expression<int>? sessionId, 
+Expression<int>? riddleId, 
+Expression<bool>? correct, 
+Expression<DateTime>? answeredAt, 
+}) {
+return RawValuesInsertable({if (id != null)'id': id,if (sessionId != null)'session_id': sessionId,if (riddleId != null)'riddle_id': riddleId,if (correct != null)'correct': correct,if (answeredAt != null)'answered_at': answeredAt,});
+}TrainingAttemptsCompanion copyWith({Value<int>? id, Value<int>? sessionId, Value<int>? riddleId, Value<bool>? correct, Value<DateTime>? answeredAt}) {
+return TrainingAttemptsCompanion(id: id ?? this.id,sessionId: sessionId ?? this.sessionId,riddleId: riddleId ?? this.riddleId,correct: correct ?? this.correct,answeredAt: answeredAt ?? this.answeredAt,);
+}
+@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};if (id.present) {
+map['id'] = Variable<int>(id.value);}
+if (sessionId.present) {
+map['session_id'] = Variable<int>(sessionId.value);}
+if (riddleId.present) {
+map['riddle_id'] = Variable<int>(riddleId.value);}
+if (correct.present) {
+map['correct'] = Variable<bool>(correct.value);}
+if (answeredAt.present) {
+map['answered_at'] = Variable<DateTime>(answeredAt.value);}
+return map; 
+}
+@override
+String toString() {return (StringBuffer('TrainingAttemptsCompanion(')..write('id: $id, ')..write('sessionId: $sessionId, ')..write('riddleId: $riddleId, ')..write('correct: $correct, ')..write('answeredAt: $answeredAt')..write(')')).toString();}
+}
 abstract class _$AppDatabase extends GeneratedDatabase{
 _$AppDatabase(QueryExecutor e): super(e);
 $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -623,12 +867,14 @@ late final $RiddleMapsTable riddleMaps = $RiddleMapsTable(this);
 late final $RiddlesTable riddles = $RiddlesTable(this);
 late final $PlaySessionsTable playSessions = $PlaySessionsTable(this);
 late final $TrainingSessionsTable trainingSessions = $TrainingSessionsTable(this);
+late final $TrainingNotifiedRiddlesTable trainingNotifiedRiddles = $TrainingNotifiedRiddlesTable(this);
+late final $TrainingAttemptsTable trainingAttempts = $TrainingAttemptsTable(this);
 @override
 Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
 @override
-List<DatabaseSchemaEntity> get allSchemaEntities => [riddleMaps, riddles, playSessions, trainingSessions];
+List<DatabaseSchemaEntity> get allSchemaEntities => [riddleMaps, riddles, playSessions, trainingSessions, trainingNotifiedRiddles, trainingAttempts];
 @override
-StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), ],);
+StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), ],);
 }
 typedef $$RiddleMapsTableCreateCompanionBuilder = RiddleMapsCompanion Function({required String id,required String title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
 typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({Value<String> id,Value<String> title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
@@ -1075,6 +1321,60 @@ typedef $$RiddlesTableUpdateCompanionBuilder = RiddlesCompanion Function({Value<
           return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
         }
 
+          
+                  static MultiTypedResultKey<
+          $TrainingNotifiedRiddlesTable,
+          List<TrainingNotifiedRiddle>
+        > _trainingNotifiedRiddlesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.trainingNotifiedRiddles, 
+          aliasName: $_aliasNameGenerator(
+            db.riddles.id,
+            db.trainingNotifiedRiddles.riddleId)
+        );
+
+          $$TrainingNotifiedRiddlesTableProcessedTableManager get trainingNotifiedRiddlesRefs {
+        final manager = $$TrainingNotifiedRiddlesTableTableManager(
+            $_db, $_db.trainingNotifiedRiddles
+            ).filter(
+              (f) => f.riddleId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_trainingNotifiedRiddlesRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
+          
+                  static MultiTypedResultKey<
+          $TrainingAttemptsTable,
+          List<TrainingAttempt>
+        > _trainingAttemptsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.trainingAttempts, 
+          aliasName: $_aliasNameGenerator(
+            db.riddles.id,
+            db.trainingAttempts.riddleId)
+        );
+
+          $$TrainingAttemptsTableProcessedTableManager get trainingAttemptsRefs {
+        final manager = $$TrainingAttemptsTableTableManager(
+            $_db, $_db.trainingAttempts
+            ).filter(
+              (f) => f.riddleId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_trainingAttemptsRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
 
       }class $$RiddlesTableFilterComposer extends Composer<
         _$AppDatabase,
@@ -1143,6 +1443,46 @@ ColumnFilters<String> get sourceExcerpt => $composableBuilder(
         ));
           return composer;
         }
+        Expression<bool> trainingNotifiedRiddlesRefs(
+          Expression<bool> Function( $$TrainingNotifiedRiddlesTableFilterComposer f) f
+        ) {
+                final $$TrainingNotifiedRiddlesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingNotifiedRiddles,
+      getReferencedColumn: (t) => t.riddleId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingNotifiedRiddlesTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingNotifiedRiddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        Expression<bool> trainingAttemptsRefs(
+          Expression<bool> Function( $$TrainingAttemptsTableFilterComposer f) f
+        ) {
+                final $$TrainingAttemptsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingAttempts,
+      getReferencedColumn: (t) => t.riddleId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingAttemptsTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingAttempts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
         }
       class $$RiddlesTableOrderingComposer extends Composer<
         _$AppDatabase,
@@ -1271,6 +1611,46 @@ GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
         ));
           return composer;
         }
+        Expression<T> trainingNotifiedRiddlesRefs<T extends Object>(
+          Expression<T> Function( $$TrainingNotifiedRiddlesTableAnnotationComposer a) f
+        ) {
+                final $$TrainingNotifiedRiddlesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingNotifiedRiddles,
+      getReferencedColumn: (t) => t.riddleId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingNotifiedRiddlesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingNotifiedRiddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        Expression<T> trainingAttemptsRefs<T extends Object>(
+          Expression<T> Function( $$TrainingAttemptsTableAnnotationComposer a) f
+        ) {
+                final $$TrainingAttemptsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingAttempts,
+      getReferencedColumn: (t) => t.riddleId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingAttemptsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingAttempts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
         }
       class $$RiddlesTableTableManager extends RootTableManager    <_$AppDatabase,
     $RiddlesTable,
@@ -1282,7 +1662,7 @@ GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
     $$RiddlesTableUpdateCompanionBuilder,
     (Riddle,$$RiddlesTableReferences),
     Riddle,
-    PrefetchHooks Function({bool mapId})
+    PrefetchHooks Function({bool mapId,bool trainingNotifiedRiddlesRefs,bool trainingAttemptsRefs})
     > {
     $$RiddlesTableTableManager(_$AppDatabase db, $RiddlesTable table) : super(
       TableManagerState(
@@ -1299,11 +1679,11 @@ GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
                      (e.readTable(table), $$RiddlesTableReferences(db, table, e))
                   )
               .toList(),
-        prefetchHooksCallback:         ({mapId = false}){
+        prefetchHooksCallback:         ({mapId = false,trainingNotifiedRiddlesRefs = false,trainingAttemptsRefs = false}){
           return PrefetchHooks(
             db: db,
             explicitlyWatchedTables: [
-             
+             if (trainingNotifiedRiddlesRefs) db.trainingNotifiedRiddles,if (trainingAttemptsRefs) db.trainingAttempts
             ],
             addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
 
@@ -1323,6 +1703,24 @@ GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
 ,
             getPrefetchedDataCallback: (items) async {
             return [
+                      if (trainingNotifiedRiddlesRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$RiddlesTableReferences._trainingNotifiedRiddlesRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$RiddlesTableReferences(db, table, p0).trainingNotifiedRiddlesRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.riddleId == item.id),
+                  typedResults: items)
+            ,          if (trainingAttemptsRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$RiddlesTableReferences._trainingAttemptsRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$RiddlesTableReferences(db, table, p0).trainingAttemptsRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.riddleId == item.id),
+                  typedResults: items)
             
                 ];
               },
@@ -1341,7 +1739,7 @@ GeneratedColumn<String> get sourceExcerpt => $composableBuilder(
     $$RiddlesTableUpdateCompanionBuilder,
     (Riddle,$$RiddlesTableReferences),
     Riddle,
-    PrefetchHooks Function({bool mapId})
+    PrefetchHooks Function({bool mapId,bool trainingNotifiedRiddlesRefs,bool trainingAttemptsRefs})
     >;typedef $$PlaySessionsTableCreateCompanionBuilder = PlaySessionsCompanion Function({Value<int> id,Value<String> publicId,required String mapId,Value<int> lastCompletedIndex,Value<DateTime> startedAt,Value<DateTime?> completedAt,Value<int> totalRiddles,Value<int> correctAnswers,Value<String?> riddleStarsJson,Value<int> riddlesVersion,});
 typedef $$PlaySessionsTableUpdateCompanionBuilder = PlaySessionsCompanion Function({Value<int> id,Value<String> publicId,Value<String> mapId,Value<int> lastCompletedIndex,Value<DateTime> startedAt,Value<DateTime?> completedAt,Value<int> totalRiddles,Value<int> correctAnswers,Value<String?> riddleStarsJson,Value<int> riddlesVersion,});
       final class $$PlaySessionsTableReferences extends BaseReferences<
@@ -1667,6 +2065,60 @@ typedef $$TrainingSessionsTableUpdateCompanionBuilder = TrainingSessionsCompanio
           return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
         }
 
+          
+                  static MultiTypedResultKey<
+          $TrainingNotifiedRiddlesTable,
+          List<TrainingNotifiedRiddle>
+        > _trainingNotifiedRiddlesRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.trainingNotifiedRiddles, 
+          aliasName: $_aliasNameGenerator(
+            db.trainingSessions.id,
+            db.trainingNotifiedRiddles.sessionId)
+        );
+
+          $$TrainingNotifiedRiddlesTableProcessedTableManager get trainingNotifiedRiddlesRefs {
+        final manager = $$TrainingNotifiedRiddlesTableTableManager(
+            $_db, $_db.trainingNotifiedRiddles
+            ).filter(
+              (f) => f.sessionId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_trainingNotifiedRiddlesRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
+          
+                  static MultiTypedResultKey<
+          $TrainingAttemptsTable,
+          List<TrainingAttempt>
+        > _trainingAttemptsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.trainingAttempts, 
+          aliasName: $_aliasNameGenerator(
+            db.trainingSessions.id,
+            db.trainingAttempts.sessionId)
+        );
+
+          $$TrainingAttemptsTableProcessedTableManager get trainingAttemptsRefs {
+        final manager = $$TrainingAttemptsTableTableManager(
+            $_db, $_db.trainingAttempts
+            ).filter(
+              (f) => f.sessionId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_trainingAttemptsRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
 
       }class $$TrainingSessionsTableFilterComposer extends Composer<
         _$AppDatabase,
@@ -1725,6 +2177,46 @@ ColumnFilters<DateTime> get completedAt => $composableBuilder(
         ));
           return composer;
         }
+        Expression<bool> trainingNotifiedRiddlesRefs(
+          Expression<bool> Function( $$TrainingNotifiedRiddlesTableFilterComposer f) f
+        ) {
+                final $$TrainingNotifiedRiddlesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingNotifiedRiddles,
+      getReferencedColumn: (t) => t.sessionId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingNotifiedRiddlesTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingNotifiedRiddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        Expression<bool> trainingAttemptsRefs(
+          Expression<bool> Function( $$TrainingAttemptsTableFilterComposer f) f
+        ) {
+                final $$TrainingAttemptsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingAttempts,
+      getReferencedColumn: (t) => t.sessionId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingAttemptsTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingAttempts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
         }
       class $$TrainingSessionsTableOrderingComposer extends Composer<
         _$AppDatabase,
@@ -1835,6 +2327,46 @@ GeneratedColumn<DateTime> get completedAt => $composableBuilder(
         ));
           return composer;
         }
+        Expression<T> trainingNotifiedRiddlesRefs<T extends Object>(
+          Expression<T> Function( $$TrainingNotifiedRiddlesTableAnnotationComposer a) f
+        ) {
+                final $$TrainingNotifiedRiddlesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingNotifiedRiddles,
+      getReferencedColumn: (t) => t.sessionId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingNotifiedRiddlesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingNotifiedRiddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        Expression<T> trainingAttemptsRefs<T extends Object>(
+          Expression<T> Function( $$TrainingAttemptsTableAnnotationComposer a) f
+        ) {
+                final $$TrainingAttemptsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trainingAttempts,
+      getReferencedColumn: (t) => t.sessionId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingAttemptsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingAttempts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
         }
       class $$TrainingSessionsTableTableManager extends RootTableManager    <_$AppDatabase,
     $TrainingSessionsTable,
@@ -1846,7 +2378,7 @@ GeneratedColumn<DateTime> get completedAt => $composableBuilder(
     $$TrainingSessionsTableUpdateCompanionBuilder,
     (TrainingSession,$$TrainingSessionsTableReferences),
     TrainingSession,
-    PrefetchHooks Function({bool mapId})
+    PrefetchHooks Function({bool mapId,bool trainingNotifiedRiddlesRefs,bool trainingAttemptsRefs})
     > {
     $$TrainingSessionsTableTableManager(_$AppDatabase db, $TrainingSessionsTable table) : super(
       TableManagerState(
@@ -1863,11 +2395,11 @@ GeneratedColumn<DateTime> get completedAt => $composableBuilder(
                      (e.readTable(table), $$TrainingSessionsTableReferences(db, table, e))
                   )
               .toList(),
-        prefetchHooksCallback:         ({mapId = false}){
+        prefetchHooksCallback:         ({mapId = false,trainingNotifiedRiddlesRefs = false,trainingAttemptsRefs = false}){
           return PrefetchHooks(
             db: db,
             explicitlyWatchedTables: [
-             
+             if (trainingNotifiedRiddlesRefs) db.trainingNotifiedRiddles,if (trainingAttemptsRefs) db.trainingAttempts
             ],
             addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
 
@@ -1887,6 +2419,24 @@ GeneratedColumn<DateTime> get completedAt => $composableBuilder(
 ,
             getPrefetchedDataCallback: (items) async {
             return [
+                      if (trainingNotifiedRiddlesRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$TrainingSessionsTableReferences._trainingNotifiedRiddlesRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$TrainingSessionsTableReferences(db, table, p0).trainingNotifiedRiddlesRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.sessionId == item.id),
+                  typedResults: items)
+            ,          if (trainingAttemptsRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$TrainingSessionsTableReferences._trainingAttemptsRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$TrainingSessionsTableReferences(db, table, p0).trainingAttemptsRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.sessionId == item.id),
+                  typedResults: items)
             
                 ];
               },
@@ -1905,7 +2455,595 @@ GeneratedColumn<DateTime> get completedAt => $composableBuilder(
     $$TrainingSessionsTableUpdateCompanionBuilder,
     (TrainingSession,$$TrainingSessionsTableReferences),
     TrainingSession,
-    PrefetchHooks Function({bool mapId})
+    PrefetchHooks Function({bool mapId,bool trainingNotifiedRiddlesRefs,bool trainingAttemptsRefs})
+    >;typedef $$TrainingNotifiedRiddlesTableCreateCompanionBuilder = TrainingNotifiedRiddlesCompanion Function({Value<int> id,required int sessionId,required String mapId,required int riddleId,Value<DateTime> notifiedAt,});
+typedef $$TrainingNotifiedRiddlesTableUpdateCompanionBuilder = TrainingNotifiedRiddlesCompanion Function({Value<int> id,Value<int> sessionId,Value<String> mapId,Value<int> riddleId,Value<DateTime> notifiedAt,});
+      final class $$TrainingNotifiedRiddlesTableReferences extends BaseReferences<
+        _$AppDatabase,
+        $TrainingNotifiedRiddlesTable,
+        TrainingNotifiedRiddle> {
+        $$TrainingNotifiedRiddlesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+        
+                          static $TrainingSessionsTable _sessionIdTable(_$AppDatabase db) => 
+            db.trainingSessions.createAlias($_aliasNameGenerator(
+            db.trainingNotifiedRiddles.sessionId,
+            db.trainingSessions.id));
+          
+
+        $$TrainingSessionsTableProcessedTableManager? get sessionId {
+          if ($_item.sessionId == null) return null;
+          final manager = $$TrainingSessionsTableTableManager($_db, $_db.trainingSessions).filter((f) => f.id($_item.sessionId!));
+          final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+                  static $RiddlesTable _riddleIdTable(_$AppDatabase db) => 
+            db.riddles.createAlias($_aliasNameGenerator(
+            db.trainingNotifiedRiddles.riddleId,
+            db.riddles.id));
+          
+
+        $$RiddlesTableProcessedTableManager? get riddleId {
+          if ($_item.riddleId == null) return null;
+          final manager = $$RiddlesTableTableManager($_db, $_db.riddles).filter((f) => f.id($_item.riddleId!));
+          final item = $_typedResult.readTableOrNull(_riddleIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+
+      }class $$TrainingNotifiedRiddlesTableFilterComposer extends Composer<
+        _$AppDatabase,
+        $TrainingNotifiedRiddlesTable> {
+        $$TrainingNotifiedRiddlesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get mapId => $composableBuilder(
+      column: $table.mapId,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get notifiedAt => $composableBuilder(
+      column: $table.notifiedAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+        $$TrainingSessionsTableFilterComposer get sessionId {
+                final $$TrainingSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        $$RiddlesTableFilterComposer get riddleId {
+                final $$RiddlesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.riddleId,
+      referencedTable: $db.riddles,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddlesTableFilterComposer(
+              $db: $db,
+              $table: $db.riddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingNotifiedRiddlesTableOrderingComposer extends Composer<
+        _$AppDatabase,
+        $TrainingNotifiedRiddlesTable> {
+        $$TrainingNotifiedRiddlesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get mapId => $composableBuilder(
+      column: $table.mapId,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get notifiedAt => $composableBuilder(
+      column: $table.notifiedAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+        $$TrainingSessionsTableOrderingComposer get sessionId {
+                final $$TrainingSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableOrderingComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        $$RiddlesTableOrderingComposer get riddleId {
+                final $$RiddlesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.riddleId,
+      referencedTable: $db.riddles,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddlesTableOrderingComposer(
+              $db: $db,
+              $table: $db.riddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingNotifiedRiddlesTableAnnotationComposer extends Composer<
+        _$AppDatabase,
+        $TrainingNotifiedRiddlesTable> {
+        $$TrainingNotifiedRiddlesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          GeneratedColumn<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get mapId => $composableBuilder(
+      column: $table.mapId,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get notifiedAt => $composableBuilder(
+      column: $table.notifiedAt,
+      builder: (column) => column);
+      
+        $$TrainingSessionsTableAnnotationComposer get sessionId {
+                final $$TrainingSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        $$RiddlesTableAnnotationComposer get riddleId {
+                final $$RiddlesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.riddleId,
+      referencedTable: $db.riddles,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddlesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.riddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingNotifiedRiddlesTableTableManager extends RootTableManager    <_$AppDatabase,
+    $TrainingNotifiedRiddlesTable,
+    TrainingNotifiedRiddle,
+    $$TrainingNotifiedRiddlesTableFilterComposer,
+    $$TrainingNotifiedRiddlesTableOrderingComposer,
+    $$TrainingNotifiedRiddlesTableAnnotationComposer,
+    $$TrainingNotifiedRiddlesTableCreateCompanionBuilder,
+    $$TrainingNotifiedRiddlesTableUpdateCompanionBuilder,
+    (TrainingNotifiedRiddle,$$TrainingNotifiedRiddlesTableReferences),
+    TrainingNotifiedRiddle,
+    PrefetchHooks Function({bool sessionId,bool riddleId})
+    > {
+    $$TrainingNotifiedRiddlesTableTableManager(_$AppDatabase db, $TrainingNotifiedRiddlesTable table) : super(
+      TableManagerState(
+        db: db,
+        table: table,
+        createFilteringComposer: () => $$TrainingNotifiedRiddlesTableFilterComposer($db: db,$table:table),
+        createOrderingComposer: () => $$TrainingNotifiedRiddlesTableOrderingComposer($db: db,$table:table),
+        createComputedFieldComposer: () => $$TrainingNotifiedRiddlesTableAnnotationComposer($db: db,$table:table),
+        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<int> sessionId = const Value.absent(),Value<String> mapId = const Value.absent(),Value<int> riddleId = const Value.absent(),Value<DateTime> notifiedAt = const Value.absent(),})=> TrainingNotifiedRiddlesCompanion(id: id,sessionId: sessionId,mapId: mapId,riddleId: riddleId,notifiedAt: notifiedAt,),
+        createCompanionCallback: ({Value<int> id = const Value.absent(),required int sessionId,required String mapId,required int riddleId,Value<DateTime> notifiedAt = const Value.absent(),})=> TrainingNotifiedRiddlesCompanion.insert(id: id,sessionId: sessionId,mapId: mapId,riddleId: riddleId,notifiedAt: notifiedAt,),
+        withReferenceMapper: (p0) => p0
+              .map(
+                  (e) =>
+                     (e.readTable(table), $$TrainingNotifiedRiddlesTableReferences(db, table, e))
+                  )
+              .toList(),
+        prefetchHooksCallback:         ({sessionId = false,riddleId = false}){
+          return PrefetchHooks(
+            db: db,
+            explicitlyWatchedTables: [
+             
+            ],
+            addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
+
+                                  if (sessionId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.sessionId,
+                    referencedTable:
+                        $$TrainingNotifiedRiddlesTableReferences._sessionIdTable(db),
+                    referencedColumn:
+                        $$TrainingNotifiedRiddlesTableReferences._sessionIdTable(db).id,
+                  ) as T;
+               }
+                  if (riddleId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.riddleId,
+                    referencedTable:
+                        $$TrainingNotifiedRiddlesTableReferences._riddleIdTable(db),
+                    referencedColumn:
+                        $$TrainingNotifiedRiddlesTableReferences._riddleIdTable(db).id,
+                  ) as T;
+               }
+
+                return state;
+              }
+,
+            getPrefetchedDataCallback: (items) async {
+            return [
+            
+                ];
+              },
+          );
+        }
+,
+        ));
+        }
+    typedef $$TrainingNotifiedRiddlesTableProcessedTableManager = ProcessedTableManager    <_$AppDatabase,
+    $TrainingNotifiedRiddlesTable,
+    TrainingNotifiedRiddle,
+    $$TrainingNotifiedRiddlesTableFilterComposer,
+    $$TrainingNotifiedRiddlesTableOrderingComposer,
+    $$TrainingNotifiedRiddlesTableAnnotationComposer,
+    $$TrainingNotifiedRiddlesTableCreateCompanionBuilder,
+    $$TrainingNotifiedRiddlesTableUpdateCompanionBuilder,
+    (TrainingNotifiedRiddle,$$TrainingNotifiedRiddlesTableReferences),
+    TrainingNotifiedRiddle,
+    PrefetchHooks Function({bool sessionId,bool riddleId})
+    >;typedef $$TrainingAttemptsTableCreateCompanionBuilder = TrainingAttemptsCompanion Function({Value<int> id,required int sessionId,required int riddleId,required bool correct,Value<DateTime> answeredAt,});
+typedef $$TrainingAttemptsTableUpdateCompanionBuilder = TrainingAttemptsCompanion Function({Value<int> id,Value<int> sessionId,Value<int> riddleId,Value<bool> correct,Value<DateTime> answeredAt,});
+      final class $$TrainingAttemptsTableReferences extends BaseReferences<
+        _$AppDatabase,
+        $TrainingAttemptsTable,
+        TrainingAttempt> {
+        $$TrainingAttemptsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+        
+                          static $TrainingSessionsTable _sessionIdTable(_$AppDatabase db) => 
+            db.trainingSessions.createAlias($_aliasNameGenerator(
+            db.trainingAttempts.sessionId,
+            db.trainingSessions.id));
+          
+
+        $$TrainingSessionsTableProcessedTableManager? get sessionId {
+          if ($_item.sessionId == null) return null;
+          final manager = $$TrainingSessionsTableTableManager($_db, $_db.trainingSessions).filter((f) => f.id($_item.sessionId!));
+          final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+                  static $RiddlesTable _riddleIdTable(_$AppDatabase db) => 
+            db.riddles.createAlias($_aliasNameGenerator(
+            db.trainingAttempts.riddleId,
+            db.riddles.id));
+          
+
+        $$RiddlesTableProcessedTableManager? get riddleId {
+          if ($_item.riddleId == null) return null;
+          final manager = $$RiddlesTableTableManager($_db, $_db.riddles).filter((f) => f.id($_item.riddleId!));
+          final item = $_typedResult.readTableOrNull(_riddleIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+
+      }class $$TrainingAttemptsTableFilterComposer extends Composer<
+        _$AppDatabase,
+        $TrainingAttemptsTable> {
+        $$TrainingAttemptsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<bool> get correct => $composableBuilder(
+      column: $table.correct,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get answeredAt => $composableBuilder(
+      column: $table.answeredAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+        $$TrainingSessionsTableFilterComposer get sessionId {
+                final $$TrainingSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableFilterComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        $$RiddlesTableFilterComposer get riddleId {
+                final $$RiddlesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.riddleId,
+      referencedTable: $db.riddles,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddlesTableFilterComposer(
+              $db: $db,
+              $table: $db.riddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingAttemptsTableOrderingComposer extends Composer<
+        _$AppDatabase,
+        $TrainingAttemptsTable> {
+        $$TrainingAttemptsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<bool> get correct => $composableBuilder(
+      column: $table.correct,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get answeredAt => $composableBuilder(
+      column: $table.answeredAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+        $$TrainingSessionsTableOrderingComposer get sessionId {
+                final $$TrainingSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableOrderingComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        $$RiddlesTableOrderingComposer get riddleId {
+                final $$RiddlesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.riddleId,
+      referencedTable: $db.riddles,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddlesTableOrderingComposer(
+              $db: $db,
+              $table: $db.riddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingAttemptsTableAnnotationComposer extends Composer<
+        _$AppDatabase,
+        $TrainingAttemptsTable> {
+        $$TrainingAttemptsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          GeneratedColumn<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => column);
+      
+GeneratedColumn<bool> get correct => $composableBuilder(
+      column: $table.correct,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get answeredAt => $composableBuilder(
+      column: $table.answeredAt,
+      builder: (column) => column);
+      
+        $$TrainingSessionsTableAnnotationComposer get sessionId {
+                final $$TrainingSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.trainingSessions,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$TrainingSessionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.trainingSessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        $$RiddlesTableAnnotationComposer get riddleId {
+                final $$RiddlesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.riddleId,
+      referencedTable: $db.riddles,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddlesTableAnnotationComposer(
+              $db: $db,
+              $table: $db.riddles,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$TrainingAttemptsTableTableManager extends RootTableManager    <_$AppDatabase,
+    $TrainingAttemptsTable,
+    TrainingAttempt,
+    $$TrainingAttemptsTableFilterComposer,
+    $$TrainingAttemptsTableOrderingComposer,
+    $$TrainingAttemptsTableAnnotationComposer,
+    $$TrainingAttemptsTableCreateCompanionBuilder,
+    $$TrainingAttemptsTableUpdateCompanionBuilder,
+    (TrainingAttempt,$$TrainingAttemptsTableReferences),
+    TrainingAttempt,
+    PrefetchHooks Function({bool sessionId,bool riddleId})
+    > {
+    $$TrainingAttemptsTableTableManager(_$AppDatabase db, $TrainingAttemptsTable table) : super(
+      TableManagerState(
+        db: db,
+        table: table,
+        createFilteringComposer: () => $$TrainingAttemptsTableFilterComposer($db: db,$table:table),
+        createOrderingComposer: () => $$TrainingAttemptsTableOrderingComposer($db: db,$table:table),
+        createComputedFieldComposer: () => $$TrainingAttemptsTableAnnotationComposer($db: db,$table:table),
+        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<int> sessionId = const Value.absent(),Value<int> riddleId = const Value.absent(),Value<bool> correct = const Value.absent(),Value<DateTime> answeredAt = const Value.absent(),})=> TrainingAttemptsCompanion(id: id,sessionId: sessionId,riddleId: riddleId,correct: correct,answeredAt: answeredAt,),
+        createCompanionCallback: ({Value<int> id = const Value.absent(),required int sessionId,required int riddleId,required bool correct,Value<DateTime> answeredAt = const Value.absent(),})=> TrainingAttemptsCompanion.insert(id: id,sessionId: sessionId,riddleId: riddleId,correct: correct,answeredAt: answeredAt,),
+        withReferenceMapper: (p0) => p0
+              .map(
+                  (e) =>
+                     (e.readTable(table), $$TrainingAttemptsTableReferences(db, table, e))
+                  )
+              .toList(),
+        prefetchHooksCallback:         ({sessionId = false,riddleId = false}){
+          return PrefetchHooks(
+            db: db,
+            explicitlyWatchedTables: [
+             
+            ],
+            addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
+
+                                  if (sessionId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.sessionId,
+                    referencedTable:
+                        $$TrainingAttemptsTableReferences._sessionIdTable(db),
+                    referencedColumn:
+                        $$TrainingAttemptsTableReferences._sessionIdTable(db).id,
+                  ) as T;
+               }
+                  if (riddleId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.riddleId,
+                    referencedTable:
+                        $$TrainingAttemptsTableReferences._riddleIdTable(db),
+                    referencedColumn:
+                        $$TrainingAttemptsTableReferences._riddleIdTable(db).id,
+                  ) as T;
+               }
+
+                return state;
+              }
+,
+            getPrefetchedDataCallback: (items) async {
+            return [
+            
+                ];
+              },
+          );
+        }
+,
+        ));
+        }
+    typedef $$TrainingAttemptsTableProcessedTableManager = ProcessedTableManager    <_$AppDatabase,
+    $TrainingAttemptsTable,
+    TrainingAttempt,
+    $$TrainingAttemptsTableFilterComposer,
+    $$TrainingAttemptsTableOrderingComposer,
+    $$TrainingAttemptsTableAnnotationComposer,
+    $$TrainingAttemptsTableCreateCompanionBuilder,
+    $$TrainingAttemptsTableUpdateCompanionBuilder,
+    (TrainingAttempt,$$TrainingAttemptsTableReferences),
+    TrainingAttempt,
+    PrefetchHooks Function({bool sessionId,bool riddleId})
     >;class $AppDatabaseManager {
 final _$AppDatabase _db;
 $AppDatabaseManager(this._db);
@@ -1913,4 +3051,6 @@ $$RiddleMapsTableTableManager get riddleMaps => $$RiddleMapsTableTableManager(_d
 $$RiddlesTableTableManager get riddles => $$RiddlesTableTableManager(_db, _db.riddles);
 $$PlaySessionsTableTableManager get playSessions => $$PlaySessionsTableTableManager(_db, _db.playSessions);
 $$TrainingSessionsTableTableManager get trainingSessions => $$TrainingSessionsTableTableManager(_db, _db.trainingSessions);
+$$TrainingNotifiedRiddlesTableTableManager get trainingNotifiedRiddles => $$TrainingNotifiedRiddlesTableTableManager(_db, _db.trainingNotifiedRiddles);
+$$TrainingAttemptsTableTableManager get trainingAttempts => $$TrainingAttemptsTableTableManager(_db, _db.trainingAttempts);
 }
