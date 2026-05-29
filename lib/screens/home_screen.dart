@@ -12,10 +12,10 @@ import 'package:enola/providers/map_providers.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
+import 'package:enola/screens/training_dashboard_screen.dart';
 import 'package:enola/services/drift_service.dart';
 import 'package:enola/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -36,11 +36,13 @@ class HomeScreen extends ConsumerWidget {
                 Expanded(
                   child: mapsAsync.when(
                     loading: () => const Center(
-                      child: CircularProgressIndicator(color: EnolaTheme.accent),
+                      child: CircularProgressIndicator(
+                          color: EnolaTheme.accent),
                     ),
                     error: (e, _) => Center(
                       child: Text('Error: $e',
-                          style: const TextStyle(color: EnolaTheme.wrong)),
+                          style:
+                              const TextStyle(color: EnolaTheme.wrong)),
                     ),
                     data: (maps) => maps.isEmpty
                         ? _EmptyState(onCreate: () => _openCreate(context))
@@ -59,6 +61,8 @@ class HomeScreen extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _DebugFab(),
+          const SizedBox(height: 12),
+          _TrainingFab(),
           const SizedBox(height: 12),
           _CreateFab(onTap: () => _openCreate(context)),
         ],
@@ -170,7 +174,8 @@ class _MapCard extends ConsumerWidget {
               Navigator.pop(dialogContext);
               await _deleteMap(context, ref);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child:
+                const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -180,7 +185,9 @@ class _MapCard extends ConsumerWidget {
   Future<void> _deleteMap(BuildContext context, WidgetRef ref) async {
     try {
       final db = DriftService.instance.db;
-      await (db.delete(db.riddleMaps)..where((t) => t.id.equals(map.id))).go();
+      await (db.delete(db.riddleMaps)
+            ..where((t) => t.id.equals(map.id)))
+          .go();
       ref.invalidate(allMapsProvider);
     } catch (e) {
       if (context.mounted) {
@@ -284,15 +291,16 @@ class _MapCard extends ConsumerWidget {
                                   child: imageBytes != null
                                       ? Image.memory(imageBytes,
                                           fit: BoxFit.cover)
-                                      : Image.asset('assets/images/0.jpeg',
+                                      : Image.asset(
+                                          'assets/images/0.jpeg',
                                           fit: BoxFit.cover),
                                 ),
                               ),
                             ),
                           ),
                           Container(
-                            padding:
-                                const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                            padding: const EdgeInsets.fromLTRB(
+                                10, 10, 10, 10),
                             decoration: const BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.vertical(
@@ -378,11 +386,13 @@ class _MapCard extends ConsumerWidget {
               left: -6,
               child: _EarButton(
                 icon: Icons.edit_rounded,
-                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.7),
+                iconColor:
+                    EnolaTheme.textSecond.withValues(alpha: 0.7),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CreateMapScreen(existingMapId: map.id),
+                    builder: (_) =>
+                        CreateMapScreen(existingMapId: map.id),
                   ),
                 ),
               ),
@@ -549,7 +559,8 @@ class _CardInfoBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+        borderRadius:
+            BorderRadius.vertical(bottom: Radius.circular(16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,7 +684,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── FAB ───────────────────────────────────────────────────────────────────────
+// ── FABs ──────────────────────────────────────────────────────────────────────
 
 class _CreateFab extends StatelessWidget {
   final VoidCallback onTap;
@@ -694,6 +705,86 @@ class _CreateFab extends StatelessWidget {
   }
 }
 
+// ── Training FAB — only visible when a training session is active ─────────────
+
+class _TrainingFab extends StatefulWidget {
+  const _TrainingFab();
+
+  @override
+  State<_TrainingFab> createState() => _TrainingFabState();
+}
+
+class _TrainingFabState extends State<_TrainingFab> {
+  late Stream<List<PendingTrainingRiddle>> _pendingStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _pendingStream = DriftService.instance.watchPendingNotifiedRiddles();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<PendingTrainingRiddle>>(
+      stream: _pendingStream,
+      builder: (context, snapshot) {
+        // Also watch active training sessions so the FAB appears even before
+        // the first notification fires (pending list may still be empty)
+        return StreamBuilder<List<TrainingSession>>(
+          stream: DriftService.instance.watchActiveTrainingSessions(),
+          builder: (context, sessionSnap) {
+            final hasActiveSessions =
+                (sessionSnap.data ?? []).isNotEmpty;
+            final pendingCount = snapshot.data?.length ?? 0;
+
+            if (!hasActiveSessions) return const SizedBox.shrink();
+
+            return FloatingActionButton.extended(
+              heroTag: 'training_fab',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TrainingDashboardScreen(),
+                ),
+              ),
+              backgroundColor: EnolaTheme.secondary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.psychology_rounded),
+              label: Row(
+                children: [
+                  const Text(
+                    'Training',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (pendingCount > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(50),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$pendingCount',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ).animate().fadeIn().slideY(begin: 0.3, end: 0);
+          },
+        );
+      },
+    );
+  }
+}
+
 // ── Debug FAB ─────────────────────────────────────────────────────────────────
 
 class _DebugFab extends StatelessWidget {
@@ -704,11 +795,15 @@ class _DebugFab extends StatelessWidget {
       backgroundColor: Colors.grey.shade700,
       onPressed: () async {
         final prefs = await SharedPreferences.getInstance();
-        final stored = prefs.getString('pending_notification_payload') ?? 'nothing in prefs';
-        final pending = await NotificationService.instance.getPendingNotifications();
+        final stored = prefs.getString('pending_notification_payload') ??
+            'nothing in prefs';
+        final pending =
+            await NotificationService.instance.getPendingNotifications();
         final pendingStr = pending.isEmpty
             ? 'no pending notifications'
-            : pending.map((p) => 'id=${p.id} payload=${p.payload}').join('\n');
+            : pending
+                .map((p) => 'id=${p.id} payload=${p.payload}')
+                .join('\n');
 
         if (!context.mounted) return;
         showDialog(
@@ -720,13 +815,16 @@ class _DebugFab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('lastPayload:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('lastPayload:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   Text(NotificationService.lastPayload),
                   const SizedBox(height: 12),
-                  const Text('prefs payload:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('prefs payload:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   Text(stored),
                   const SizedBox(height: 12),
-                  const Text('pending notifications:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('pending notifications:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   Text(pendingStr),
                 ],
               ),
@@ -745,7 +843,6 @@ class _DebugFab extends StatelessWidget {
   }
 }
 
-
 // ── Custom Painter ────────────────────────────────────────────────────────────
 
 class SunburstPainter extends CustomPainter {
@@ -757,8 +854,8 @@ class SunburstPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.sqrt(
-        size.width * size.width + size.height * size.height);
+    final radius =
+        math.sqrt(size.width * size.width + size.height * size.height);
 
     final angleStep = (2 * math.pi) / rayCount;
     final paint = Paint()..style = PaintingStyle.fill;
@@ -788,6 +885,7 @@ class SunburstPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SunburstPainter oldDelegate) {
-    return oldDelegate.rayCount != rayCount || oldDelegate.alphas != alphas;
+    return oldDelegate.rayCount != rayCount ||
+        oldDelegate.alphas != alphas;
   }
 }
