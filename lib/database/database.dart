@@ -14,7 +14,7 @@ class RiddleMaps extends Table {
   TextColumn get subject => text().nullable()();
   BlobColumn get imageBytes => blob().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-	IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
+  IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -42,10 +42,8 @@ class PlaySessions extends Table {
   IntColumn get totalRiddles => integer().withDefault(const Constant(0))();
   IntColumn get correctAnswers => integer().withDefault(const Constant(0))();
   TextColumn get riddleStarsJson => text().nullable()();
-	IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
+  IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
 }
-
-// Add this new table class alongside the existing ones
 
 class TrainingSessions extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -57,6 +55,23 @@ class TrainingSessions extends Table {
   DateTimeColumn get completedAt => dateTime().nullable()();
 }
 
+// ── NEW ───────────────────────────────────────────────────────────────────────
+
+class TrainingNotifiedRiddles extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get sessionId => integer().references(TrainingSessions, #id, onDelete: KeyAction.cascade)();
+  TextColumn get mapId => text()();
+  IntColumn get riddleId => integer().references(Riddles, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get notifiedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class TrainingAttempts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get sessionId => integer().references(TrainingSessions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get riddleId => integer().references(Riddles, #id, onDelete: KeyAction.cascade)();
+  BoolColumn get correct => boolean()();
+  DateTimeColumn get answeredAt => dateTime().withDefault(currentDateAndTime)();
+}
 
 // ---
 
@@ -117,12 +132,19 @@ class OrderingPayload extends RiddlePayload {
 
 // ---
 
-@DriftDatabase(tables: [RiddleMaps, Riddles, PlaySessions, TrainingSessions])
+@DriftDatabase(tables: [
+  RiddleMaps,
+  Riddles,
+  PlaySessions,
+  TrainingSessions,
+  TrainingNotifiedRiddles, // NEW
+  TrainingAttempts,        // NEW
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -139,14 +161,17 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         await m.addColumn(riddles, riddles.sourceExcerpt);
       }
-			if (from < 6) {
+      if (from < 6) {
         await m.addColumn(riddleMaps, riddleMaps.riddlesVersion);
         await m.addColumn(playSessions, playSessions.riddlesVersion);
       }
-			if (from < 7) {
-  				await m.createTable(trainingSessions);
-			}
-
+      if (from < 7) {
+        await m.createTable(trainingSessions);
+      }
+      if (from < 8) {
+        await m.createTable(trainingNotifiedRiddles);
+        await m.createTable(trainingAttempts);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
