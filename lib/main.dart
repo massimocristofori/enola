@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,21 +8,24 @@ import 'services/training_service.dart';
 import 'theme/enola_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/riddle_screen.dart';
+import 'screens/training_dashboard_screen.dart';
 import 'services/drift_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // ── Training navigation ───────────────────────────────────────────────────────
-// Extracted from the inline closure so both notification taps and the
-// training dashboard can open the riddle screen identically.
 
-void openTrainingRiddle(String mapId, int riddleId) {
+void openTrainingRiddle(
+  String mapId,
+  int riddleId, {
+  bool fromDashboard = false,
+}) {
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     final context = navigatorKey.currentContext;
 
     if (context == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        openTrainingRiddle(mapId, riddleId);
+        openTrainingRiddle(mapId, riddleId, fromDashboard: fromDashboard);
       });
       return;
     }
@@ -60,7 +62,16 @@ void openTrainingRiddle(String mapId, int riddleId) {
                     correct: false,
                     riddles: allRiddles,
                   );
-                  Navigator.pop(context);
+                  if (fromDashboard) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TrainingDashboardScreen(),
+                      ),
+                    );
+                  }
                 },
                 onComplete: (int errorCount) {
                   final bool isCorrect = errorCount == 0;
@@ -70,7 +81,16 @@ void openTrainingRiddle(String mapId, int riddleId) {
                     correct: isCorrect,
                     riddles: allRiddles,
                   );
-                  Navigator.pop(context);
+                  if (isCorrect || fromDashboard) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TrainingDashboardScreen(),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
