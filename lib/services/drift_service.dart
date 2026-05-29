@@ -328,6 +328,19 @@ class DriftService {
     });
   }
 
+	/// Stream of all currently active (non-completed, not expired) training sessions.
+	/// Used by the home screen FAB to decide whether to show itself.
+	Stream<List<TrainingSession>> watchActiveTrainingSessions() {
+ 	 return (DriftService.instance.db.select(
+          DriftService.instance.db.trainingSessions)
+        ..where((t) => t.completedAt.isNull()))
+      .watch()
+      .map((sessions) => sessions
+          .where((s) => DateTime.now().isBefore(s.endsAt))
+          .toList());
+	}
+
+
   // ── TRAINING ATTEMPTS ─────────────────────────────────────────────────────
 
   Future<void> insertTrainingAttempt({
