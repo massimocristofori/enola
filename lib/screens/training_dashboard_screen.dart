@@ -26,12 +26,14 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
 
   void _refresh() {
     _streakFuture = DriftService.instance.getTrainingStreak();
-    _masteryFuture = _getMasteryPublic();
+    _masteryFuture = _getMastery();
   }
 
-  Future<Map<String, MasteryProgress>> _getMasteryPublic() async {
+  Future<Map<String, MasteryProgress>> _getMastery() async {
     final raw = await DriftService.instance.getMasteryPerMap();
-    return raw.map((k, v) => MapEntry(k, MasteryProgress(mastered: v.mastered, total: v.total)));
+    return raw.map(
+      (k, v) => MapEntry(k, MasteryProgress(mastered: v.mastered, total: v.total)),
+    );
   }
 
   @override
@@ -122,10 +124,12 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
                           onTap: () => openTrainingRiddle(
                             item.notified.mapId,
                             item.riddle.id,
+                            fromDashboard: true,
                           ),
                         )
                             .animate()
-                            .fadeIn(delay: Duration(milliseconds: index * 60))
+                            .fadeIn(
+                                delay: Duration(milliseconds: index * 60))
                             .slideX(begin: 0.05, end: 0);
                       },
                       childCount: pending.length,
@@ -176,7 +180,6 @@ class _SummaryHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Streak
           Expanded(
             child: _StatCell(
               icon: Icons.local_fire_department_rounded,
@@ -189,7 +192,6 @@ class _SummaryHeader extends StatelessWidget {
             height: 40,
             color: Colors.white.withAlpha(60),
           ),
-          // Mastered
           Expanded(
             child: _StatCell(
               icon: Icons.check_circle_outline_rounded,
@@ -204,7 +206,6 @@ class _SummaryHeader extends StatelessWidget {
             height: 40,
             color: Colors.white.withAlpha(60),
           ),
-          // Active maps
           Expanded(
             child: _StatCell(
               icon: Icons.map_outlined,
@@ -294,7 +295,6 @@ class _PendingRiddleCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Icon
             Container(
               width: 44,
               height: 44,
@@ -309,7 +309,6 @@ class _PendingRiddleCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            // Question preview
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
