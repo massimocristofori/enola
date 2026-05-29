@@ -13,6 +13,92 @@ import 'services/drift_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// ── Training navigation ───────────────────────────────────────────────────────
+// Extracted from the inline closure so both notification taps and the
+// training dashboard can open the riddle screen identically.
+
+void openTrainingRiddle(String mapId, int riddleId) {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final context = navigatorKey.currentContext;
+
+    if (context == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        openTrainingRiddle(mapId, riddleId);
+      });
+      return;
+    }
+
+    try {
+      final db = DriftService.instance.db;
+
+      final riddle = await (db.select(db.riddles)
+            ..where((r) => r.id.equals(riddleId)))
+          .getSingle();
+      final allRiddles = await (db.select(db.riddles)
+            ..where((r) => r.mapId.equals(mapId)))
+          .get();
+      final int targetIndex =
+          allRiddles.indexWhere((r) => r.id == riddleId);
+
+      if (!context.mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            body: SafeArea(
+              child: RiddleScreen(
+                riddle: riddle,
+                riddleIndex: targetIndex >= 0 ? targetIndex : 0,
+                trainingMode: true,
+                readOnly: false,
+                onDismiss: () => Navigator.pop(context),
+                onSkip: () {
+                  TrainingService.instance.onRiddleAnswered(
+                    mapId: mapId,
+                    riddleId: riddleId,
+                    correct: false,
+                    riddles: allRiddles,
+                  );
+                  Navigator.pop(context);
+                },
+                onComplete: (int errorCount) {
+                  final bool isCorrect = errorCount == 0;
+                  TrainingService.instance.onRiddleAnswered(
+                    mapId: mapId,
+                    riddleId: riddleId,
+                    correct: isCorrect,
+                    riddles: allRiddles,
+                  );
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Training Route Sync Failed'),
+          content: Text(
+              'Could not safely fetch riddle details from database.\nDetails: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -30,97 +116,14 @@ void main() async {
     defaultValue: '',
   );
 
-  // ── 1. Initialize Services ─────────────────────────────────────────────────
   await NotificationService.instance.init();
   TrainingService.instance.init();
 
-  // ── 2. Bind the screen route ───────────────────────────────────────────────
-  // Setting onNotificationTap automatically flushes any buffered cold-start
-  // or early-resume payload via the setter in NotificationService.
   TrainingService.instance.onTrainingNotificationTap =
       (String mapId, int riddleId) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final context = navigatorKey.currentContext;
-
-      if (context == null) {
-        // Navigator not mounted yet — retry next frame
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          TrainingService.instance.onTrainingNotificationTap
-              ?.call(mapId, riddleId);
-        });
-        return;
-      }
-
-      try {
-        final db = DriftService.instance.db;
-
-        final riddle = await (db.select(db.riddles)
-              ..where((r) => r.id.equals(riddleId)))
-            .getSingle();
-        final allRiddles = await (db.select(db.riddles)
-              ..where((r) => r.mapId.equals(mapId)))
-            .get();
-        final int targetIndex =
-            allRiddles.indexWhere((r) => r.id == riddleId);
-
-        if (!context.mounted) return;
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              body: SafeArea(
-                child: RiddleScreen(
-                  riddle: riddle,
-                  riddleIndex: targetIndex >= 0 ? targetIndex : 0,
-                  trainingMode: true,
-                  readOnly: false,
-                  onDismiss: () => Navigator.pop(context),
-                  onSkip: () {
-                    TrainingService.instance.onRiddleAnswered(
-                      mapId: mapId,
-                      riddleId: riddleId,
-                      correct: false,
-                      riddles: allRiddles,
-                    );
-                    Navigator.pop(context);
-                  },
-                  onComplete: (int errorCount) {
-                    final bool isCorrect = errorCount == 0;
-                    TrainingService.instance.onRiddleAnswered(
-                      mapId: mapId,
-                      riddleId: riddleId,
-                      correct: isCorrect,
-                      riddles: allRiddles,
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      } catch (e) {
-        if (!context.mounted) return;
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Training Route Sync Failed'),
-            content: Text(
-                'Could not safely fetch riddle details from database.\nDetails: $e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    });
+    openTrainingRiddle(mapId, riddleId);
   };
 
-  // ── 3. Launch app then drain any cold-start payload ────────────────────────
   runApp(const ProviderScope(child: EnolaApp()));
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
