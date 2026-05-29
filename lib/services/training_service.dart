@@ -101,7 +101,6 @@ class TrainingService {
 
     final pool = riddles.map((r) => r.id).toList();
 
-    // Schedule initial slots in the first 50% of the window
     final firstHalfEnd = now.add(Duration(minutes: durationMinutes ~/ 2));
     final slots = _buildInitialSlots(
       mapId: mapId,
@@ -162,30 +161,44 @@ class TrainingService {
     List<TrainingSlot> slotsToCancel = [];
     TrainingSlot? newSlot;
 
+    // ── Record attempt ────────────────────────────────────────────────────
+    await DriftService.instance.insertTrainingAttempt(
+      sessionId: session.id,
+      riddleId: riddleId,
+      correct: correct,
+    );
+
     if (correct) {
       pool.remove(riddleId);
-      
-      // Identify slots to cancel without awaiting yet
-      slotsToCancel = slots.where((s) =>
-          s.riddleId == riddleId && s.scheduledAt.isAfter(now)).toList();
-      
+
+      slotsToCancel = slots
+          .where((s) =>
+              s.riddleId == riddleId && s.scheduledAt.isAfter(now))
+          .toList();
+
       slots.removeWhere(
           (s) => s.riddleId == riddleId && s.scheduledAt.isAfter(now));
 
+      // ── Remove from notified queue ──────────────────────────────────────
+      await DriftService.instance.removeNotifiedRiddle(
+        sessionId: session.id,
+        riddleId: riddleId,
+      );
+
       if (pool.isEmpty) {
-        // Save terminal state directly
         await (db.update(db.trainingSessions)
               ..where((t) => t.id.equals(session.id)))
             .write(TrainingSessionsCompanion(
           poolJson: drift.Value(jsonEncode(pool)),
-          scheduledJson: drift.Value(jsonEncode(slots.map((s) => s.toJson()).toList())),
+          scheduledJson: drift.Value(
+              jsonEncode(slots.map((s) => s.toJson()).toList())),
           completedAt: drift.Value(DateTime.now()),
         ));
 
-        // Fire and clear notifications last
         await _scheduleCompletionNotification();
         for (final slot in slotsToCancel) {
-          await NotificationService.instance.cancelNotification(slot.notificationId);
+          await NotificationService.instance
+              .cancelNotification(slot.notificationId);
         }
         return;
       }
@@ -203,7 +216,7 @@ class TrainingService {
       }
     }
 
-    // CRITICAL FIX: Update DB state immediately before performing awaited notifications
+    // Update DB state
     await (db.update(db.trainingSessions)
           ..where((t) => t.id.equals(session.id)))
         .write(TrainingSessionsCompanion(
@@ -213,10 +226,11 @@ class TrainingService {
       ),
     ));
 
-    // Perform notification mutations safely now that DB reflects current state
+    // Notify mutations
     if (correct) {
       for (final slot in slotsToCancel) {
-        await NotificationService.instance.cancelNotification(slot.notificationId);
+        await NotificationService.instance
+            .cancelNotification(slot.notificationId);
       }
     } else if (newSlot != null) {
       final riddle = riddles.firstWhere((r) => r.id == riddleId);
@@ -229,10 +243,16 @@ class TrainingService {
         scheduledAt: newSlot.scheduledAt,
         payload: '$mapId:$riddleId',
       );
+      // ── Mark as notified for the new failure slot ─────────────────────
+      await DriftService.instance.insertNotifiedRiddle(
+        sessionId: session.id,
+        mapId: mapId,
+        riddleId: riddleId,
+      );
     }
   }
 
-  // ── Build initial slots (first 50% of window) ─────────────────────────────
+  // ── Build initial slots ───────────────────────────────────────────────────
 
   List<TrainingSlot> _buildInitialSlots({
     required String mapId,
@@ -252,7 +272,6 @@ class TrainingService {
     final slots = <TrainingSlot>[];
     final shuffled = List<int>.from(pool)..shuffle(Random());
 
-    // Safe padding buffer (10 seconds) ensuring first slots fall strictly in the future
     final baseTime = from.add(const Duration(seconds: 10));
 
     for (int i = 0; i < shuffled.length; i++) {
@@ -270,7 +289,7 @@ class TrainingService {
     return slots;
   }
 
-  // ── Schedule failure slot (into remaining back half) ──────────────────────
+  // ── Schedule failure slot ─────────────────────────────────────────────────
 
   TrainingSlot? _scheduleFailureSlot({
     required String mapId,
@@ -286,8 +305,7 @@ class TrainingService {
 
     DateTime candidate;
     if (futureSlots.isEmpty) {
-      candidate =
-          now.add(Duration(minutes: kTrainingMinGapMinutes));
+      candidate = now.add(Duration(minutes: kTrainingMinGapMinutes));
     } else {
       candidate = futureSlots.last.scheduledAt
           .add(Duration(minutes: kTrainingMinGapMinutes));
@@ -309,7 +327,10 @@ class TrainingService {
     List<Riddle> riddles,
     List<TrainingSlot> slots,
   ) async {
+    // Fetch the session we just created so we have its id
+    final session = await getActiveSession(mapId);
     final riddleMap = {for (final r in riddles) r.id: r};
+
     for (final slot in slots) {
       final riddle = riddleMap[slot.riddleId];
       if (riddle == null) continue;
@@ -324,6 +345,15 @@ class TrainingService {
         scheduledAt: slot.scheduledAt,
         payload: '$mapId:${slot.riddleId}',
       );
+
+      // ── Mark as notified ──────────────────────────────────────────────
+      if (session != null) {
+        await DriftService.instance.insertNotifiedRiddle(
+          sessionId: session.id,
+          mapId: mapId,
+          riddleId: slot.riddleId,
+        );
+      }
     }
   }
 
