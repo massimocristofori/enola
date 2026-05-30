@@ -18,103 +18,90 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void openTrainingRiddle(
   String mapId,
   int riddleId, {
-  bool fromDashboard = false,
+  bool fromNotification = false,
 }) {
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    final context = navigatorKey.currentContext;
+  if (fromNotification) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pushTrainingRiddle(mapId, riddleId, fromNotification: true);
+    });
+  } else {
+    _pushTrainingRiddle(mapId, riddleId, fromNotification: false);
+  }
+}
 
-    if (context == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        openTrainingRiddle(mapId, riddleId, fromDashboard: fromDashboard);
-      });
-      return;
+Future<void> _pushTrainingRiddle(
+  String mapId,
+  int riddleId, {
+  required bool fromNotification,
+}) async {
+  final context = navigatorKey.currentContext;
+  if (context == null) return;
+
+  try {
+    final db = DriftService.instance.db;
+
+    final riddle = await (db.select(db.riddles)
+          ..where((r) => r.id.equals(riddleId)))
+        .getSingle();
+    final allRiddles = await (db.select(db.riddles)
+          ..where((r) => r.mapId.equals(mapId)))
+        .get();
+    final int targetIndex = allRiddles.indexWhere((r) => r.id == riddleId);
+
+    if (!context.mounted) return;
+
+    void onDone(BuildContext riddleContext, int errorCount) {
+      TrainingService.instance.onRiddleAnswered(
+        mapId: mapId,
+        riddleId: riddleId,
+        correct: errorCount == 0,
+        riddles: allRiddles,
+      );
+      if (fromNotification) {
+        Navigator.pushReplacement(
+          riddleContext,
+          MaterialPageRoute(builder: (_) => const TrainingDashboardScreen()),
+        );
+      } else {
+        Navigator.pop(riddleContext);
+      }
     }
 
-    try {
-      final db = DriftService.instance.db;
-
-      final riddle = await (db.select(db.riddles)
-            ..where((r) => r.id.equals(riddleId)))
-          .getSingle();
-      final allRiddles = await (db.select(db.riddles)
-            ..where((r) => r.mapId.equals(mapId)))
-          .get();
-      final int targetIndex =
-          allRiddles.indexWhere((r) => r.id == riddleId);
-
-      if (!context.mounted) return;
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => Scaffold(
-            body: SafeArea(
-              child: RiddleScreen(
-                riddle: riddle,
-                riddleIndex: targetIndex >= 0 ? targetIndex : 0,
-                trainingMode: true,
-                readOnly: false,
-                onDismiss: () => Navigator.pop(context),
-                onSkip: () {
-                  TrainingService.instance.onRiddleAnswered(
-                    mapId: mapId,
-                    riddleId: riddleId,
-                    correct: false,
-                    riddles: allRiddles,
-                  );
-                  if (fromDashboard) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TrainingDashboardScreen(),
-                      ),
-                    );
-                  }
-                },
-                onComplete: (int errorCount) {
-                  final bool isCorrect = errorCount == 0;
-                  TrainingService.instance.onRiddleAnswered(
-                    mapId: mapId,
-                    riddleId: riddleId,
-                    correct: isCorrect,
-                    riddles: allRiddles,
-                  );
-                  if (isCorrect || fromDashboard) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TrainingDashboardScreen(),
-                      ),
-                    );
-                  }
-                },
-              ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (riddleContext) => Scaffold(
+          body: SafeArea(
+            child: RiddleScreen(
+              riddle: riddle,
+              riddleIndex: targetIndex >= 0 ? targetIndex : 0,
+              trainingMode: true,
+              readOnly: false,
+              onDismiss: () => Navigator.pop(riddleContext),
+              onSkip: () => onDone(riddleContext, 1),
+              onComplete: (int errorCount) => onDone(riddleContext, errorCount),
             ),
           ),
         ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Training Route Sync Failed'),
-          content: Text(
-              'Could not safely fetch riddle details from database.\nDetails: $e'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-    }
-  });
+      ),
+    );
+  } catch (e) {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    showDialog(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        title: const Text('Training Route Sync Failed'),
+        content: Text('Could not fetch riddle details.\nDetails: $e'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,7 +128,7 @@ void main() async {
 
   TrainingService.instance.onTrainingNotificationTap =
       (String mapId, int riddleId) {
-    openTrainingRiddle(mapId, riddleId);
+    openTrainingRiddle(mapId, riddleId, fromNotification: true);
   };
 
   runApp(const ProviderScope(child: EnolaApp()));
