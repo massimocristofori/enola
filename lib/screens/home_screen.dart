@@ -202,6 +202,7 @@ class _MapCard extends ConsumerWidget {
     final hasBeenPlayed = session != null;
     final isComplete =
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
+    final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
 
     return GestureDetector(
       onTap: () => _openPlay(context),
@@ -265,16 +266,26 @@ class _MapCard extends ConsumerWidget {
           );
         },
         child: Stack(
-          clipBehavior: Clip.none,
+          clipBehavior: Clip.none, // Allows ribbon to bleed left and right cleanly
           children: [
             _CardShell(
               imageBytes: imageBytes,
-              isComplete: isComplete,
               title: map.title,
               achievedStars: achievedStars,
               maxStars: maxStars,
               hasBeenPlayed: hasBeenPlayed,
+              isComplete: isComplete,
             ),
+
+            // ── Centered Ribbon Overlay (Spans entire card width + 4px total bleed) ──
+            if (isComplete)
+              Positioned(
+                left: -2,
+                right: -2,
+                top: 0,
+                bottom: 0,
+                child: _RankRibbonOverlay(starRatio: starRatio),
+              ),
 
             // ── Top-right ear (Edit) ──
             Positioned(
@@ -307,7 +318,7 @@ String _rankEmoji(double starRatio) {
   return '📜';
 }
 
-// ── Modern Completion Ribbon Overlay ──────────────────────────────────────────
+// ── Floating Ribbon Overlay ───────────────────────────────────────────────────
 
 class _RankRibbonOverlay extends StatelessWidget {
   final double starRatio;
@@ -320,11 +331,18 @@ class _RankRibbonOverlay extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.85),
+          color: Colors.white.withValues(alpha: 0.88),
           border: Border(
-            top: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.5), width: 1),
-            bottom: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.5), width: 1),
+            top: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.6), width: 1),
+            bottom: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.6), width: 1),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Text(
           _rankEmoji(starRatio),
@@ -351,7 +369,6 @@ class _StarProgressBar extends StatelessWidget {
         const double starSize = 26.0;
         const double barHeight = 8.0;
         
-        // Maps progress natively across the true absolute dimensions of the background track
         final double leftOffset = width * progress.clamp(0.0, 1.0);
 
         return SizedBox(
@@ -379,15 +396,15 @@ class _StarProgressBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              // Thumb precisely center-anchored to the layout offset
+              // Thumb precisely center-anchored and shifted 2px up
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform: Matrix4.translationValues(-starSize / 2, 0, 0),
+                  transform: Matrix4.translationValues(-starSize / 2, -2.0, 0), // Moved 2px up
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
-                    color: Color(0xFFE5B822),
+                    color: Color(0xFFF1C40F), // Brightened gold tone
                   ),
                 ),
               ),
@@ -403,25 +420,23 @@ class _StarProgressBar extends StatelessWidget {
 
 class _CardShell extends StatelessWidget {
   final Uint8List? imageBytes;
-  final bool isComplete;
   final String title;
   final int achievedStars;
   final int maxStars;
   final bool hasBeenPlayed;
+  final bool isComplete;
 
   const _CardShell({
     required this.imageBytes,
-    required this.isComplete,
     required this.title,
     required this.achievedStars,
     required this.maxStars,
     required this.hasBeenPlayed,
+    required this.isComplete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -440,18 +455,9 @@ class _CardShell extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  imageBytes != null
-                      ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                      : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
-                  if (isComplete)
-                    Positioned.fill(
-                      child: _RankRibbonOverlay(starRatio: starRatio),
-                    ),
-                ],
-              ),
+              child: imageBytes != null
+                  ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                  : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
             ),
           ),
           _CardInfoBar(
@@ -532,7 +538,7 @@ class _CardInfoBar extends StatelessWidget {
                     color: Color(0xFF555555),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10), // Increased spacing to prevent star overlap
                 Expanded(
                   child: _StarProgressBar(
                     progress: maxStars > 0 && hasBeenPlayed
@@ -540,7 +546,7 @@ class _CardInfoBar extends StatelessWidget {
                         : 0.0,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10), // Increased spacing to prevent star overlap
                 Text(
                   '$maxStars',
                   style: const TextStyle(
