@@ -347,7 +347,7 @@ class _RankRibbonOverlay extends StatelessWidget {
         child: Text(
           _rankEmoji(starRatio),
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 32),
+          style: const TextStyle(fontSize: 42),
         ),
       ),
     );
@@ -503,6 +503,7 @@ class _CardInfoBar extends StatelessWidget {
         children: [
           // ── The Flush Title Rectangle ──
           Container(
+						height: 38,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF9FAFB),
@@ -527,6 +528,7 @@ class _CardInfoBar extends StatelessWidget {
           ),
           // ── The Progress Bar Row ──
           Padding(
+						height: 50,
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Row(
               children: [
