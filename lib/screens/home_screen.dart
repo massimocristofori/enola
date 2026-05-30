@@ -241,10 +241,10 @@ class _MapCard extends ConsumerWidget {
                       child: ClipRRect(
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(8)),
-                        child: imageBytes != null
-                            ? Image.memory(imageBytes, fit: BoxFit.cover)
-                            : Image.asset('assets/images/0.jpeg',
-                                fit: BoxFit.cover),
+												child: imageBytes != null
+												    ? Image.memory(imageBytes, fit: BoxFit.cover, width: double.infinity)
+												    : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover, width: double.infinity),
+
                       ),
                     ),
                   ),
