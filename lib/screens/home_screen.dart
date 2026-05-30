@@ -134,9 +134,9 @@ class _MapGrid extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cols,
-        crossAxisSpacing: 24, // Increased spacing for more horizontal room between cards
+        crossAxisSpacing: 24,
         mainAxisSpacing: 14,
-        childAspectRatio: 0.95, // Increased to make the overall card shorter
+        childAspectRatio: 0.95,
       ),
       itemCount: maps.length,
       itemBuilder: (context, i) {
@@ -221,7 +221,7 @@ class _MapCard extends ConsumerWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(8), // Reduced to 8
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(15),
@@ -239,7 +239,7 @@ class _MapCard extends ConsumerWidget {
                               heightFactor: imageHeightFactor,
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(16)),
+                                    top: Radius.circular(8)), // Reduced to 8
                                 child: imageBytes != null
                                     ? Image.memory(imageBytes, fit: BoxFit.cover)
                                     : Image.asset('assets/images/0.jpeg',
@@ -277,8 +277,8 @@ class _MapCard extends ConsumerWidget {
 
             // ── Top-right ear (Edit) ──
             Positioned(
-              top: -6,
-              right: -6,
+              top: -8, // Adjusted position for larger button
+              right: -8,
               child: _EarButton(
                 icon: Icons.edit_rounded,
                 iconColor: EnolaTheme.textSecond.withValues(alpha: 0.7),
@@ -359,7 +359,7 @@ class _StarProgressBar extends StatelessWidget {
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
         const double starSize = 20.0;
-        const double barHeight = 8.0; // Increased height
+        const double barHeight = 8.0;
         final double availableWidth = width - starSize;
         final double leftOffset = availableWidth * progress.clamp(0.0, 1.0);
 
@@ -372,8 +372,8 @@ class _StarProgressBar extends StatelessWidget {
               Container(
                 height: barHeight,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6), // Lighter grey
-                  border: Border.all(color: const Color(0xFFD1D5DB), width: 1), // Darker grey 1px border
+                  color: const Color(0xFFF3F4F6),
+                  border: Border.all(color: const Color(0xFFD1D5DB), width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -382,7 +382,7 @@ class _StarProgressBar extends StatelessWidget {
                 height: barHeight,
                 width: leftOffset + (starSize / 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700), // Gold yellow
+                  color: const Color(0xFFFFD700),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -404,7 +404,7 @@ class _StarProgressBar extends StatelessWidget {
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
-                    color: Color(0xFFFFD700), // Gold yellow
+                    color: Color(0xFFFFD700),
                   ),
                 ),
               ),
@@ -442,7 +442,7 @@ class _CardShell extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8), // Reduced to 8
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(15),
@@ -456,7 +456,7 @@ class _CardShell extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)), // Reduced to 8
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -507,23 +507,32 @@ class _CardInfoBar extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)), // Reduced to 8
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            textAlign: TextAlign.center, // Centered text
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: EnolaTheme.textPrimary,
-              height: 1.3,
-              letterSpacing: 0.1,
+          // ── The new Title Rectangle ──
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB), // Very light grey
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1), // Less light grey
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+                color: EnolaTheme.textPrimary,
+                height: 1.3,
+                letterSpacing: 0.1,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -580,12 +589,12 @@ class _EarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(8), // Increased from 6
         decoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 22, color: iconColor),
+        child: Icon(icon, size: 26, color: iconColor), // Increased from 22
       ),
     );
   }
