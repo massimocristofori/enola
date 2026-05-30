@@ -17,8 +17,9 @@ import 'package:enola/services/notification_service.dart';
 
 import 'package:drift/drift.dart' as drift;
 
-const double kPlayHeaderHeight = 90.0;
-const double kPlayHeaderCompact = 58.0;
+// Exact heights matching the _CardInfoBar in home_screen.dart
+const double kPlayHeaderHeight = 88.0; 
+const double kPlayHeaderCompact = 50.0;
 
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
@@ -576,7 +577,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       ),
     );
   }
-} // ← end of _PlayScreenState
+}
 
 // ── Map view ──────────────────────────────────────────────────────────────────
 
@@ -815,9 +816,73 @@ class _MapViewState extends State<_MapView> {
       ],
     );
   }
-} // ← end of _MapViewState
+}
 
-// ── Play Header ───────────────────────────────────────────────────────────────
+// ── Custom Progress Bar (Mirrored from home_screen) ───────────────────────────
+
+class _StarProgressBar extends StatelessWidget {
+  final double progress;
+  final Key? starKey;
+
+  const _StarProgressBar({required this.progress, this.starKey});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double width = constraints.maxWidth;
+        const double starSize = 26.0;
+        const double barHeight = 8.0;
+        
+        final double leftOffset = width * progress.clamp(0.0, 1.0);
+
+        return SizedBox(
+          height: starSize,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            clipBehavior: Clip.none,
+            children: [
+              // Background track
+              Container(
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              // Fill track
+              if (progress > 0)
+                Container(
+                  height: barHeight,
+                  width: leftOffset,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              // Thumb precisely center-anchored and shifted 2px up
+              Positioned(
+                left: leftOffset,
+                child: Container(
+                  transform: Matrix4.translationValues(-starSize / 2, -2.0, 0),
+                  child: Icon(
+                    key: starKey, // Passed so flying stars know exactly where to land
+                    Icons.star_rounded,
+                    size: starSize,
+                    color: const Color(0xFFF1C40F),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Play Header (Matches home_screen EXACTLY for seamless Hero) ───────────────
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
@@ -852,7 +917,7 @@ class _PlayHeader extends StatelessWidget {
             height: compact ? kPlayHeaderCompact : kPlayHeaderHeight,
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)), // Changed to 8 matching home
               boxShadow: [
                 BoxShadow(
                   color: Color(0x18000000),
@@ -863,19 +928,30 @@ class _PlayHeader extends StatelessWidget {
             ),
             child: ClipRect(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Title area matched exactly with _CardInfoBar ──
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
-                    height: compact ? 0 : 32,
+                    height: compact ? 0 : 38,
                     child: SingleChildScrollView(
                       physics: const NeverScrollableScrollPhysics(),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                      child: Container(
+                        height: 38,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF9FAFB),
+                          border: Border(
+                            top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                            bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                          ),
+                        ),
                         child: Text(
                           title,
+                          textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -889,53 +965,41 @@ class _PlayHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              key: starKey,
-                              Icons.star_rounded,
-                              size: 17,
-                              color: const Color(0xFFf59e0b),
+                  // ── Progress area matched exactly with _CardInfoBar ──
+                  SizedBox(
+                    height: 50,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Text(
+                            '$achievedStars',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF555555),
                             ),
-                            const SizedBox(width: 4),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 200),
-                              transitionBuilder: (child, anim) =>
-                                  ScaleTransition(scale: anim, child: child),
-                              child: Text(
-                                key: ValueKey(achievedStars),
-                                hasBeenPlayed
-                                    ? '$achievedStars / $maxStars'
-                                    : '$maxStars',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF555555),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: maxStars > 0 && hasBeenPlayed
-                                ? achievedStars / maxStars
-                                : 0,
-                            minHeight: 5,
-                            backgroundColor: const Color(0xFFE5E7EB),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFFf59e0b)),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _StarProgressBar(
+                              progress: maxStars > 0 && hasBeenPlayed
+                                  ? achievedStars / maxStars
+                                  : 0.0,
+                              starKey: starKey, // Keeps star animation functioning
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '$maxStars',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF555555),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
