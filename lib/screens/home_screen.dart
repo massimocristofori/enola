@@ -344,71 +344,22 @@ class _RankRibbonOverlay extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1E1B4B), Color(0xFF312E81), Color(0xFF1E1B4B)],
-            stops: [0.0, 0.5, 1.0],
+          color: const Color(0xFFF5F5F5).withValues(alpha: 0.82),
+          border: const Border(
+            top: BorderSide(color: Color(0xFFCCCCCC), width: 1),
+            bottom: BorderSide(color: Color(0xFFCCCCCC), width: 1),
           ),
-          border: Border(
-            top: BorderSide(
-                color: const Color(0xFFD4AF37).withValues(alpha: 0.7),
-                width: 1.2),
-            bottom: BorderSide(
-                color: const Color(0xFFD4AF37).withValues(alpha: 0.7),
-                width: 1.2),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E1B4B).withAlpha(60),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        child: Row(
-          children: [
-            // Left gold fade line
-            Expanded(
-              child: Container(
-                height: 1,
-                margin: const EdgeInsets.only(left: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      const Color(0xFFD4AF37).withValues(alpha: 0.6),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              _rankEmoji(starRatio),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 36),
-            ),
-            const SizedBox(width: 10),
-            // Right gold fade line
-            Expanded(
-              child: Container(
-                height: 1,
-                margin: const EdgeInsets.only(right: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFFD4AF37).withValues(alpha: 0.6),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+        child: Text(
+          _rankEmoji(starRatio),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 42),
         ),
       ),
     );
   }
 }
+
 
 // ── Custom Progress Bar ───────────────────────────────────────────────────────
 
