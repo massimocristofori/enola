@@ -36,13 +36,11 @@ class HomeScreen extends ConsumerWidget {
                 Expanded(
                   child: mapsAsync.when(
                     loading: () => const Center(
-                      child: CircularProgressIndicator(
-                          color: EnolaTheme.accent),
+                      child: CircularProgressIndicator(color: EnolaTheme.accent),
                     ),
                     error: (e, _) => Center(
                       child: Text('Error: $e',
-                          style:
-                              const TextStyle(color: EnolaTheme.wrong)),
+                          style: const TextStyle(color: EnolaTheme.wrong)),
                     ),
                     data: (maps) => maps.isEmpty
                         ? _EmptyState(onCreate: () => _openCreate(context))
@@ -136,9 +134,9 @@ class _MapGrid extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cols,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.78,
+        crossAxisSpacing: 14, // Slightly increased spacing to shrink width
+        mainAxisSpacing: 14,
+        childAspectRatio: 0.85, // Increased from 0.78 to make the card shorter
       ),
       itemCount: maps.length,
       itemBuilder: (context, i) {
@@ -174,8 +172,7 @@ class _MapCard extends ConsumerWidget {
               Navigator.pop(dialogContext);
               await _deleteMap(context, ref);
             },
-            child:
-                const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -185,9 +182,7 @@ class _MapCard extends ConsumerWidget {
   Future<void> _deleteMap(BuildContext context, WidgetRef ref) async {
     try {
       final db = DriftService.instance.db;
-      await (db.delete(db.riddleMaps)
-            ..where((t) => t.id.equals(map.id)))
-          .go();
+      await (db.delete(db.riddleMaps)..where((t) => t.id.equals(map.id))).go();
       ref.invalidate(allMapsProvider);
     } catch (e) {
       if (context.mounted) {
@@ -267,7 +262,7 @@ class _MapCard extends ConsumerWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(15),
@@ -283,81 +278,22 @@ class _MapCard extends ConsumerWidget {
                             child: Align(
                               alignment: Alignment.topCenter,
                               heightFactor: imageHeightFactor,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: imageBytes != null
-                                      ? Image.memory(imageBytes,
-                                          fit: BoxFit.cover)
-                                      : Image.asset(
-                                          'assets/images/0.jpeg',
-                                          fit: BoxFit.cover),
-                                ),
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                                child: imageBytes != null
+                                    ? Image.memory(imageBytes, fit: BoxFit.cover)
+                                    : Image.asset('assets/images/0.jpeg',
+                                        fit: BoxFit.cover),
                               ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.fromLTRB(
-                                10, 10, 10, 10),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                  bottom: Radius.circular(16)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  map.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w400,
-                                    color: EnolaTheme.textPrimary,
-                                    height: 1.3,
-                                    letterSpacing: 0.1,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.star_rounded,
-                                        size: 17,
-                                        color: Color(0xFFf59e0b)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      hasBeenPlayed
-                                          ? '$achievedStars / $maxStars'
-                                          : '$maxStars',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF555555),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(
-                                    value: maxStars > 0 && hasBeenPlayed
-                                        ? achievedStars / maxStars
-                                        : 0,
-                                    minHeight: 5,
-                                    backgroundColor:
-                                        const Color(0xFFE5E7EB),
-                                    valueColor:
-                                        const AlwaysStoppedAnimation<Color>(
-                                            Color(0xFFf59e0b)),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          _CardInfoBar(
+                            title: map.title,
+                            achievedStars: achievedStars,
+                            maxStars: maxStars,
+                            hasBeenPlayed: hasBeenPlayed,
+                            isComplete: isComplete,
                           ),
                         ],
                       ),
@@ -386,13 +322,11 @@ class _MapCard extends ConsumerWidget {
               left: -6,
               child: _EarButton(
                 icon: Icons.edit_rounded,
-                iconColor:
-                    EnolaTheme.textSecond.withValues(alpha: 0.7),
+                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.7),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        CreateMapScreen(existingMapId: map.id),
+                    builder: (_) => CreateMapScreen(existingMapId: map.id),
                   ),
                 ),
               ),
@@ -464,6 +398,74 @@ class _RankOverlay extends StatelessWidget {
   }
 }
 
+// ── Custom Progress Bar ───────────────────────────────────────────────────────
+
+class _StarProgressBar extends StatelessWidget {
+  final double progress;
+
+  const _StarProgressBar({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double width = constraints.maxWidth;
+        const double starSize = 20.0;
+        final double availableWidth = width - starSize;
+        final double leftOffset = availableWidth * progress.clamp(0.0, 1.0);
+
+        return SizedBox(
+          height: starSize,
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              // Background track
+              Container(
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              // Fill track
+              Container(
+                height: 5,
+                width: leftOffset + (starSize / 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFf59e0b),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              // Traveling Star Thumb
+              Positioned(
+                left: leftOffset,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(20),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.star_rounded,
+                    size: starSize,
+                    color: Color(0xFFf59e0b),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 // ── Card Shell ────────────────────────────────────────────────────────────────
 
 class _CardShell extends StatelessWidget {
@@ -503,23 +505,19 @@ class _CardShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    imageBytes != null
-                        ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                        : Image.asset('assets/images/0.jpeg',
-                            fit: BoxFit.cover),
-                    if (isComplete)
-                      Positioned.fill(
-                        child: _RankOverlay(starRatio: starRatio),
-                      ),
-                  ],
-                ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  imageBytes != null
+                      ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                      : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                  if (isComplete)
+                    Positioned.fill(
+                      child: _RankOverlay(starRatio: starRatio),
+                    ),
+                ],
               ),
             ),
           ),
@@ -556,11 +554,10 @@ class _CardInfoBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius:
-            BorderRadius.vertical(bottom: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,34 +575,35 @@ class _CardInfoBar extends StatelessWidget {
               letterSpacing: 0.1,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.star_rounded,
-                  size: 17, color: Color(0xFFf59e0b)),
-              const SizedBox(width: 4),
               Text(
-                '$achievedStars / $maxStars',
+                '$achievedStars',
                 style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF555555),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StarProgressBar(
+                  progress: maxStars > 0 && hasBeenPlayed
+                      ? achievedStars / maxStars
+                      : 0.0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$maxStars',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                   color: Color(0xFF555555),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: maxStars > 0 && hasBeenPlayed
-                  ? achievedStars / maxStars
-                  : 0,
-              minHeight: 5,
-              backgroundColor: const Color(0xFFE5E7EB),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFFf59e0b)),
-            ),
           ),
         ],
       ),
@@ -728,13 +726,10 @@ class _TrainingFabState extends State<_TrainingFab> {
     return StreamBuilder<List<PendingTrainingRiddle>>(
       stream: _pendingStream,
       builder: (context, snapshot) {
-        // Also watch active training sessions so the FAB appears even before
-        // the first notification fires (pending list may still be empty)
         return StreamBuilder<List<TrainingSession>>(
           stream: DriftService.instance.watchActiveTrainingSessions(),
           builder: (context, sessionSnap) {
-            final hasActiveSessions =
-                (sessionSnap.data ?? []).isNotEmpty;
+            final hasActiveSessions = (sessionSnap.data ?? []).isNotEmpty;
             final pendingCount = snapshot.data?.length ?? 0;
 
             if (!hasActiveSessions) return const SizedBox.shrink();
@@ -801,9 +796,7 @@ class _DebugFab extends StatelessWidget {
             await NotificationService.instance.getPendingNotifications();
         final pendingStr = pending.isEmpty
             ? 'no pending notifications'
-            : pending
-                .map((p) => 'id=${p.id} payload=${p.payload}')
-                .join('\n');
+            : pending.map((p) => 'id=${p.id} payload=${p.payload}').join('\n');
 
         if (!context.mounted) return;
         showDialog(
@@ -854,8 +847,7 @@ class SunburstPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius =
-        math.sqrt(size.width * size.width + size.height * size.height);
+    final radius = math.sqrt(size.width * size.width + size.height * size.height);
 
     final angleStep = (2 * math.pi) / rayCount;
     final paint = Paint()..style = PaintingStyle.fill;
@@ -885,7 +877,6 @@ class SunburstPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SunburstPainter oldDelegate) {
-    return oldDelegate.rayCount != rayCount ||
-        oldDelegate.alphas != alphas;
+    return oldDelegate.rayCount != rayCount || oldDelegate.alphas != alphas;
   }
 }
