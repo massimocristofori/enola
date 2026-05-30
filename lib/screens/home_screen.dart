@@ -209,62 +209,62 @@ class _MapCard extends ConsumerWidget {
       child: Hero(
         tag: 'map-card-${map.id}',
         flightShuttleBuilder: (_, animation, __, ___, ____) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, _) {
-              final imageHeightFactor =
-                  (1.0 - animation.value).clamp(0.0, 1.0);
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, _) {
+      final imageHeightFactor =
+          (1.0 - animation.value).clamp(0.0, 1.0);
 
-              return Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(25),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ClipRect(
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              heightFactor: imageHeightFactor,
-                              child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8)),
-                                child: imageBytes != null
-                                    ? Image.memory(imageBytes, fit: BoxFit.cover)
-                                    : Image.asset('assets/images/0.jpeg',
-                                        fit: BoxFit.cover),
-                              ),
-                            ),
-                          ),
-                          _CardInfoBar(
-                            title: map.title,
-                            achievedStars: achievedStars,
-                            maxStars: maxStars,
-                            hasBeenPlayed: hasBeenPlayed,
-                            isComplete: isComplete,
-                          ),
-                        ],
+      return SizedBox.expand(                          // ← was Center(child: ConstrainedBox(...))
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(                              // ← wrap image in Expanded to match _CardShell
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: imageHeightFactor,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8)),
+                        child: imageBytes != null
+                            ? Image.memory(imageBytes, fit: BoxFit.cover)
+                            : Image.asset('assets/images/0.jpeg',
+                                fit: BoxFit.cover),
                       ),
                     ),
                   ),
                 ),
-              );
-            },
-          );
-        },
+                _CardInfoBar(
+                  title: map.title,
+                  achievedStars: achievedStars,
+                  maxStars: maxStars,
+                  hasBeenPlayed: hasBeenPlayed,
+                  isComplete: isComplete,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+},
+
         child: Stack(
           clipBehavior: Clip.none, // Allows ribbon to bleed left and right cleanly
           children: [
