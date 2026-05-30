@@ -25907,10 +25907,10 @@ r=A.bB(a,B.ct)
 r=r==null?null:r.b
 if(r==null)r=1
 return new A.ES(s,r,A.Fy(a),A.dZ(a),b,A.aS())},
-aRP(a,b){var s=null
-return new A.u1(A.aSm(s,s,new A.CE(a,s,s)),s,s,b,s)},
-aiM(a,b){var s=null
-return new A.u1(A.aSm(s,s,new A.q5(a,1)),s,s,b,s)},
+aRP(a,b,c){var s=null
+return new A.u1(A.aSm(s,s,new A.CE(a,s,s)),c,s,b,s)},
+aiM(a,b,c){var s=null
+return new A.u1(A.aSm(s,s,new A.q5(a,1)),c,s,b,s)},
 u1:function u1(a,b,c,d,e){var _=this
 _.c=a
 _.r=b
@@ -54613,7 +54613,7 @@ n=A.b_(18)
 if(r)r=B.H7
 else{r=c.as
 m=t.p
-r=r!=null?A.eX(B.bo,A.b([A.aiM(r,B.d5),A.hF(6,A.bt(b,B.LO,B.l,b,b,new A.b0(A.ao(220,B.f.t()>>>16&255,B.f.t()>>>8&255,B.f.t()&255),b,b,A.b_(8),b,b,B.x),b,b,b,b,B.iq,b,b,b),b,b,b,6,b,b)],m),B.C,B.D0,b):A.bL(A.b([A.eo(B.L9,A.ao(180,B.o.t()>>>16&255,B.o.t()>>>8&255,B.o.t()&255),b,b,b,32),B.dh,A.b1("Add cover",b,b,b,A.d6(b,b,A.ao(180,B.A.t()>>>16&255,B.A.t()>>>8&255,B.A.t()&255),b,b,b,b,b,b,b,b,11,b,b,B.bQ,b,b,!0,b,b,b,b,b,b,b,b),b,b)],m),B.q,B.eA,B.t)}q=A.eO(A.d9(b,A.jA(A.xm(n,r),b,B.K,new A.b0(B.b1,b,o,p,b,b,B.x),B.N,b,110,b,b,110),B.H,!1,b,b,b,b,b,b,b,b,b,b,b,b,b,b,q,b,b,b,b,b,b),b,b)
+r=r!=null?A.eX(B.bo,A.b([A.aiM(r,B.d5,b),A.hF(6,A.bt(b,B.LO,B.l,b,b,new A.b0(A.ao(220,B.f.t()>>>16&255,B.f.t()>>>8&255,B.f.t()&255),b,b,A.b_(8),b,b,B.x),b,b,b,b,B.iq,b,b,b),b,b,b,6,b,b)],m),B.C,B.D0,b):A.bL(A.b([A.eo(B.L9,A.ao(180,B.o.t()>>>16&255,B.o.t()>>>8&255,B.o.t()&255),b,b,b,32),B.dh,A.b1("Add cover",b,b,b,A.d6(b,b,A.ao(180,B.A.t()>>>16&255,B.A.t()>>>8&255,B.A.t()&255),b,b,b,b,b,b,b,b,11,b,b,B.bQ,b,b,!0,b,b,b,b,b,b,b,b),b,b)],m),B.q,B.eA,B.t)}q=A.eO(A.d9(b,A.jA(A.xm(n,r),b,B.K,new A.b0(B.b1,b,o,p,b,b,B.x),B.N,b,110,b,b,110),B.H,!1,b,b,b,b,b,b,b,b,b,b,b,b,b,b,q,b,b,b,b,b,b),b,b)
 p=c.Ug(c.w,"e.g., The Solar System","Map Title",new A.aBl())
 o=c.agn(c.x,"e.g., Science, History, Math","Subject")
 l=c.z==null
@@ -54807,7 +54807,7 @@ $R:5,
 $S:522}
 A.aFG.prototype={
 $2(a,b){var s=this,r=null,q=B.d.dX(1-s.c.gq(),0,1),p=A.b_(8),o=A.b([new A.dk(0,B.bC,A.ao(25,B.n.t()>>>16&255,B.n.t()>>>8&255,B.n.t()&255),B.dN,16)],t.T),n=s.d
-return new A.cH(1/0,1/0,A.i0(!1,B.N,!0,r,A.bt(r,A.bL(A.b([A.dG(A.xo(new A.dW(B.d2,r,q,A.xm(B.oO,n!=null?A.aiM(n,B.d5):A.aRP("assets/images/0.jpeg",B.d5)),r),B.C,r),1,r),new A.JX(s.b.e.b,s.a.a,s.e,s.f,r)],t.p),B.cz,B.m,B.t),B.l,r,r,new A.b0(B.f,r,r,p,o,r,B.x),r,r,r,r,r,r,r,r),B.l,r,0,r,r,r,r,r,B.eB),r)},
+return new A.cH(1/0,1/0,A.i0(!1,B.N,!0,r,A.bt(r,A.bL(A.b([A.dG(A.xo(new A.dW(B.d2,r,q,A.xm(B.oO,n!=null?A.aiM(n,B.d5,1/0):A.aRP("assets/images/0.jpeg",B.d5,1/0)),r),B.C,r),1,r),new A.JX(s.b.e.b,s.a.a,s.e,s.f,r)],t.p),B.cz,B.m,B.t),B.l,r,r,new A.b0(B.f,r,r,p,o,r,B.x),r,r,r,r,r,r,r,r),B.l,r,0,r,r,r,r,r,B.eB),r)},
 $S:523}
 A.aFJ.prototype={
 $0(){var s=A.m2(new A.aFH(this.a),null,t.z)
@@ -54829,7 +54829,7 @@ return A.dv(A.eX(B.d3,p,B.l,B.aV,s),26,s)},
 $S:166}
 A.a_n.prototype={
 H(a){var s=this,r=null,q=A.b_(8),p=A.b([new A.dk(0,B.bC,A.ao(25,B.n.t()>>>16&255,B.n.t()>>>8&255,B.n.t()&255),B.dN,16)],t.T),o=s.c
-return A.bt(r,A.bL(A.b([A.dG(A.xm(B.oO,o!=null?A.aiM(o,B.d5):A.aRP("assets/images/0.jpeg",B.d5)),1,r),new A.JX(s.d,s.e,s.f,s.r,r)],t.p),B.cz,B.m,B.t),B.l,r,r,new A.b0(B.f,r,r,q,p,r,B.x),r,r,r,r,r,r,r,r)}}
+return A.bt(r,A.bL(A.b([A.dG(A.xm(B.oO,o!=null?A.aiM(o,B.d5,r):A.aRP("assets/images/0.jpeg",B.d5,r)),1,r),new A.JX(s.d,s.e,s.f,s.r,r)],t.p),B.cz,B.m,B.t),B.l,r,r,new A.b0(B.f,r,r,q,p,r,B.x),r,r,r,r,r,r,r,r)}}
 A.JX.prototype={
 H(a){var s=this,r=null,q=A.bt(r,A.b1(s.c,1,B.b3,r,B.DC,B.bL,r),B.l,r,r,B.oX,r,38,r,r,B.qn,r,r,r),p=s.d,o=A.b1(""+p,r,r,r,B.jW,r,r),n=s.e,m=t.p
 return A.bt(r,A.bL(A.b([q,new A.b6(B.lv,A.bW(A.b([o,B.cM,A.dG(new A.a5M(n>0&&s.f?p/n:0,r),1,r),B.cM,A.b1(""+n,r,r,r,B.jW,r,r)],m),B.q,B.m,B.t,0),r)],m),B.cz,B.m,B.ap),B.l,r,r,B.FA,r,r,r,r,r,r,r,r)}}
@@ -57656,8 +57656,8 @@ if(c)return A.bt(p,p,B.l,p,p,new A.b0(B.f,p,A.f5(B.o.dd(0.3),2),B.kL,p,p,B.x),p,
 s=A.f5(B.hP.dd(0.6),3)
 r=A.b([],t.p)
 q=this.a.r
-if(q!=null)r.push(A.aiM(q,B.d5))
-else r.push(A.aRP("assets/images/0.jpeg",B.d5))
+if(q!=null)r.push(A.aiM(q,B.d5,p))
+else r.push(A.aRP("assets/images/0.jpeg",B.d5,p))
 r.push(A.bt(p,p,B.l,p,p,new A.b0(p,p,p,p,p,new A.q_(B.d2,B.hz,B.cS,A.b([B.f,B.f.dd(0.3)],t.t_),B.N2,p),B.x),p,p,p,p,p,p,p,p))
 return A.bt(p,A.bt(p,A.xm(B.F6,A.eX(B.bo,r,B.C,B.D0,p)),B.l,p,p,B.Fx,p,p,p,p,p,p,p,p),B.l,p,p,new A.b0(B.HW,p,s,B.kL,p,p,B.x),p,60,p,p,p,p,p,60)}}
 A.aJN.prototype={
