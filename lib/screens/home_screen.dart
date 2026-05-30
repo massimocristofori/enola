@@ -528,7 +528,6 @@ class _CardInfoBar extends StatelessWidget {
           ),
           // ── The Progress Bar Row ──
           Padding(
-						height: 50,
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Row(
               children: [
