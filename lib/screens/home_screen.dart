@@ -14,8 +14,6 @@ import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
 import 'package:enola/screens/training_dashboard_screen.dart';
 import 'package:enola/services/drift_service.dart';
-import 'package:enola/services/notification_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -30,15 +28,17 @@ class HomeScreen extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
-              children: [
-                _Header(),
-                Expanded(
-                  child: mapsAsync.when(
-                    loading: () => const Center(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _Header(),
+                  mapsAsync.when(
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(40.0),
                       child: CircularProgressIndicator(color: EnolaTheme.accent),
                     ),
-                    error: (e, _) => Center(
+                    error: (e, _) => Padding(
+                      padding: const EdgeInsets.all(40.0),
                       child: Text('Error: $e',
                           style: const TextStyle(color: EnolaTheme.wrong)),
                     ),
@@ -49,8 +49,8 @@ class HomeScreen extends ConsumerWidget {
                             onCreate: () => _openCreate(context),
                           ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -58,9 +58,7 @@ class HomeScreen extends ConsumerWidget {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _DebugFab(),
-          const SizedBox(height: 12),
-          _TrainingFab(),
+          const _TrainingFab(),
           const SizedBox(height: 12),
           _CreateFab(onTap: () => _openCreate(context)),
         ],
@@ -131,7 +129,10 @@ class _MapGrid extends ConsumerWidget {
     final cols = _crossAxisCount(width);
 
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      // Increased left/right padding to 48 for slimmer cards
+      padding: const EdgeInsets.fromLTRB(48, 4, 48, 100),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cols,
         crossAxisSpacing: 24,
@@ -224,8 +225,8 @@ class _MapCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withAlpha(15),
-                            blurRadius: 12,
+                            color: Colors.black.withAlpha(25), // Increased shadow alpha
+                            blurRadius: 16, // Increased blur radius
                             offset: const Offset(0, 4),
                           ),
                         ],
@@ -281,7 +282,8 @@ class _MapCard extends ConsumerWidget {
               right: -8,
               child: _EarButton(
                 icon: Icons.edit_rounded,
-                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.7),
+                // Darkened the icon color by increasing alpha
+                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.95),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -358,7 +360,7 @@ class _StarProgressBar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        const double starSize = 20.0;
+        const double starSize = 28.0;
         const double barHeight = 8.0;
         final double availableWidth = width - starSize;
         final double leftOffset = availableWidth * progress.clamp(0.0, 1.0);
@@ -368,7 +370,7 @@ class _StarProgressBar extends StatelessWidget {
           child: Stack(
             alignment: Alignment.centerLeft,
             children: [
-              // Background track (Colors matched to title bg)
+              // Background track
               Container(
                 height: barHeight,
                 decoration: BoxDecoration(
@@ -386,26 +388,13 @@ class _StarProgressBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              // Traveling Star Thumb
+              // Star Thumb
               Positioned(
                 left: leftOffset,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(20),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.star_rounded,
-                    size: starSize,
-                    color: Color(0xFFFFD700),
-                  ),
+                child: const Icon(
+                  Icons.star_rounded,
+                  size: starSize,
+                  color: Color(0xFFD4AF37),
                 ),
               ),
             ],
@@ -445,8 +434,8 @@ class _CardShell extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(15),
-            blurRadius: 12,
+            color: Colors.black.withAlpha(25), // Increased shadow alpha
+            blurRadius: 16, // Increased blur radius
             offset: const Offset(0, 4),
           ),
         ],
@@ -517,8 +506,6 @@ class _CardInfoBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF9FAFB),
-              // We use top and bottom borders only so it perfectly connects image and content
-              // without doubling up the side borders of the parent card.
               border: Border(
                 top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
                 bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
@@ -742,62 +729,6 @@ class _TrainingFabState extends State<_TrainingFab> {
           },
         );
       },
-    );
-  }
-}
-
-// ── Debug FAB ─────────────────────────────────────────────────────────────────
-
-class _DebugFab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return FloatingActionButton.small(
-      heroTag: 'debug_fab',
-      backgroundColor: Colors.grey.shade700,
-      onPressed: () async {
-        final prefs = await SharedPreferences.getInstance();
-        final stored = prefs.getString('pending_notification_payload') ??
-            'nothing in prefs';
-        final pending =
-            await NotificationService.instance.getPendingNotifications();
-        final pendingStr = pending.isEmpty
-            ? 'no pending notifications'
-            : pending.map((p) => 'id=${p.id} payload=${p.payload}').join('\n');
-
-        if (!context.mounted) return;
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Debug'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('lastPayload:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(NotificationService.lastPayload),
-                  const SizedBox(height: 12),
-                  const Text('prefs payload:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(stored),
-                  const SizedBox(height: 12),
-                  const Text('pending notifications:',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(pendingStr),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      },
-      child: const Icon(Icons.bug_report_rounded, color: Colors.white),
     );
   }
 }
