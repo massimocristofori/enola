@@ -22,47 +22,58 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mapsAsync = ref.watch(allMapsProvider);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F4F8),
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _Header(),
-                  mapsAsync.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.all(40.0),
-                      child: CircularProgressIndicator(color: EnolaTheme.accent),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFECEFF4), Colors.white],
+          stops: [0.0, 0.65],
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _Header(),
+                    mapsAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(color: EnolaTheme.accent),
+                      ),
+                      error: (e, _) => Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Text('Error: $e',
+                            style: const TextStyle(color: EnolaTheme.wrong)),
+                      ),
+                      data: (maps) => maps.isEmpty
+                          ? _EmptyState(onCreate: () => _openCreate(context))
+                          : _MapGrid(
+                              maps: maps,
+                              onCreate: () => _openCreate(context),
+                            ),
                     ),
-                    error: (e, _) => Padding(
-                      padding: const EdgeInsets.all(40.0),
-                      child: Text('Error: $e',
-                          style: const TextStyle(color: EnolaTheme.wrong)),
-                    ),
-                    data: (maps) => maps.isEmpty
-                        ? _EmptyState(onCreate: () => _openCreate(context))
-                        : _MapGrid(
-                            maps: maps,
-                            onCreate: () => _openCreate(context),
-                          ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const _TrainingFab(),
-          const SizedBox(height: 12),
-          _CreateFab(onTap: () => _openCreate(context)),
-        ],
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _TrainingFab(),
+            const SizedBox(width: 12),
+            _CreateFab(onTap: () => _openCreate(context)),
+          ],
+        ),
       ),
     );
   }
@@ -209,64 +220,66 @@ class _MapCard extends ConsumerWidget {
       child: Hero(
         tag: 'map-card-${map.id}',
         flightShuttleBuilder: (_, animation, __, ___, ____) {
-  return AnimatedBuilder(
-    animation: animation,
-    builder: (context, _) {
-      final imageHeightFactor =
-          (1.0 - animation.value).clamp(0.0, 1.0);
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final imageHeightFactor =
+                  (1.0 - animation.value).clamp(0.0, 1.0);
 
-      return SizedBox.expand(                          // ← was Center(child: ConstrainedBox(...))
-        child: Material(
-          type: MaterialType.transparency,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(25),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(                              // ← wrap image in Expanded to match _CardShell
-                  child: ClipRect(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      heightFactor: imageHeightFactor,
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(8)),
-												child: imageBytes != null
-												    ? Image.memory(imageBytes, fit: BoxFit.cover, width: double.infinity)
-												    : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover, width: double.infinity),
-
-                      ),
+              return SizedBox.expand(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: ClipRect(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              heightFactor: imageHeightFactor,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(8)),
+                                child: imageBytes != null
+                                    ? Image.memory(imageBytes,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity)
+                                    : Image.asset('assets/images/0.jpeg',
+                                        fit: BoxFit.cover,
+                                        width: double.infinity),
+                              ),
+                            ),
+                          ),
+                        ),
+                        _CardInfoBar(
+                          title: map.title,
+                          achievedStars: achievedStars,
+                          maxStars: maxStars,
+                          hasBeenPlayed: hasBeenPlayed,
+                          isComplete: isComplete,
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                _CardInfoBar(
-                  title: map.title,
-                  achievedStars: achievedStars,
-                  maxStars: maxStars,
-                  hasBeenPlayed: hasBeenPlayed,
-                  isComplete: isComplete,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-},
-
+              );
+            },
+          );
+        },
         child: Stack(
-          clipBehavior: Clip.none, // Allows ribbon to bleed left and right cleanly
+          clipBehavior: Clip.none,
           children: [
             _CardShell(
               imageBytes: imageBytes,
@@ -277,7 +290,7 @@ class _MapCard extends ConsumerWidget {
               isComplete: isComplete,
             ),
 
-            // ── Centered Ribbon Overlay (Spans entire card width + 4px total bleed) ──
+            // ── Centered Ribbon Overlay ──
             if (isComplete)
               Positioned(
                 left: -2,
@@ -331,23 +344,66 @@ class _RankRibbonOverlay extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.88),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E1B4B), Color(0xFF312E81), Color(0xFF1E1B4B)],
+            stops: [0.0, 0.5, 1.0],
+          ),
           border: Border(
-            top: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.6), width: 1),
-            bottom: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.6), width: 1),
+            top: BorderSide(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.7),
+                width: 1.2),
+            bottom: BorderSide(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.7),
+                width: 1.2),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+              color: const Color(0xFF1E1B4B).withAlpha(60),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Text(
-          _rankEmoji(starRatio),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 42),
+        child: Row(
+          children: [
+            // Left gold fade line
+            Expanded(
+              child: Container(
+                height: 1,
+                margin: const EdgeInsets.only(left: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFFD4AF37).withValues(alpha: 0.6),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              _rankEmoji(starRatio),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 36),
+            ),
+            const SizedBox(width: 10),
+            // Right gold fade line
+            Expanded(
+              child: Container(
+                height: 1,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFD4AF37).withValues(alpha: 0.6),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -368,7 +424,7 @@ class _StarProgressBar extends StatelessWidget {
         final double width = constraints.maxWidth;
         const double starSize = 26.0;
         const double barHeight = 8.0;
-        
+
         final double leftOffset = width * progress.clamp(0.0, 1.0);
 
         return SizedBox(
@@ -382,7 +438,8 @@ class _StarProgressBar extends StatelessWidget {
                 height: barHeight,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF9FAFB),
-                  border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                  border:
+                      Border.all(color: const Color(0xFFE5E7EB), width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -396,15 +453,16 @@ class _StarProgressBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              // Thumb precisely center-anchored and shifted 2px up
+              // Thumb
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform: Matrix4.translationValues(-starSize / 2, -2.0, 0), // Moved 2px up
+                  transform:
+                      Matrix4.translationValues(-starSize / 2, -2.0, 0),
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
-                    color: Color(0xFFF1C40F), // Brightened gold tone
+                    color: Color(0xFFF1C40F),
                   ),
                 ),
               ),
@@ -454,10 +512,12 @@ class _CardShell extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
               child: imageBytes != null
                   ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                  : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                  : Image.asset('assets/images/0.jpeg',
+                      fit: BoxFit.cover),
             ),
           ),
           _CardInfoBar(
@@ -501,10 +561,11 @@ class _CardInfoBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── The Flush Title Rectangle ──
+          // ── Title rectangle ──
           Container(
-						height: 38,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            height: 38,
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF9FAFB),
               border: Border(
@@ -526,7 +587,7 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
-          // ── The Progress Bar Row ──
+          // ── Progress bar row ──
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Row(
@@ -539,7 +600,7 @@ class _CardInfoBar extends StatelessWidget {
                     color: Color(0xFF555555),
                   ),
                 ),
-                const SizedBox(width: 10), // Increased spacing to prevent star overlap
+                const SizedBox(width: 10),
                 Expanded(
                   child: _StarProgressBar(
                     progress: maxStars > 0 && hasBeenPlayed
@@ -547,7 +608,7 @@ class _CardInfoBar extends StatelessWidget {
                         : 0.0,
                   ),
                 ),
-                const SizedBox(width: 10), // Increased spacing to prevent star overlap
+                const SizedBox(width: 10),
                 Text(
                   '$maxStars',
                   style: const TextStyle(
@@ -645,6 +706,7 @@ class _CreateFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton.extended(
+      heroTag: 'create_fab',
       onPressed: onTap,
       backgroundColor: EnolaTheme.accent,
       foregroundColor: EnolaTheme.background,
