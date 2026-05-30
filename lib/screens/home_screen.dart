@@ -25,7 +25,8 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter, // Aligns everything to the top of the page
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: SingleChildScrollView(
@@ -131,13 +132,12 @@ class _MapGrid extends ConsumerWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      // Increased left/right padding to 48 for slimmer cards
       padding: const EdgeInsets.fromLTRB(48, 4, 48, 100),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cols,
         crossAxisSpacing: 24,
         mainAxisSpacing: 14,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.84, // Lowered from 0.95 to give the image ~10px extra height
       ),
       itemCount: maps.length,
       itemBuilder: (context, i) {
@@ -225,8 +225,8 @@ class _MapCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withAlpha(25), // Increased shadow alpha
-                            blurRadius: 16, // Increased blur radius
+                            color: Colors.black.withAlpha(25),
+                            blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
                         ],
@@ -282,7 +282,6 @@ class _MapCard extends ConsumerWidget {
               right: -8,
               child: _EarButton(
                 icon: Icons.edit_rounded,
-                // Darkened the icon color by increasing alpha
                 iconColor: EnolaTheme.textSecond.withValues(alpha: 0.95),
                 onTap: () => Navigator.push(
                   context,
@@ -360,7 +359,7 @@ class _StarProgressBar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        const double starSize = 28.0;
+        const double starSize = 26.0; // Dropped size slightly
         const double barHeight = 8.0;
         final double availableWidth = width - starSize;
         final double leftOffset = availableWidth * progress.clamp(0.0, 1.0);
@@ -379,13 +378,14 @@ class _StarProgressBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              // Fill track
-              Container(
-                height: barHeight,
-                width: leftOffset + (starSize / 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700),
-                  borderRadius: BorderRadius.circular(4),
+              // Fill track (Only rendered if progress > 0 to maintain absolute zero layout)
+              if (progress > 0)
+                Container(
+                  height: barHeight,
+                  width: leftOffset + (starSize / 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700),
+                    borderRadius: BorderRadius.circular(4),
                 ),
               ),
               // Star Thumb
@@ -394,7 +394,7 @@ class _StarProgressBar extends StatelessWidget {
                 child: const Icon(
                   Icons.star_rounded,
                   size: starSize,
-                  color: Color(0xFFD4AF37),
+                  color: Color(0xFFE5B822), // Balanced intermediate gold color
                 ),
               ),
             ],
@@ -434,8 +434,8 @@ class _CardShell extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(25), // Increased shadow alpha
-            blurRadius: 16, // Increased blur radius
+            color: Colors.black.withAlpha(25),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -514,8 +514,8 @@ class _CardInfoBar extends StatelessWidget {
             child: Text(
               title,
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              maxLines: 1, // Constrained to a single line
+              overflow: TextOverflow.ellipsis, // Truncates gracefully with standard ellipsis
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w400,
