@@ -344,7 +344,7 @@ class _RankRibbonOverlay extends StatelessWidget {
        width: double.infinity,
        padding: const EdgeInsets.symmetric(vertical: 10),
        decoration: BoxDecoration(
-         color: const Color(0xFFFFFFFF).withValues(alpha: 0.82),
+         color: const Color(0xFFFFFFFF).withValues(alpha: 0.88),
          boxShadow: [
            BoxShadow(
              color: Colors.black.withAlpha(28),
