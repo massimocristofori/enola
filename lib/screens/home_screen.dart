@@ -134,9 +134,9 @@ class _MapGrid extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cols,
-        crossAxisSpacing: 14, // Slightly increased spacing to shrink width
+        crossAxisSpacing: 24, // Increased spacing for more horizontal room between cards
         mainAxisSpacing: 14,
-        childAspectRatio: 0.85, // Increased from 0.78 to make the card shorter
+        childAspectRatio: 0.95, // Increased to make the overall card shorter
       ),
       itemCount: maps.length,
       itemBuilder: (context, i) {
@@ -154,47 +154,6 @@ class _MapGrid extends ConsumerWidget {
 class _MapCard extends ConsumerWidget {
   final RiddleMap map;
   const _MapCard({required this.map});
-
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Map'),
-        content: const Text(
-            'Are you sure you want to delete this map? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await _deleteMap(context, ref);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteMap(BuildContext context, WidgetRef ref) async {
-    try {
-      final db = DriftService.instance.db;
-      await (db.delete(db.riddleMaps)..where((t) => t.id.equals(map.id))).go();
-      ref.invalidate(allMapsProvider);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not delete map: $e'),
-            backgroundColor: EnolaTheme.wrong,
-          ),
-        );
-      }
-    }
-  }
 
   void _openPlay(BuildContext context) {
     Navigator.push(
@@ -316,10 +275,10 @@ class _MapCard extends ConsumerWidget {
               hasBeenPlayed: hasBeenPlayed,
             ),
 
-            // ── Top-left ear (Edit) ──
+            // ── Top-right ear (Edit) ──
             Positioned(
               top: -6,
-              left: -6,
+              right: -6,
               child: _EarButton(
                 icon: Icons.edit_rounded,
                 iconColor: EnolaTheme.textSecond.withValues(alpha: 0.7),
@@ -329,17 +288,6 @@ class _MapCard extends ConsumerWidget {
                     builder: (_) => CreateMapScreen(existingMapId: map.id),
                   ),
                 ),
-              ),
-            ),
-
-            // ── Top-right ear (Delete) ──
-            Positioned(
-              top: -6,
-              right: -6,
-              child: _EarButton(
-                icon: Icons.delete_forever_rounded,
-                iconColor: Colors.redAccent.withValues(alpha: 0.7),
-                onTap: () => _confirmDelete(context, ref),
               ),
             ),
           ],
@@ -411,6 +359,7 @@ class _StarProgressBar extends StatelessWidget {
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
         const double starSize = 20.0;
+        const double barHeight = 8.0; // Increased height
         final double availableWidth = width - starSize;
         final double leftOffset = availableWidth * progress.clamp(0.0, 1.0);
 
@@ -421,18 +370,19 @@ class _StarProgressBar extends StatelessWidget {
             children: [
               // Background track
               Container(
-                height: 5,
+                height: barHeight,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: const Color(0xFFF3F4F6), // Lighter grey
+                  border: Border.all(color: const Color(0xFFD1D5DB), width: 1), // Darker grey 1px border
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
               // Fill track
               Container(
-                height: 5,
+                height: barHeight,
                 width: leftOffset + (starSize / 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFf59e0b),
+                  color: const Color(0xFFFFD700), // Gold yellow
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -454,7 +404,7 @@ class _StarProgressBar extends StatelessWidget {
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
-                    color: Color(0xFFf59e0b),
+                    color: Color(0xFFFFD700), // Gold yellow
                   ),
                 ),
               ),
@@ -560,11 +510,12 @@ class _CardInfoBar extends StatelessWidget {
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             title,
+            textAlign: TextAlign.center, // Centered text
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
