@@ -334,33 +334,40 @@ String _rankEmoji(double starRatio) {
 // ── Floating Ribbon Overlay ───────────────────────────────────────────────────
 
 class _RankRibbonOverlay extends StatelessWidget {
-  final double starRatio;
-  const _RankRibbonOverlay({required this.starRatio});
+ final double starRatio;
+ const _RankRibbonOverlay({required this.starRatio});
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF).withValues(alpha: 0.90),
-          border: const Border(
-            top: BorderSide(color: Color(0xFFCCCCCC), width: 1),
-            bottom: BorderSide(color: Color(0xFFCCCCCC), width: 1),
-            left: BorderSide(color: Color(0xFFCCCCCC), width: 1),
-            right: BorderSide(color: Color(0xFFCCCCCC), width: 1),
-          ),
-        ),
-        child: Text(
-          _rankEmoji(starRatio),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 42),
-        ),
-      ),
-    );
-  }
+ @override
+ Widget build(BuildContext context) {
+   return Center(
+     child: Container(
+       width: double.infinity,
+       padding: const EdgeInsets.symmetric(vertical: 10),
+       decoration: BoxDecoration(
+         color: const Color(0xFFF5F5F5).withValues(alpha: 0.82),
+         boxShadow: [
+           BoxShadow(
+             color: Colors.black.withAlpha(18),
+             blurRadius: 6,
+             offset: const Offset(0, 2),
+           ),
+           BoxShadow(
+             color: Colors.black.withAlpha(10),
+             blurRadius: 3,
+             offset: const Offset(0, -1),
+           ),
+         ],
+       ),
+       child: Text(
+         _rankEmoji(starRatio),
+         textAlign: TextAlign.center,
+         style: const TextStyle(fontSize: 42),
+       ),
+     ),
+   );
+ }
 }
+
 
 
 // ── Custom Progress Bar ───────────────────────────────────────────────────────
