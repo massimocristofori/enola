@@ -124,7 +124,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
                           onTap: () => openTrainingRiddle(
                             item.notified.mapId,
                             item.riddle.id,
-                            fromDashboard: true,
+                            // fromNotification defaults to false
                           ),
                         )
                             .animate()
