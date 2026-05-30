@@ -26,7 +26,7 @@ class HomeScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF1F4F8),
       body: SafeArea(
         child: Align(
-          alignment: Alignment.topCenter, // Aligns everything to the top of the page
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: SingleChildScrollView(
@@ -137,7 +137,7 @@ class _MapGrid extends ConsumerWidget {
         crossAxisCount: cols,
         crossAxisSpacing: 24,
         mainAxisSpacing: 14,
-        childAspectRatio: 0.84, // Lowered from 0.95 to give the image ~10px extra height
+        childAspectRatio: 0.84,
       ),
       itemCount: maps.length,
       itemBuilder: (context, i) {
@@ -307,42 +307,31 @@ String _rankEmoji(double starRatio) {
   return '📜';
 }
 
-String _rankName(double starRatio) {
-  if (starRatio >= 0.9) return 'Grand Sage';
-  if (starRatio >= 0.7) return 'Scholar';
-  if (starRatio >= 0.5) return 'Apprentice';
-  return 'Novice';
-}
+// ── Modern Completion Ribbon Overlay ──────────────────────────────────────────
 
-// ── Rank Overlay ──────────────────────────────────────────────────────────────
-
-class _RankOverlay extends StatelessWidget {
+class _RankRibbonOverlay extends StatelessWidget {
   final double starRatio;
-  const _RankOverlay({required this.starRatio});
+  const _RankRibbonOverlay({required this.starRatio});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Positioned.fill(
-          child: CustomPaint(
-            painter: SunburstPainter(
-              rayCount: 16,
-              alphas: [0.46, 0.74, 0.59, 0.67],
-            ),
+    return Center(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          border: Border(
+            top: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.5), width: 1),
+            bottom: BorderSide(color: const Color(0xFFE5E7EB).withValues(alpha: 0.5), width: 1),
           ),
         ),
-        Text(
+        child: Text(
           _rankEmoji(starRatio),
-          style: const TextStyle(fontSize: 64),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 32),
         ),
-        Visibility(
-          visible: false,
-          maintainState: true,
-          child: Text(_rankName(starRatio)),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -359,15 +348,17 @@ class _StarProgressBar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        const double starSize = 26.0; // Dropped size slightly
+        const double starSize = 26.0;
         const double barHeight = 8.0;
-        final double availableWidth = width - starSize;
-        final double leftOffset = availableWidth * progress.clamp(0.0, 1.0);
+        
+        // Maps progress natively across the true absolute dimensions of the background track
+        final double leftOffset = width * progress.clamp(0.0, 1.0);
 
         return SizedBox(
           height: starSize,
           child: Stack(
             alignment: Alignment.centerLeft,
+            clipBehavior: Clip.none,
             children: [
               // Background track
               Container(
@@ -378,23 +369,26 @@ class _StarProgressBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              // Fill track (Only rendered if progress > 0 to maintain absolute zero layout)
+              // Fill track
               if (progress > 0)
                 Container(
                   height: barHeight,
-                  width: leftOffset + (starSize / 2),
+                  width: leftOffset,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFD700),
                     borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-              // Star Thumb
+              // Thumb precisely center-anchored to the layout offset
               Positioned(
                 left: leftOffset,
-                child: const Icon(
-                  Icons.star_rounded,
-                  size: starSize,
-                  color: Color(0xFFE5B822), // Balanced intermediate gold color
+                child: Container(
+                  transform: Matrix4.translationValues(-starSize / 2, 0, 0),
+                  child: const Icon(
+                    Icons.star_rounded,
+                    size: starSize,
+                    color: Color(0xFFE5B822),
+                  ),
                 ),
               ),
             ],
@@ -454,7 +448,7 @@ class _CardShell extends StatelessWidget {
                       : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
                   if (isComplete)
                     Positioned.fill(
-                      child: _RankOverlay(starRatio: starRatio),
+                      child: _RankRibbonOverlay(starRatio: starRatio),
                     ),
                 ],
               ),
@@ -514,8 +508,8 @@ class _CardInfoBar extends StatelessWidget {
             child: Text(
               title,
               textAlign: TextAlign.center,
-              maxLines: 1, // Constrained to a single line
-              overflow: TextOverflow.ellipsis, // Truncates gracefully with standard ellipsis
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w400,
@@ -730,50 +724,5 @@ class _TrainingFabState extends State<_TrainingFab> {
         );
       },
     );
-  }
-}
-
-// ── Custom Painter ────────────────────────────────────────────────────────────
-
-class SunburstPainter extends CustomPainter {
-  final int rayCount;
-  final List<double> alphas;
-
-  SunburstPainter({this.rayCount = 16, required this.alphas});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.sqrt(size.width * size.width + size.height * size.height);
-
-    final angleStep = (2 * math.pi) / rayCount;
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    for (int i = 0; i < rayCount; i++) {
-      final alpha = alphas[i % alphas.length];
-      paint.color = Colors.white.withValues(alpha: alpha);
-
-      final startAngle = i * angleStep;
-      final endAngle = startAngle + (angleStep * 1);
-
-      final path = Path()
-        ..moveTo(center.dx, center.dy)
-        ..lineTo(
-          center.dx + radius * math.cos(startAngle),
-          center.dy + radius * math.sin(startAngle),
-        )
-        ..lineTo(
-          center.dx + radius * math.cos(endAngle),
-          center.dy + radius * math.sin(endAngle),
-        )
-        ..close();
-
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant SunburstPainter oldDelegate) {
-    return oldDelegate.rayCount != rayCount || oldDelegate.alphas != alphas;
   }
 }
