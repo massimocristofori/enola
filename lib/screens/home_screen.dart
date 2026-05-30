@@ -221,7 +221,7 @@ class _MapCard extends ConsumerWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8), // Reduced to 8
+                        borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(15),
@@ -239,7 +239,7 @@ class _MapCard extends ConsumerWidget {
                               heightFactor: imageHeightFactor,
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8)), // Reduced to 8
+                                    top: Radius.circular(8)),
                                 child: imageBytes != null
                                     ? Image.memory(imageBytes, fit: BoxFit.cover)
                                     : Image.asset('assets/images/0.jpeg',
@@ -277,7 +277,7 @@ class _MapCard extends ConsumerWidget {
 
             // ── Top-right ear (Edit) ──
             Positioned(
-              top: -8, // Adjusted position for larger button
+              top: -8,
               right: -8,
               child: _EarButton(
                 icon: Icons.edit_rounded,
@@ -368,12 +368,12 @@ class _StarProgressBar extends StatelessWidget {
           child: Stack(
             alignment: Alignment.centerLeft,
             children: [
-              // Background track
+              // Background track (Colors matched to title bg)
               Container(
                 height: barHeight,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  border: Border.all(color: const Color(0xFFD1D5DB), width: 1),
+                  color: const Color(0xFFF9FAFB),
+                  border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -442,7 +442,7 @@ class _CardShell extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8), // Reduced to 8
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(15),
@@ -456,7 +456,7 @@ class _CardShell extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)), // Reduced to 8
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -504,22 +504,25 @@ class _CardInfoBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)), // Reduced to 8
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── The new Title Rectangle ──
+          // ── The Flush Title Rectangle ──
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB), // Very light grey
-              border: Border.all(color: const Color(0xFFE5E7EB), width: 1), // Less light grey
-              borderRadius: BorderRadius.circular(4),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF9FAFB),
+              // We use top and bottom borders only so it perfectly connects image and content
+              // without doubling up the side borders of the parent card.
+              border: Border(
+                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+              ),
             ),
             child: Text(
               title,
@@ -535,35 +538,38 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(
-                '$achievedStars',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF555555),
+          // ── The Progress Bar Row ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: Row(
+              children: [
+                Text(
+                  '$achievedStars',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF555555),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _StarProgressBar(
-                  progress: maxStars > 0 && hasBeenPlayed
-                      ? achievedStars / maxStars
-                      : 0.0,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _StarProgressBar(
+                    progress: maxStars > 0 && hasBeenPlayed
+                        ? achievedStars / maxStars
+                        : 0.0,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$maxStars',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF555555),
+                const SizedBox(width: 8),
+                Text(
+                  '$maxStars',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF555555),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -589,12 +595,12 @@ class _EarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8), // Increased from 6
+        padding: const EdgeInsets.all(8),
         decoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 26, color: iconColor), // Increased from 22
+        child: Icon(icon, size: 26, color: iconColor),
       ),
     );
   }
