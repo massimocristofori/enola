@@ -45,12 +45,14 @@ class HomeScreen extends ConsumerWidget {
                     mapsAsync.when(
                       loading: () => const Padding(
                         padding: EdgeInsets.all(40.0),
-                        child: CircularProgressIndicator(color: EnolaTheme.accent),
+                        child: CircularProgressIndicator(
+                            color: EnolaTheme.accent),
                       ),
                       error: (e, _) => Padding(
                         padding: const EdgeInsets.all(40.0),
                         child: Text('Error: $e',
-                            style: const TextStyle(color: EnolaTheme.wrong)),
+                            style:
+                                const TextStyle(color: EnolaTheme.wrong)),
                       ),
                       data: (maps) => maps.isEmpty
                           ? _EmptyState(onCreate: () => _openCreate(context))
@@ -65,7 +67,8 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButtonLocation:
+            FloatingActionButtonLocation.centerFloat,
         floatingActionButton: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -306,11 +309,13 @@ class _MapCard extends ConsumerWidget {
               right: -8,
               child: _EarButton(
                 icon: Icons.edit_rounded,
-                iconColor: EnolaTheme.textSecond.withValues(alpha: 0.95),
+                iconColor:
+                    EnolaTheme.textSecond.withValues(alpha: 0.95),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CreateMapScreen(existingMapId: map.id),
+                    builder: (_) =>
+                        CreateMapScreen(existingMapId: map.id),
                   ),
                 ),
               ),
@@ -334,41 +339,39 @@ String _rankEmoji(double starRatio) {
 // ── Floating Ribbon Overlay ───────────────────────────────────────────────────
 
 class _RankRibbonOverlay extends StatelessWidget {
- final double starRatio;
- const _RankRibbonOverlay({required this.starRatio});
+  final double starRatio;
+  const _RankRibbonOverlay({required this.starRatio});
 
- @override
- Widget build(BuildContext context) {
-   return Center(
-     child: Container(
-       width: double.infinity,
-       padding: const EdgeInsets.symmetric(vertical: 10),
-       decoration: BoxDecoration(
-         color: const Color(0xFFFFFFFF).withValues(alpha: 0.88),
-         boxShadow: [
-           BoxShadow(
-             color: Colors.black.withAlpha(28),
-             blurRadius: 6,
-             offset: const Offset(0, 2),
-           ),
-           BoxShadow(
-             color: Colors.black.withAlpha(20),
-             blurRadius: 3,
-             offset: const Offset(0, -1),
-           ),
-         ],
-       ),
-       child: Text(
-         _rankEmoji(starRatio),
-         textAlign: TextAlign.center,
-         style: const TextStyle(fontSize: 42),
-       ),
-     ),
-   );
- }
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.88),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(28),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 3,
+              offset: const Offset(0, -1),
+            ),
+          ],
+        ),
+        child: Text(
+          _rankEmoji(starRatio),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 42),
+        ),
+      ),
+    );
+  }
 }
-
-
 
 // ── Custom Progress Bar ───────────────────────────────────────────────────────
 
@@ -398,8 +401,8 @@ class _StarProgressBar extends StatelessWidget {
                 height: barHeight,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF9FAFB),
-                  border:
-                      Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                  border: Border.all(
+                      color: const Color(0xFFE5E7EB), width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -417,8 +420,8 @@ class _StarProgressBar extends StatelessWidget {
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform:
-                      Matrix4.translationValues(-starSize / 2, -2.0, 0),
+                  transform: Matrix4.translationValues(
+                      -starSize / 2, -2.0, 0),
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
@@ -705,14 +708,13 @@ class _TrainingFabState extends State<_TrainingFab> {
         return StreamBuilder<List<TrainingSession>>(
           stream: DriftService.instance.watchActiveTrainingSessions(),
           builder: (context, sessionSnap) {
-            final hasActiveSessions = (sessionSnap.data ?? []).isNotEmpty;
+            final hasActiveSessions =
+                (sessionSnap.data ?? []).isNotEmpty;
 
-            // Count only riddles that need action (notified, with or without a wrong attempt)
-            final actionableCount = (snapshot.data ?? [])
-                .where((i) =>
-                    i.status == TrainingRiddleStatus.failedNotified ||
-                    i.status == TrainingRiddleStatus.pendingNotified)
-                .length;
+            // Every item in the stream is still pending (correctly answered
+            // riddles are removed from the pool), so the total length is
+            // the right count to show.
+            final totalCount = snapshot.data?.length ?? 0;
 
             if (!hasActiveSessions) return const SizedBox.shrink();
 
@@ -733,7 +735,7 @@ class _TrainingFabState extends State<_TrainingFab> {
                     'Training',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  if (actionableCount > 0) ...[
+                  if (totalCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -743,7 +745,7 @@ class _TrainingFabState extends State<_TrainingFab> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '$actionableCount',
+                        '$totalCount',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -761,4 +763,3 @@ class _TrainingFabState extends State<_TrainingFab> {
     );
   }
 }
-
