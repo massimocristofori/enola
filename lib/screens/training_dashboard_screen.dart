@@ -15,21 +15,13 @@ class TrainingDashboardScreen extends StatefulWidget {
 }
 
 class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
-  late Future<int> _streakFuture;
-  late Future<Map<String, MasteryProgress>> _masteryFuture;
+  // Incremented every time the riddles stream fires, forcing FutureBuilders
+  // to re-run and pick up fresh streak + mastery data.
+  int _summaryEpoch = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _refresh();
-  }
+  Future<int> _fetchStreak() => DriftService.instance.getTrainingStreak();
 
-  void _refresh() {
-    _streakFuture = DriftService.instance.getTrainingStreak();
-    _masteryFuture = _getMastery();
-  }
-
-  Future<Map<String, MasteryProgress>> _getMastery() async {
+  Future<Map<String, MasteryProgress>> _fetchMastery() async {
     final raw = await DriftService.instance.getMasteryPerMap();
     return raw.map(
       (k, v) => MapEntry(k, MasteryProgress(mastered: v.mastered, total: v.total)),
@@ -53,6 +45,12 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
           child: StreamBuilder<List<TrainingRiddleItem>>(
             stream: DriftService.instance.watchAllTrainingRiddles(),
             builder: (context, snapshot) {
+              // Every time the riddles stream fires, bump the epoch so the
+              // summary FutureBuilders re-execute with fresh data.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _summaryEpoch++);
+              });
+
               final allItems = snapshot.data ?? [];
 
               final failed = allItems
@@ -68,17 +66,20 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
               final activeCount = failed.length + pending.length;
 
               return RefreshIndicator(
-                onRefresh: () async => setState(() => _refresh()),
+                onRefresh: () async => setState(() => _summaryEpoch++),
                 child: CustomScrollView(
                   slivers: [
                     // ── Summary header ──────────────────────────────────
                     SliverToBoxAdapter(
                       child: FutureBuilder<int>(
-                        future: _streakFuture,
+                        // key forces a rebuild when epoch changes
+                        key: ValueKey('streak_$_summaryEpoch'),
+                        future: _fetchStreak(),
                         builder: (context, streakSnap) {
                           final streak = streakSnap.data ?? 0;
                           return FutureBuilder<Map<String, MasteryProgress>>(
-                            future: _masteryFuture,
+                            key: ValueKey('mastery_$_summaryEpoch'),
+                            future: _fetchMastery(),
                             builder: (context, masterySnap) {
                               final mastery = masterySnap.data ?? {};
                               return _SummaryHeader(
@@ -130,7 +131,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
                               return _RiddleCard(
                                 item: item,
                                 index: index,
-                                onTap: null, // not yet notified — disabled
+                                onTap: null,
                               );
                             },
                             childCount: upcoming.length,
@@ -303,7 +304,6 @@ class _RiddleCard extends StatelessWidget {
     final isDisabled = item.status == TrainingRiddleStatus.notYetNotified;
     final isFailed = item.status == TrainingRiddleStatus.failedNotified;
 
-    // Visual tokens per status
     final Color iconBg;
     final Color iconColor;
     final Color? borderAccent;
@@ -314,10 +314,7 @@ class _RiddleCard extends StatelessWidget {
       iconBg = EnolaTheme.wrong.withAlpha(20);
       iconColor = EnolaTheme.wrong;
       borderAccent = EnolaTheme.wrong.withAlpha(80);
-      badge = _StatusBadge(
-        label: 'Try again',
-        color: EnolaTheme.wrong,
-      );
+      badge = _StatusBadge(label: 'Try again', color: EnolaTheme.wrong);
       final elapsed = DateTime.now().difference(item.notifiedAt!);
       final elapsedLabel = elapsed.inMinutes < 60
           ? '${elapsed.inMinutes}m ago'
@@ -334,7 +331,6 @@ class _RiddleCard extends StatelessWidget {
           : '${elapsed.inHours}h ago';
       subtitle = 'Notified $elapsedLabel';
     } else {
-      // notYetNotified
       iconBg = EnolaTheme.border;
       iconColor = EnolaTheme.textSecond;
       borderAccent = null;
@@ -368,7 +364,6 @@ class _RiddleCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Icon
               Container(
                 width: 44,
                 height: 44,
@@ -387,7 +382,6 @@ class _RiddleCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              // Text
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
