@@ -179,7 +179,7 @@ class TrainingService {
       slots.removeWhere(
           (s) => s.riddleId == riddleId && s.scheduledAt.isAfter(now));
 
-      // ── Remove from notified queue ──────────────────────────────────────
+      // ── Remove from notified queue ────────────────────────────────────
       await DriftService.instance.removeNotifiedRiddle(
         sessionId: session.id,
         riddleId: riddleId,
@@ -327,8 +327,6 @@ class TrainingService {
     List<Riddle> riddles,
     List<TrainingSlot> slots,
   ) async {
-    // Fetch the session we just created so we have its id
-    final session = await getActiveSession(mapId);
     final riddleMap = {for (final r in riddles) r.id: r};
 
     for (final slot in slots) {
@@ -345,15 +343,8 @@ class TrainingService {
         scheduledAt: slot.scheduledAt,
         payload: '$mapId:${slot.riddleId}',
       );
-
-      // ── Mark as notified ──────────────────────────────────────────────
-      if (session != null) {
-        await DriftService.instance.insertNotifiedRiddle(
-          sessionId: session.id,
-          mapId: mapId,
-          riddleId: slot.riddleId,
-        );
-      }
+      // intentionally no insertNotifiedRiddle here —
+      // the row is written only when the user actually opens the riddle
     }
   }
 
