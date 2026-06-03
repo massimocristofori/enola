@@ -46,101 +46,137 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
         foregroundColor: EnolaTheme.textPrimary,
         elevation: 0,
       ),
-      body: StreamBuilder<List<PendingTrainingRiddle>>(
-        stream: DriftService.instance.watchPendingNotifiedRiddles(),
-        builder: (context, snapshot) {
-          final pending = snapshot.data ?? [];
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: StreamBuilder<List<TrainingRiddleItem>>(
+            stream: DriftService.instance.watchAllTrainingRiddles(),
+            builder: (context, snapshot) {
+              final allItems = snapshot.data ?? [];
 
-          return RefreshIndicator(
-            onRefresh: () async => setState(() => _refresh()),
-            child: CustomScrollView(
-              slivers: [
-                // ── Streak + mastery summary ──────────────────────────────
-                SliverToBoxAdapter(
-                  child: FutureBuilder<int>(
-                    future: _streakFuture,
-                    builder: (context, streakSnap) {
-                      final streak = streakSnap.data ?? 0;
-                      return FutureBuilder<Map<String, MasteryProgress>>(
-                        future: _masteryFuture,
-                        builder: (context, masterySnap) {
-                          final mastery = masterySnap.data ?? {};
-                          return _SummaryHeader(
-                            streak: streak,
-                            mastery: mastery,
+              final failed = allItems
+                  .where((i) => i.status == TrainingRiddleStatus.failedNotified)
+                  .toList();
+              final pending = allItems
+                  .where((i) => i.status == TrainingRiddleStatus.pendingNotified)
+                  .toList();
+              final upcoming = allItems
+                  .where((i) => i.status == TrainingRiddleStatus.notYetNotified)
+                  .toList();
+
+              final activeCount = failed.length + pending.length;
+
+              return RefreshIndicator(
+                onRefresh: () async => setState(() => _refresh()),
+                child: CustomScrollView(
+                  slivers: [
+                    // ── Summary header ──────────────────────────────────
+                    SliverToBoxAdapter(
+                      child: FutureBuilder<int>(
+                        future: _streakFuture,
+                        builder: (context, streakSnap) {
+                          final streak = streakSnap.data ?? 0;
+                          return FutureBuilder<Map<String, MasteryProgress>>(
+                            future: _masteryFuture,
+                            builder: (context, masterySnap) {
+                              final mastery = masterySnap.data ?? {};
+                              return _SummaryHeader(
+                                streak: streak,
+                                mastery: mastery,
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
-                ),
+                      ),
+                    ),
 
-                // ── Pending queue header ──────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Waiting for you',
-                          style: EnolaTheme.sectionHeader,
+                    // ── Empty state ─────────────────────────────────────
+                    if (allItems.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyPendingState(),
+                      )
+                    else ...[
+
+                      // ── "Waiting for you" section ───────────────────
+                      if (failed.isNotEmpty || pending.isNotEmpty) ...[
+                        _sectionHeader('Waiting for you', activeCount),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = [...failed, ...pending][index];
+                              return _RiddleCard(
+                                item: item,
+                                index: index,
+                                onTap: () => openTrainingRiddle(
+                                  item.mapId,
+                                  item.riddle.id,
+                                ),
+                              );
+                            },
+                            childCount: failed.length + pending.length,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        if (pending.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: EnolaTheme.accent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '${pending.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
                       ],
-                    ),
+
+                      // ── "Coming up" section ─────────────────────────
+                      if (upcoming.isNotEmpty) ...[
+                        _sectionHeader('Coming up', null),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = upcoming[index];
+                              return _RiddleCard(
+                                item: item,
+                                index: index,
+                                onTap: null, // not yet notified — disabled
+                              );
+                            },
+                            childCount: upcoming.length,
+                          ),
+                        ),
+                      ],
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _sectionHeader(String label, int? count) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+        child: Row(
+          children: [
+            Text(label, style: EnolaTheme.sectionHeader),
+            const SizedBox(width: 8),
+            if (count != null && count > 0)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: EnolaTheme.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-
-                // ── Empty state ───────────────────────────────────────────
-                if (pending.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _EmptyPendingState(),
-                  )
-                else
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final item = pending[index];
-                        return _PendingRiddleCard(
-                          item: item,
-                          onTap: () => openTrainingRiddle(
-                            item.notified.mapId,
-                            item.riddle.id,
-                            // fromNotification defaults to false
-                          ),
-                        )
-                            .animate()
-                            .fadeIn(
-                                delay: Duration(milliseconds: index * 60))
-                            .slideX(begin: 0.05, end: 0);
-                      },
-                      childCount: pending.length,
-                    ),
-                  ),
-
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              ],
-            ),
-          );
-        },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -187,25 +223,15 @@ class _SummaryHeader extends StatelessWidget {
               label: 'Streak',
             ),
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withAlpha(60),
-          ),
+          Container(width: 1, height: 40, color: Colors.white.withAlpha(60)),
           Expanded(
             child: _StatCell(
               icon: Icons.check_circle_outline_rounded,
-              value: totalRiddles > 0
-                  ? '$totalMastered / $totalRiddles'
-                  : '—',
+              value: totalRiddles > 0 ? '$totalMastered / $totalRiddles' : '—',
               label: 'Mastered',
             ),
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withAlpha(60),
-          ),
+          Container(width: 1, height: 40, color: Colors.white.withAlpha(60)),
           Expanded(
             child: _StatCell(
               icon: Icons.map_outlined,
@@ -259,88 +285,185 @@ class _StatCell extends StatelessWidget {
   }
 }
 
-// ── Pending riddle card ───────────────────────────────────────────────────────
+// ── Unified riddle card ───────────────────────────────────────────────────────
 
-class _PendingRiddleCard extends StatelessWidget {
-  final PendingTrainingRiddle item;
-  final VoidCallback onTap;
+class _RiddleCard extends StatelessWidget {
+  final TrainingRiddleItem item;
+  final int index;
+  final VoidCallback? onTap;
 
-  const _PendingRiddleCard({required this.item, required this.onTap});
+  const _RiddleCard({
+    required this.item,
+    required this.index,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final riddle = item.riddle;
-    final notifiedAt = item.notified.notifiedAt;
-    final elapsed = DateTime.now().difference(notifiedAt);
-    final elapsedLabel = elapsed.inMinutes < 60
-        ? '${elapsed.inMinutes}m ago'
-        : '${elapsed.inHours}h ago';
+    final isDisabled = item.status == TrainingRiddleStatus.notYetNotified;
+    final isFailed = item.status == TrainingRiddleStatus.failedNotified;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: EnolaTheme.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(8),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    // Visual tokens per status
+    final Color iconBg;
+    final Color iconColor;
+    final Color? borderAccent;
+    final Widget? badge;
+    final String subtitle;
+
+    if (isFailed) {
+      iconBg = EnolaTheme.wrong.withAlpha(20);
+      iconColor = EnolaTheme.wrong;
+      borderAccent = EnolaTheme.wrong.withAlpha(80);
+      badge = _StatusBadge(
+        label: 'Try again',
+        color: EnolaTheme.wrong,
+      );
+      final elapsed = DateTime.now().difference(item.notifiedAt!);
+      final elapsedLabel = elapsed.inMinutes < 60
+          ? '${elapsed.inMinutes}m ago'
+          : '${elapsed.inHours}h ago';
+      subtitle = 'Notified $elapsedLabel';
+    } else if (item.status == TrainingRiddleStatus.pendingNotified) {
+      iconBg = EnolaTheme.accent.withAlpha(20);
+      iconColor = EnolaTheme.accent;
+      borderAccent = null;
+      badge = null;
+      final elapsed = DateTime.now().difference(item.notifiedAt!);
+      final elapsedLabel = elapsed.inMinutes < 60
+          ? '${elapsed.inMinutes}m ago'
+          : '${elapsed.inHours}h ago';
+      subtitle = 'Notified $elapsedLabel';
+    } else {
+      // notYetNotified
+      iconBg = EnolaTheme.border;
+      iconColor = EnolaTheme.textSecond;
+      borderAccent = null;
+      badge = null;
+      subtitle = 'Coming up next';
+    }
+
+    return Opacity(
+      opacity: isDisabled ? 0.5 : 1.0,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: borderAccent ?? EnolaTheme.border,
+              width: borderAccent != null ? 1.5 : 1.0,
             ),
-          ],
+            boxShadow: isDisabled
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(8),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isFailed
+                      ? Icons.refresh_rounded
+                      : isDisabled
+                          ? Icons.lock_outline_rounded
+                          : Icons.psychology_rounded,
+                  color: iconColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.riddle.question,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDisabled
+                                  ? EnolaTheme.textSecond
+                                  : EnolaTheme.textPrimary,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 8),
+                          badge,
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: EnolaTheme.textSecond,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (!isDisabled)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: EnolaTheme.textSecond,
+                ),
+            ],
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: EnolaTheme.accent.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.psychology_rounded,
-                color: EnolaTheme.accent,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    riddle.question,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: EnolaTheme.textPrimary,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Notified $elapsedLabel',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: EnolaTheme.textSecond,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: EnolaTheme.textSecond,
-            ),
-          ],
+      ),
+    )
+        .animate()
+        .fadeIn(delay: Duration(milliseconds: index * 60))
+        .slideX(begin: 0.05, end: 0);
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(80)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
         ),
       ),
     );
