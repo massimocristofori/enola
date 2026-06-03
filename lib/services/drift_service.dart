@@ -359,21 +359,35 @@ class DriftService {
         .get();
   }
 
-  Future<int> getTrainingStreak() async {
-    final attempts = await (db.select(db.trainingAttempts)
-          ..orderBy([(t) => OrderingTerm.desc(t.answeredAt)]))
-        .get();
+/// Consecutive correct answers across active sessions only, most recent first.
+Future<int> getTrainingStreak() async {
+  final activeSessions = await (db.select(db.trainingSessions)
+        ..where((t) => t.completedAt.isNull()))
+      .get();
 
-    int streak = 0;
-    for (final attempt in attempts) {
-      if (attempt.correct) {
-        streak++;
-      } else {
-        break;
-      }
+  final now = DateTime.now();
+  final activeIds = activeSessions
+      .where((s) => now.isBefore(s.endsAt))
+      .map((s) => s.id)
+      .toList();
+
+  if (activeIds.isEmpty) return 0;
+
+  final attempts = await (db.select(db.trainingAttempts)
+        ..where((t) => t.sessionId.isIn(activeIds))
+        ..orderBy([(t) => OrderingTerm.desc(t.answeredAt)]))
+      .get();
+
+  int streak = 0;
+  for (final attempt in attempts) {
+    if (attempt.correct) {
+      streak++;
+    } else {
+      break;
     }
-    return streak;
   }
+  return streak;
+}
 
   Future<Map<String, _MasteryProgress>> getMasteryPerMap() async {
     final sessions = await (db.select(db.trainingSessions)
