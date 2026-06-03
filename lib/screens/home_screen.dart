@@ -689,24 +689,30 @@ class _TrainingFab extends StatefulWidget {
 }
 
 class _TrainingFabState extends State<_TrainingFab> {
-  late Stream<List<PendingTrainingRiddle>> _pendingStream;
+  late Stream<List<TrainingRiddleItem>> _riddlesStream;
 
   @override
   void initState() {
     super.initState();
-    _pendingStream = DriftService.instance.watchPendingNotifiedRiddles();
+    _riddlesStream = DriftService.instance.watchAllTrainingRiddles();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<PendingTrainingRiddle>>(
-      stream: _pendingStream,
+    return StreamBuilder<List<TrainingRiddleItem>>(
+      stream: _riddlesStream,
       builder: (context, snapshot) {
         return StreamBuilder<List<TrainingSession>>(
           stream: DriftService.instance.watchActiveTrainingSessions(),
           builder: (context, sessionSnap) {
             final hasActiveSessions = (sessionSnap.data ?? []).isNotEmpty;
-            final pendingCount = snapshot.data?.length ?? 0;
+
+            // Count only riddles that need action (notified, with or without a wrong attempt)
+            final actionableCount = (snapshot.data ?? [])
+                .where((i) =>
+                    i.status == TrainingRiddleStatus.failedNotified ||
+                    i.status == TrainingRiddleStatus.pendingNotified)
+                .length;
 
             if (!hasActiveSessions) return const SizedBox.shrink();
 
@@ -727,7 +733,7 @@ class _TrainingFabState extends State<_TrainingFab> {
                     'Training',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  if (pendingCount > 0) ...[
+                  if (actionableCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -737,7 +743,7 @@ class _TrainingFabState extends State<_TrainingFab> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '$pendingCount',
+                        '$actionableCount',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -755,3 +761,4 @@ class _TrainingFabState extends State<_TrainingFab> {
     );
   }
 }
+
