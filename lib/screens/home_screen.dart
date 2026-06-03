@@ -349,7 +349,11 @@ class _RankRibbonOverlay extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF).withValues(alpha: 0.88),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF9CF58), Color(0xFFF6B700)],
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(28),
@@ -366,12 +370,16 @@ class _RankRibbonOverlay extends StatelessWidget {
         child: Text(
           _rankEmoji(starRatio),
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 42),
+          style: const TextStyle(
+            fontSize: 42,
+            color: Colors.white,
+          ),
         ),
       ),
     );
   }
 }
+
 
 // ── Custom Progress Bar ───────────────────────────────────────────────────────
 
