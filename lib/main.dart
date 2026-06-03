@@ -48,6 +48,19 @@ Future<void> _pushTrainingRiddle(
         .get();
     final int targetIndex = allRiddles.indexWhere((r) => r.id == riddleId);
 
+    // ── Mark as notified the moment the user opens the riddle ─────────────
+    // Covers both notification taps and dashboard taps on failed riddles.
+    // insertNotifiedRiddle is idempotent (insertOnConflictUpdate) so calling
+    // it again on a re-attempt is safe.
+    final session = await TrainingService.instance.getActiveSession(mapId);
+    if (session != null) {
+      await DriftService.instance.insertNotifiedRiddle(
+        sessionId: session.id,
+        mapId: mapId,
+        riddleId: riddleId,
+      );
+    }
+
     if (!context.mounted) return;
 
     void onDone(BuildContext riddleContext, int errorCount) {
