@@ -146,7 +146,7 @@ class _MapGrid extends ConsumerWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(48, 4, 48, 100),
+      padding: const EdgeInsets.fromLTRB(40, 4, 40, 100),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: cols,
         crossAxisSpacing: 24,
