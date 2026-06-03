@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:enola/database/database.dart';
@@ -261,8 +262,6 @@ class DriftService {
 
   // ── TRAINING NOTIFIED RIDDLES ─────────────────────────────────────────────
 
-  /// Inserts a notified row. Safe to call multiple times — if a row already
-  /// exists for this session + riddle it is replaced (idempotent).
   Future<void> insertNotifiedRiddle({
     required int sessionId,
     required String mapId,
@@ -278,7 +277,6 @@ class DriftService {
     );
   }
 
-  /// Removes the pending row once a riddle is answered correctly.
   Future<void> removeNotifiedRiddle({
     required int sessionId,
     required int riddleId,
@@ -289,9 +287,6 @@ class DriftService {
         .go();
   }
 
-  /// Stream of all pending notified riddles across all active training sessions,
-  /// joined with their riddle data. Ordered by notifiedAt ascending so the
-  /// oldest surfaced riddle appears first.
   Stream<List<PendingTrainingRiddle>> watchPendingNotifiedRiddles() {
     final query = db.select(db.trainingNotifiedRiddles).join([
       innerJoin(
@@ -316,7 +311,6 @@ class DriftService {
         }).toList());
   }
 
-  /// Stream of pending count per mapId, for the dashboard header summary.
   Stream<Map<String, int>> watchPendingCountPerMap() {
     return watchPendingNotifiedRiddles().map((rows) {
       final counts = <String, int>{};
@@ -328,18 +322,14 @@ class DriftService {
     });
   }
 
-	/// Stream of all currently active (non-completed, not expired) training sessions.
-	/// Used by the home screen FAB to decide whether to show itself.
-	Stream<List<TrainingSession>> watchActiveTrainingSessions() {
- 	 return (DriftService.instance.db.select(
-          DriftService.instance.db.trainingSessions)
-        ..where((t) => t.completedAt.isNull()))
-      .watch()
-      .map((sessions) => sessions
-          .where((s) => DateTime.now().isBefore(s.endsAt))
-          .toList());
-	}
-
+  Stream<List<TrainingSession>> watchActiveTrainingSessions() {
+    return (db.select(db.trainingSessions)
+          ..where((t) => t.completedAt.isNull()))
+        .watch()
+        .map((sessions) => sessions
+            .where((s) => DateTime.now().isBefore(s.endsAt))
+            .toList());
+  }
 
   // ── TRAINING ATTEMPTS ─────────────────────────────────────────────────────
 
@@ -358,7 +348,6 @@ class DriftService {
     );
   }
 
-  /// Returns all attempts for a specific riddle in a session, oldest first.
   Future<List<TrainingAttempt>> getAttemptsForRiddle({
     required int sessionId,
     required int riddleId,
@@ -370,8 +359,6 @@ class DriftService {
         .get();
   }
 
-  /// Computes the current training streak: consecutive correct answers
-  /// across all sessions, walking backwards from the most recent attempt.
   Future<int> getTrainingStreak() async {
     final attempts = await (db.select(db.trainingAttempts)
           ..orderBy([(t) => OrderingTerm.desc(t.answeredAt)]))
@@ -388,8 +375,6 @@ class DriftService {
     return streak;
   }
 
-  /// Returns mastery progress per map: how many riddles have been answered
-  /// correctly at least once across all training sessions for that map.
   Future<Map<String, _MasteryProgress>> getMasteryPerMap() async {
     final sessions = await (db.select(db.trainingSessions)
           ..where((t) => t.completedAt.isNull()))
@@ -419,6 +404,138 @@ class DriftService {
 
     return result;
   }
+
+  // ── ALL TRAINING RIDDLES STREAM ───────────────────────────────────────────
+
+  /// Streams all riddles across all active training sessions, classified by
+  /// status. Order: failedNotified → pendingNotified → notYetNotified.
+  /// Riddles answered correctly are excluded (their notified row is deleted).
+  Stream<List<TrainingRiddleItem>> watchAllTrainingRiddles() {
+    final notifiedStream = watchPendingNotifiedRiddles();
+    final sessionsStream = (db.select(db.trainingSessions)
+          ..where((t) => t.completedAt.isNull()))
+        .watch();
+
+    late StreamController<List<TrainingRiddleItem>> controller;
+    List<PendingTrainingRiddle> latestNotified = [];
+    List<TrainingSession> latestSessions = [];
+    bool notifiedReady = false;
+    bool sessionsReady = false;
+    StreamSubscription<List<PendingTrainingRiddle>>? notifiedSub;
+    StreamSubscription<List<TrainingSession>>? sessionsSub;
+
+    Future<List<TrainingRiddleItem>> compute() async {
+      final now = DateTime.now();
+      final activeSessions =
+          latestSessions.where((s) => now.isBefore(s.endsAt)).toList();
+
+      if (activeSessions.isEmpty) return [];
+
+      final items = <TrainingRiddleItem>[];
+
+      final notifiedMap = {
+        for (final p in latestNotified) p.riddle.id: p,
+      };
+
+      // Collect all riddle IDs that have at least one wrong attempt,
+      // across all active sessions
+      final wrongAttemptRiddleIds = <int>{};
+      for (final session in activeSessions) {
+        final attempts = await (db.select(db.trainingAttempts)
+              ..where((t) =>
+                  t.sessionId.equals(session.id) &
+                  t.correct.equals(false)))
+            .get();
+        for (final a in attempts) {
+          wrongAttemptRiddleIds.add(a.riddleId);
+        }
+      }
+
+      for (final session in activeSessions) {
+        final pool = _parsePoolJson(session.poolJson);
+        if (pool.isEmpty) continue;
+
+        final riddles = await (db.select(db.riddles)
+              ..where((t) => t.id.isIn(pool)))
+            .get();
+
+        for (final riddle in riddles) {
+          final notifiedEntry = notifiedMap[riddle.id];
+          final TrainingRiddleStatus status;
+
+          if (notifiedEntry != null) {
+            status = wrongAttemptRiddleIds.contains(riddle.id)
+                ? TrainingRiddleStatus.failedNotified
+                : TrainingRiddleStatus.pendingNotified;
+          } else {
+            status = TrainingRiddleStatus.notYetNotified;
+          }
+
+          items.add(TrainingRiddleItem(
+            riddle: riddle,
+            mapId: session.mapId,
+            sessionId: session.id,
+            status: status,
+            notifiedAt: notifiedEntry?.notified.notifiedAt,
+          ));
+        }
+      }
+
+      const order = {
+        TrainingRiddleStatus.failedNotified: 0,
+        TrainingRiddleStatus.pendingNotified: 1,
+        TrainingRiddleStatus.notYetNotified: 2,
+      };
+      items.sort((a, b) {
+        final statusCmp = order[a.status]!.compareTo(order[b.status]!);
+        if (statusCmp != 0) return statusCmp;
+        if (a.notifiedAt != null && b.notifiedAt != null) {
+          return a.notifiedAt!.compareTo(b.notifiedAt!);
+        }
+        return a.riddle.orderInMap.compareTo(b.riddle.orderInMap);
+      });
+
+      return items;
+    }
+
+    void emit() {
+      if (!notifiedReady || !sessionsReady) return;
+      compute().then((result) {
+        if (!controller.isClosed) controller.add(result);
+      });
+    }
+
+    controller = StreamController<List<TrainingRiddleItem>>(
+      onListen: () {
+        notifiedSub = notifiedStream.listen((data) {
+          latestNotified = data;
+          notifiedReady = true;
+          emit();
+        });
+        sessionsSub = sessionsStream.listen((data) {
+          latestSessions = data;
+          sessionsReady = true;
+          emit();
+        });
+      },
+      onCancel: () {
+        notifiedSub?.cancel();
+        sessionsSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  List<int> _parsePoolJson(String json) {
+    try {
+      return (jsonDecode(json) as List).cast<int>();
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 // ── Supporting data classes ───────────────────────────────────────────────────
@@ -441,9 +558,35 @@ class _MasteryProgress {
   const _MasteryProgress({required this.mastered, required this.total});
 }
 
-// Make it public so the dashboard can use it
 class MasteryProgress {
   final int mastered;
   final int total;
   const MasteryProgress({required this.mastered, required this.total});
+}
+
+// ── Training riddle status ────────────────────────────────────────────────────
+
+enum TrainingRiddleStatus {
+  /// Notified and answered at least once incorrectly (no correct answer yet)
+  failedNotified,
+  /// Notified but never attempted yet
+  pendingNotified,
+  /// In the pool but not yet notified
+  notYetNotified,
+}
+
+class TrainingRiddleItem {
+  final Riddle riddle;
+  final String mapId;
+  final int sessionId;
+  final TrainingRiddleStatus status;
+  final DateTime? notifiedAt;
+
+  const TrainingRiddleItem({
+    required this.riddle,
+    required this.mapId,
+    required this.sessionId,
+    required this.status,
+    this.notifiedAt,
+  });
 }
