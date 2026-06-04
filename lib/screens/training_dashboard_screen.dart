@@ -230,7 +230,7 @@ class _SummaryHeader extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           //colors: [EnolaTheme.accent, EnolaTheme.secondary],
-					colors: [EnolaTheme.accent, EnolaTheme.accent],
+					colors: [EnolaTheme.secondary, EnolaTheme.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
