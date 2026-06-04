@@ -252,92 +252,81 @@ class _MapCard extends ConsumerWidget {
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
     final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
 
-    // The flightShuttleBuilder is defined here, outside StreamBuilder,
-    // so it captures only stable values and never rebuilds mid-flight.
     Widget flightShuttle(
-  BuildContext flightContext,
-  Animation<double> animation,
-  HeroFlightDirection flightDirection,
-  BuildContext fromHeroContext,
-  BuildContext toHeroContext,
-) {
-  // The destination Hero (_PlayHeader) has no image — just the info bar.
-  // We need the from-Hero's RenderBox size to compute the image height.
-  final RenderBox? fromBox =
-      fromHeroContext.findRenderObject() as RenderBox?;
-  final double fromHeight = fromBox?.size.height ?? 200.0;
-  // Info bar is always 88px (kPlayHeaderHeight) tall.
-  const double infoBarHeight = kPlayHeaderHeight; // 88.0
+      BuildContext flightContext,
+      Animation<double> animation,
+      HeroFlightDirection flightDirection,
+      BuildContext fromHeroContext,
+      BuildContext toHeroContext,
+    ) {
+      final RenderBox? fromBox =
+          fromHeroContext.findRenderObject() as RenderBox?;
+      final double fromHeight = fromBox?.size.height ?? 200.0;
+      const double infoBarHeight = kPlayHeaderHeight; // 76.0
 
-  return AnimatedBuilder(
-    animation: animation,
-    builder: (context, _) {
-      // t: 0 = start (card), 1 = end (play header)
-      final t = animation.value;
+      return AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final t = animation.value;
+          final imageHeight =
+              ((fromHeight - infoBarHeight) * (1.0 - t)).clamp(0.0, double.infinity);
 
-      // Image height goes from (fromHeight - infoBarHeight) → 0
-      final imageHeight =
-          ((fromHeight - infoBarHeight) * (1.0 - t)).clamp(0.0, double.infinity);
-
-      return Material(
-        type: MaterialType.transparency,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(25),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+          return Material(
+            type: MaterialType.transparency,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Image collapses to 0 height as we approach the destination.
-              SizedBox(
-                height: imageHeight,
-                child: imageHeight > 0
-                    ? ClipRect(
-                        child: OverflowBox(
-                          alignment: Alignment.topCenter,
-                          maxHeight: fromHeight - infoBarHeight,
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(8)),
-                            child: imageBytes != null
-                                ? Image.memory(imageBytes,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity)
-                                : Image.asset(
-                                    'assets/images/0.jpeg',
-                                    fit: BoxFit.cover,
-                                    width: double.infinity),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: imageHeight,
+                    child: imageHeight > 0
+                        ? ClipRect(
+                            child: OverflowBox(
+                              alignment: Alignment.topCenter,
+                              maxHeight: fromHeight - infoBarHeight,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(8)),
+                                child: imageBytes != null
+                                    ? Image.memory(imageBytes,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity)
+                                    : Image.asset(
+                                        'assets/images/0.jpeg',
+                                        fit: BoxFit.cover,
+                                        width: double.infinity),
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  Expanded(
+                    child: _CardInfoBar(
+                      title: map.title,
+                      achievedStars: achievedStars,
+                      maxStars: maxStars,
+                      hasBeenPlayed: hasBeenPlayed,
+                      isComplete: isComplete,
+                    ),
+                  ),
+                ],
               ),
-              // Info bar fills the remaining space (expands as image shrinks).
-              Expanded(
-                child: _CardInfoBar(
-                  title: map.title,
-                  achievedStars: achievedStars,
-                  maxStars: maxStars,
-                  hasBeenPlayed: hasBeenPlayed,
-                  isComplete: isComplete,
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
-    },
-  );
-}
-
+    }
 
     return GestureDetector(
       onTap: () => _openPlay(context),
@@ -372,7 +361,6 @@ class _MapCard extends ConsumerWidget {
                   isComplete: isComplete,
                 ),
 
-                // ── Centered Ribbon Overlay ──
                 if (isComplete)
                   Positioned(
                     left: -4,
@@ -382,7 +370,6 @@ class _MapCard extends ConsumerWidget {
                     child: _RankRibbonOverlay(starRatio: starRatio),
                   ),
 
-                // ── Top-right ear (Training toggle) ──
                 Positioned(
                   top: -8,
                   right: -8,
@@ -616,6 +603,7 @@ class _CardInfoBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Title row — 38px ──
           Container(
             height: 38,
             padding:
@@ -641,36 +629,40 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-            child: Row(
-              children: [
-                Text(
-                  '$achievedStars',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF555555),
+          // ── Star row — 38px ──
+          SizedBox(
+            height: 38,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+              child: Row(
+                children: [
+                  Text(
+                    '$achievedStars',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF555555),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StarProgressBar(
-                    progress: maxStars > 0 && hasBeenPlayed
-                        ? achievedStars / maxStars
-                        : 0.0,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StarProgressBar(
+                      progress: maxStars > 0 && hasBeenPlayed
+                          ? achievedStars / maxStars
+                          : 0.0,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  '$maxStars',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF555555),
+                  const SizedBox(width: 10),
+                  Text(
+                    '$maxStars',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF555555),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -774,7 +766,7 @@ class _CreateFab extends StatelessWidget {
   }
 }
 
-// ── Training FAB — only visible when a training session is active ─────────────
+// ── Training FAB ──────────────────────────────────────────────────────────────
 
 class _TrainingFab extends StatefulWidget {
   const _TrainingFab();
