@@ -46,8 +46,16 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
           Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         }
       },
+			decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFECEFF4), Colors.white],
+          stops: [0.0, 0.65],
+        ),
+      ),
       child: Scaffold(
-        backgroundColor: EnolaTheme.background,
+        //backgroundColor: EnolaTheme.background,
         appBar: AppBar(
           title: const Text('Training'),
           backgroundColor: EnolaTheme.background,
