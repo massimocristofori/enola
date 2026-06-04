@@ -798,7 +798,7 @@ class _TrainingFabState extends State<_TrainingFab> {
               ),
               backgroundColor: EnolaTheme.secondary,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.psychology_rounded),
+              icon: const Icon(Icons.school_rounded),
               label: Row(
                 children: [
                   const Text(
