@@ -296,8 +296,8 @@ class _MapCard extends ConsumerWidget {
             // ── Centered Ribbon Overlay ──
             if (isComplete)
               Positioned(
-                left: -2,
-                right: -2,
+                left: -4,
+                right: -4,
                 top: 0,
                 bottom: 0,
                 child: _RankRibbonOverlay(starRatio: starRatio),
@@ -346,8 +346,7 @@ class _RankRibbonOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        // 6px wider on each side than the card
-        margin: const EdgeInsets.symmetric(horizontal: -6),
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -370,7 +369,6 @@ class _RankRibbonOverlay extends StatelessWidget {
         ),
         child: ColorFiltered(
           colorFilter: const ColorFilter.matrix(<double>[
-            // Desaturate fully then push to white
             0.33, 0.33, 0.33, 0, 180,
             0.33, 0.33, 0.33, 0, 180,
             0.33, 0.33, 0.33, 0, 180,
@@ -386,6 +384,7 @@ class _RankRibbonOverlay extends StatelessWidget {
     );
   }
 }
+
 
 
 // ── Custom Progress Bar ───────────────────────────────────────────────────────
