@@ -218,7 +218,8 @@ class _SummaryHeader extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [EnolaTheme.accent, EnolaTheme.secondary],
+          //colors: [EnolaTheme.accent, EnolaTheme.secondary],
+					colors: [EnolaTheme.accent, EnolaTheme.accent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
