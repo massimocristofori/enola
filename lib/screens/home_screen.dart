@@ -14,6 +14,10 @@ import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
 import 'package:enola/screens/training_dashboard_screen.dart';
 import 'package:enola/services/drift_service.dart';
+import 'package:enola/services/training_service.dart';
+
+import 'package:drift/drift.dart' as drift_orm;
+
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -190,6 +194,39 @@ class _MapCard extends ConsumerWidget {
     );
   }
 
+  Future<void> _toggleTraining(BuildContext context) async {
+    final isActive =
+        await TrainingService.instance.isTrainingActive(map.id);
+
+    if (isActive) {
+      await TrainingService.instance.stopTraining(map.id);
+      return;
+    }
+
+    // Need riddles to start training
+    final riddles = await (DriftService.instance.db.select(
+      DriftService.instance.db.riddles,
+    )..where((t) => t.mapId.equals(map.id)))
+        .get();
+
+    if (riddles.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Add riddles to this map before training.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    await TrainingService.instance.startTraining(
+      mapId: map.id,
+      riddles: riddles,
+      durationMinutes: 60,
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final Uint8List? imageBytes =
@@ -218,111 +255,130 @@ class _MapCard extends ConsumerWidget {
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
     final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
 
-    return GestureDetector(
-      onTap: () => _openPlay(context),
-      child: Hero(
-        tag: 'map-card-${map.id}',
-        flightShuttleBuilder: (_, animation, __, ___, ____) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, _) {
-              final imageHeightFactor =
-                  (1.0 - animation.value).clamp(0.0, 1.0);
+    return StreamBuilder<TrainingSession?>(
+      stream: (DriftService.instance.db.select(
+        DriftService.instance.db.trainingSessions,
+      )
+            ..where((t) => t.mapId.equals(map.id))
+            ..where((t) => t.completedAt.isNull())
+            ..orderBy([
+              (t) => drift_orm.OrderingTerm.desc(t.startedAt),
+            ])
+            ..limit(1))
+          .watchSingleOrNull(),
+      builder: (context, trainingSnap) {
+        // A session row exists but may be expired — treat expired as off
+        final rawSession = trainingSnap.data;
+        final isTrainingOn = rawSession != null &&
+            DateTime.now().isBefore(rawSession.endsAt);
 
-              return SizedBox.expand(
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+        return GestureDetector(
+          onTap: () => _openPlay(context),
+          child: Hero(
+            tag: 'map-card-${map.id}',
+            flightShuttleBuilder: (_, animation, __, ___, ____) {
+              return AnimatedBuilder(
+                animation: animation,
+                builder: (context, _) {
+                  final imageHeightFactor =
+                      (1.0 - animation.value).clamp(0.0, 1.0);
+
+                  return SizedBox.expand(
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(25),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: ClipRect(
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              heightFactor: imageHeightFactor,
-                              child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8)),
-                                child: imageBytes != null
-                                    ? Image.memory(imageBytes,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity)
-                                    : Image.asset('assets/images/0.jpeg',
-                                        fit: BoxFit.cover,
-                                        width: double.infinity),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: ClipRect(
+                                child: Align(
+                                  alignment: Alignment.topCenter,
+                                  heightFactor: imageHeightFactor,
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(8)),
+                                    child: imageBytes != null
+                                        ? Image.memory(imageBytes,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity)
+                                        : Image.asset(
+                                            'assets/images/0.jpeg',
+                                            fit: BoxFit.cover,
+                                            width: double.infinity),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            _CardInfoBar(
+                              title: map.title,
+                              achievedStars: achievedStars,
+                              maxStars: maxStars,
+                              hasBeenPlayed: hasBeenPlayed,
+                              isComplete: isComplete,
+                            ),
+                          ],
                         ),
-                        _CardInfoBar(
-                          title: map.title,
-                          achievedStars: achievedStars,
-                          maxStars: maxStars,
-                          hasBeenPlayed: hasBeenPlayed,
-                          isComplete: isComplete,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
-          );
-        },
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            _CardShell(
-              imageBytes: imageBytes,
-              title: map.title,
-              achievedStars: achievedStars,
-              maxStars: maxStars,
-              hasBeenPlayed: hasBeenPlayed,
-              isComplete: isComplete,
-            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _CardShell(
+                  imageBytes: imageBytes,
+                  title: map.title,
+                  achievedStars: achievedStars,
+                  maxStars: maxStars,
+                  hasBeenPlayed: hasBeenPlayed,
+                  isComplete: isComplete,
+                ),
 
-            // ── Centered Ribbon Overlay ──
-            if (isComplete)
-              Positioned(
-                left: -4,
-                right: -4,
-                top: 0,
-                bottom: 20,
-                child: _RankRibbonOverlay(starRatio: starRatio),
-              ),
+                // ── Centered Ribbon Overlay ──
+                if (isComplete)
+                  Positioned(
+                    left: -4,
+                    right: -4,
+                    top: 0,
+                    bottom: 20,
+                    child: _RankRibbonOverlay(starRatio: starRatio),
+                  ),
 
-            // ── Top-right ear (Edit) ──
-            Positioned(
-              top: -8,
-              right: -8,
-              child: _EarButton(
-                icon: Icons.edit_rounded,
-                iconColor:
-                    EnolaTheme.textSecond.withValues(alpha: 0.95),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CreateMapScreen(existingMapId: map.id),
+                // ── Top-right ear (Training toggle) ──
+                Positioned(
+                  top: -8,
+                  right: -8,
+                  child: _EarButton(
+                    icon: isTrainingOn
+                        ? Icons.school_rounded
+                        : Icons.school_outlined,
+                    iconColor: isTrainingOn
+                        ? Colors.white
+                        : EnolaTheme.textSecond.withValues(alpha: 0.95),
+                    backgroundColor:
+                        isTrainingOn ? EnolaTheme.secondary : Colors.white,
+                    onTap: () => _toggleTraining(context),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -347,15 +403,15 @@ class _RankRibbonOverlay extends StatelessWidget {
     return Center(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 5), // was 10
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-							const Color(0xFFF9CF58).withValues(alpha: 0.9), 
-							const Color(0xFFF6B700).withValues(alpha: 0.9),
-						],
+              const Color(0xFFF9CF58).withValues(alpha: 0.9),
+              const Color(0xFFF6B700).withValues(alpha: 0.9),
+            ],
           ),
           boxShadow: [
             BoxShadow(
@@ -387,8 +443,6 @@ class _RankRibbonOverlay extends StatelessWidget {
     );
   }
 }
-
-
 
 // ── Custom Progress Bar ───────────────────────────────────────────────────────
 
@@ -612,11 +666,13 @@ class _EarButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color iconColor;
+  final Color backgroundColor;
 
   const _EarButton({
     required this.icon,
     required this.onTap,
     this.iconColor = Colors.white,
+    this.backgroundColor = Colors.white,
   });
 
   @override
@@ -625,8 +681,8 @@ class _EarButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: backgroundColor,
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 26, color: iconColor),
@@ -728,9 +784,6 @@ class _TrainingFabState extends State<_TrainingFab> {
             final hasActiveSessions =
                 (sessionSnap.data ?? []).isNotEmpty;
 
-            // Every item in the stream is still pending (correctly answered
-            // riddles are removed from the pool), so the total length is
-            // the right count to show.
             final totalCount = snapshot.data?.length ?? 0;
 
             if (!hasActiveSessions) return const SizedBox.shrink();
