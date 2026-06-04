@@ -352,7 +352,7 @@ class _RankRibbonOverlay extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF9CF58).withAlpha(230), Color(0xFFF6B700).withAlpha(230)],
+            colors: [const Color(0xFFF9CF58).withAlpha(230), const Color(0xFFF6B700).withAlpha(230)],
           ),
           boxShadow: [
             BoxShadow(
