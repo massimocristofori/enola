@@ -54906,7 +54906,7 @@ e.a=J.a9x(q,0,new A.aG7())}catch(k){}j=s!=null
 i=j&&n>0&&r>=n
 h=m>0?e.a/m:0
 d=A.b([new A.a_y(b,d.b,e.a,m,j,i,f)],t.p)
-if(i)d.push(A.hI(0,new A.a42(h,f),f,f,-4,-4,0,f))
+if(i)d.push(A.hI(10,new A.a42(h,f),f,f,-4,-4,0,f))
 d.push(A.hI(f,new A.a0S(B.rb,new A.aG8(g,a),B.A.dB(0.95),f),f,f,f,-8,-8,f))
 return A.dc(f,A.air(A.eZ(B.bo,d,B.l,B.aV,f),new A.aG9(e,g,b,m,j,i),"map-card-"+c,!1),B.H,!1,f,f,f,f,f,f,f,f,f,f,f,f,f,f,new A.aGa(g,a),f,f,f,f,f,f)}}
 A.aG3.prototype={
