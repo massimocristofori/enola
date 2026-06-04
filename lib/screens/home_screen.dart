@@ -352,7 +352,7 @@ class _RankRibbonOverlay extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF9CF58), Color(0xFFF6B700)],
+            colors: [Color(0xFFF9CF58).withAlpha(230), Color(0xFFF6B700).withAlpha(230)],
           ),
           boxShadow: [
             BoxShadow(
@@ -566,7 +566,7 @@ class _CardInfoBar extends StatelessWidget {
           ),
           // ── Progress bar row ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
             child: Row(
               children: [
                 Text(
