@@ -46,135 +46,136 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
           Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         }
       },
-			child: Container(
-			decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFECEFF4), Colors.white],
-          stops: [0.0, 0.65],
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFECEFF4), Colors.white],
+            stops: [0.0, 0.65],
+          ),
         ),
-      ),
-      child: Scaffold(
-        //backgroundColor: EnolaTheme.background,
-				backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text('Training'),
-          backgroundColor: EnolaTheme.background,
-          foregroundColor: EnolaTheme.textPrimary,
-          elevation: 0,
-          // Explicit back button to respect the PopScope logic
-          leading: BackButton(
-            onPressed: () {
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('Training'),
+            backgroundColor: Colors.transparent,
+            foregroundColor: EnolaTheme.textPrimary,
+            elevation: 0,
+            automaticallyImplyLeading: false, // Removes the top back button
+          ),
+          floatingActionButton: _BackFab(
+            onTap: () {
               Navigator.of(context)
                   .pushNamedAndRemoveUntil('/', (route) => false);
             },
           ),
-        ),
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: StreamBuilder<List<TrainingRiddleItem>>(
-              stream: DriftService.instance.watchAllTrainingRiddles(),
-              builder: (context, snapshot) {
-                final allItems = snapshot.data ?? [];
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: StreamBuilder<List<TrainingRiddleItem>>(
+                stream: DriftService.instance.watchAllTrainingRiddles(),
+                builder: (context, snapshot) {
+                  final allItems = snapshot.data ?? [];
 
-                final failed = allItems
-                    .where((i) => i.status == TrainingRiddleStatus.failedNotified)
-                    .toList();
-                final pending = allItems
-                    .where((i) => i.status == TrainingRiddleStatus.pendingNotified)
-                    .toList();
-                final upcoming = allItems
-                    .where((i) => i.status == TrainingRiddleStatus.notYetNotified)
-                    .toList();
+                  final failed = allItems
+                      .where((i) => i.status == TrainingRiddleStatus.failedNotified)
+                      .toList();
+                  final pending = allItems
+                      .where((i) => i.status == TrainingRiddleStatus.pendingNotified)
+                      .toList();
+                  final upcoming = allItems
+                      .where((i) => i.status == TrainingRiddleStatus.notYetNotified)
+                      .toList();
 
-                final activeCount = failed.length + pending.length;
+                  final activeCount = failed.length + pending.length;
 
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() => _refreshSummary());
-                  },
-                  child: CustomScrollView(
-                    slivers: [
-                      // ── Summary header ──────────────────────────────
-                      SliverToBoxAdapter(
-                        child: FutureBuilder<(int, Map<String, MasteryProgress>)>(
-                          future: Future.wait([_streakFuture, _masteryFuture])
-                              .then((r) => (
-                                    r[0] as int,
-                                    r[1] as Map<String, MasteryProgress>,
-                                  )),
-                          builder: (context, snap) {
-                            final streak = snap.data?.$1 ?? 0;
-                            final mastery = snap.data?.$2 ?? {};
-                            return _SummaryHeader(
-                              streak: streak,
-                              mastery: mastery,
-                            );
-                          },
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      setState(() => _refreshSummary());
+                    },
+                    child: CustomScrollView(
+                      slivers: [
+                        // ── Summary header ──────────────────────────────
+                        SliverToBoxAdapter(
+                          child: FutureBuilder<(int, Map<String, MasteryProgress>)>(
+                            future: Future.wait([_streakFuture, _masteryFuture])
+                                .then((r) => (
+                                      r[0] as int,
+                                      r[1] as Map<String, MasteryProgress>,
+                                    )),
+                            builder: (context, snap) {
+                              final streak = snap.data?.$1 ?? 0;
+                              final mastery = snap.data?.$2 ?? {};
+                              return _SummaryHeader(
+                                streak: streak,
+                                mastery: mastery,
+                              );
+                            },
+                          ),
                         ),
-                      ),
 
-                      // ── Empty state ─────────────────────────────────
-                      if (allItems.isEmpty)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: _EmptyPendingState(),
-                        )
-                      else ...[
+                        // ── Empty state ─────────────────────────────────
+                        if (allItems.isEmpty)
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _EmptyPendingState(),
+                          )
+                        else ...[
 
-                        // ── "Waiting for you" section ────────────────
-                        if (failed.isNotEmpty || pending.isNotEmpty) ...[
-                          _sectionHeader('Waiting for you', activeCount),
-                          SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = [...failed, ...pending][index];
-                                return _RiddleCard(
-                                  item: item,
-                                  index: index,
-                                  onTap: () => openTrainingRiddle(
-                                    item.mapId,
-                                    item.riddle.id,
-                                  ),
-                                );
-                              },
-                              childCount: failed.length + pending.length,
+                          // ── "Waiting for you" section ────────────────
+                          if (failed.isNotEmpty || pending.isNotEmpty) ...[
+                            _sectionHeader('Waiting for you', activeCount),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final item = [...failed, ...pending][index];
+                                  return _RiddleCard(
+                                    item: item,
+                                    index: index,
+                                    onTap: () => openTrainingRiddle(
+                                      item.mapId,
+                                      item.riddle.id,
+                                    ),
+                                  );
+                                },
+                                childCount: failed.length + pending.length,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
 
-                        // ── "Coming up" section ──────────────────────
-                        if (upcoming.isNotEmpty) ...[
-                          _sectionHeader('Coming up', null),
-                          SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = upcoming[index];
-                                return _RiddleCard(
-                                  item: item,
-                                  index: index,
-                                  onTap: null,
-                                );
-                              },
-                              childCount: upcoming.length,
+                          // ── "Coming up" section ──────────────────────
+                          if (upcoming.isNotEmpty) ...[
+                            _sectionHeader('Coming up', null),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final item = upcoming[index];
+                                  return _RiddleCard(
+                                    item: item,
+                                    index: index,
+                                    onTap: null,
+                                  );
+                                },
+                                childCount: upcoming.length,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
 
-                        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                          // Added extra padding so the FAB doesn't cover the last item
+                          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                        ],
                       ],
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
       ),
-			),
     );
   }
 
@@ -229,8 +230,7 @@ class _SummaryHeader extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          //colors: [EnolaTheme.accent, EnolaTheme.secondary],
-					colors: [EnolaTheme.secondary, EnolaTheme.secondary],
+          colors: [EnolaTheme.secondary, EnolaTheme.secondary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -547,5 +547,50 @@ class _EmptyPendingState extends StatelessWidget {
         ),
       ),
     ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.05, end: 0);
+  }
+}
+
+// ── Back FAB ──────────────────────────────────────────────────────────────────
+
+class _BackFab extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackFab({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.chevron_left_rounded,
+                size: 22, color: EnolaTheme.textPrimary),
+            SizedBox(width: 4),
+            Text(
+              'My Maps',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: EnolaTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
