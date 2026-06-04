@@ -299,7 +299,7 @@ class _MapCard extends ConsumerWidget {
                 left: -4,
                 right: -4,
                 top: 0,
-                bottom: 0,
+                bottom: 10,
                 child: _RankRibbonOverlay(starRatio: starRatio),
               ),
 
