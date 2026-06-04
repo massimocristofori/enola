@@ -17,9 +17,10 @@ import 'package:enola/services/notification_service.dart';
 
 import 'package:drift/drift.dart' as drift;
 
-// Exact heights matching the _CardInfoBar in home_screen.dart
-const double kPlayHeaderHeight = 88.0;
-const double kPlayHeaderCompact = 50.0;
+// Title row (38) + star row (38) = 76
+const double kPlayHeaderHeight = 76.0;
+// Compact: only star row visible
+const double kPlayHeaderCompact = 38.0;
 
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
@@ -736,12 +737,11 @@ class _MapViewState extends State<_MapView> {
 
     return Stack(
       children: [
-        // ── Scrollable map (slides under the sticky bar) ────────────────
         SingleChildScrollView(
           controller: _scrollController,
           padding:
               EdgeInsets.fromLTRB(24, stickyHeight + 16, 24, 100),
-          child: Align(                          // ← was Center
+          child: Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
@@ -768,7 +768,6 @@ class _MapViewState extends State<_MapView> {
           ),
         ),
 
-        // ── Sticky training bar + hint (floats on top) ──────────────────
         Positioned(
           top: 0,
           left: 0,
@@ -874,7 +873,7 @@ class _MapViewState extends State<_MapView> {
   }
 }
 
-// ── Custom Progress Bar (Mirrored from home_screen) ───────────────────────────
+// ── Custom Progress Bar ───────────────────────────────────────────────────────
 
 class _StarProgressBar extends StatelessWidget {
   final double progress;
@@ -937,7 +936,7 @@ class _StarProgressBar extends StatelessWidget {
   }
 }
 
-// ── Play Header (Matches home_screen EXACTLY for seamless Hero) ───────────────
+// ── Play Header ───────────────────────────────────────────────────────────────
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
@@ -987,6 +986,7 @@ class _PlayHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ── Title row — collapses to 0 in compact mode ──
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
@@ -1023,8 +1023,9 @@ class _PlayHeader extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // ── Star row — always 38px ──
                   SizedBox(
-                    height: 50,
+                    height: 38,
                     child: Padding(
                       padding:
                           const EdgeInsets.symmetric(horizontal: 12),
