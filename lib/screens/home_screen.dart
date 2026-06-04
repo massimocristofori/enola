@@ -18,7 +18,6 @@ import 'package:enola/services/training_service.dart';
 
 import 'package:drift/drift.dart' as drift_orm;
 
-
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -195,15 +194,13 @@ class _MapCard extends ConsumerWidget {
   }
 
   Future<void> _toggleTraining(BuildContext context) async {
-    final isActive =
-        await TrainingService.instance.isTrainingActive(map.id);
+    final isActive = await TrainingService.instance.isTrainingActive(map.id);
 
     if (isActive) {
       await TrainingService.instance.stopTraining(map.id);
       return;
     }
 
-    // Need riddles to start training
     final riddles = await (DriftService.instance.db.select(
       DriftService.instance.db.riddles,
     )..where((t) => t.mapId.equals(map.id)))
@@ -255,88 +252,96 @@ class _MapCard extends ConsumerWidget {
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
     final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
 
-    return StreamBuilder<TrainingSession?>(
-      stream: (DriftService.instance.db.select(
-        DriftService.instance.db.trainingSessions,
-      )
-            ..where((t) => t.mapId.equals(map.id))
-            ..where((t) => t.completedAt.isNull())
-            ..orderBy([
-              (t) => drift_orm.OrderingTerm.desc(t.startedAt),
-            ])
-            ..limit(1))
-          .watchSingleOrNull(),
-      builder: (context, trainingSnap) {
-        // A session row exists but may be expired — treat expired as off
-        final rawSession = trainingSnap.data;
-        final isTrainingOn = rawSession != null &&
-            DateTime.now().isBefore(rawSession.endsAt);
-
-        return GestureDetector(
-          onTap: () => _openPlay(context),
-          child: Hero(
-            tag: 'map-card-${map.id}',
-            flightShuttleBuilder: (_, animation, __, ___, ____) {
-              return AnimatedBuilder(
-                animation: animation,
-                builder: (context, _) {
-                  final imageHeightFactor =
-                      (1.0 - animation.value).clamp(0.0, 1.0);
-
-                  return SizedBox.expand(
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(25),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: ClipRect(
-                                child: Align(
-                                  alignment: Alignment.topCenter,
-                                  heightFactor: imageHeightFactor,
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(8)),
-                                    child: imageBytes != null
-                                        ? Image.memory(imageBytes,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity)
-                                        : Image.asset(
-                                            'assets/images/0.jpeg',
-                                            fit: BoxFit.cover,
-                                            width: double.infinity),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            _CardInfoBar(
-                              title: map.title,
-                              achievedStars: achievedStars,
-                              maxStars: maxStars,
-                              hasBeenPlayed: hasBeenPlayed,
-                              isComplete: isComplete,
-                            ),
-                          ],
+    // The flightShuttleBuilder is defined here, outside StreamBuilder,
+    // so it captures only stable values and never rebuilds mid-flight.
+    Widget flightShuttle(
+      BuildContext flightContext,
+      Animation<double> animation,
+      HeroFlightDirection flightDirection,
+      BuildContext fromHeroContext,
+      BuildContext toHeroContext,
+    ) {
+      return AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final imageHeightFactor =
+              (1.0 - animation.value).clamp(0.0, 1.0);
+          return SizedBox.expand(
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: imageHeightFactor,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(8)),
+                            child: imageBytes != null
+                                ? Image.memory(imageBytes,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity)
+                                : Image.asset(
+                                    'assets/images/0.jpeg',
+                                    fit: BoxFit.cover,
+                                    width: double.infinity),
+                          ),
                         ),
                       ),
                     ),
-                  );
-                },
-              );
-            },
-            child: Stack(
+                    _CardInfoBar(
+                      title: map.title,
+                      achievedStars: achievedStars,
+                      maxStars: maxStars,
+                      hasBeenPlayed: hasBeenPlayed,
+                      isComplete: isComplete,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => _openPlay(context),
+      child: Hero(
+        tag: 'map-card-${map.id}',
+        flightShuttleBuilder: flightShuttle,
+        child: StreamBuilder<TrainingSession?>(
+          stream: (DriftService.instance.db.select(
+            DriftService.instance.db.trainingSessions,
+          )
+                ..where((t) => t.mapId.equals(map.id))
+                ..where((t) => t.completedAt.isNull())
+                ..orderBy([
+                  (t) => drift_orm.OrderingTerm.desc(t.startedAt),
+                ])
+                ..limit(1))
+              .watchSingleOrNull(),
+          builder: (context, trainingSnap) {
+            final rawSession = trainingSnap.data;
+            final isTrainingOn = rawSession != null &&
+                DateTime.now().isBefore(rawSession.endsAt);
+
+            return Stack(
               clipBehavior: Clip.none,
               children: [
                 _CardShell(
@@ -375,10 +380,10 @@ class _MapCard extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -403,7 +408,7 @@ class _RankRibbonOverlay extends StatelessWidget {
     return Center(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 5), // was 10
+        padding: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -467,7 +472,6 @@ class _StarProgressBar extends StatelessWidget {
             alignment: Alignment.centerLeft,
             clipBehavior: Clip.none,
             children: [
-              // Background track
               Container(
                 height: barHeight,
                 decoration: BoxDecoration(
@@ -477,7 +481,6 @@ class _StarProgressBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              // Fill track
               if (progress > 0)
                 Container(
                   height: barHeight,
@@ -487,7 +490,6 @@ class _StarProgressBar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              // Thumb
               Positioned(
                 left: leftOffset,
                 child: Container(
@@ -595,7 +597,6 @@ class _CardInfoBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Title rectangle ──
           Container(
             height: 38,
             padding:
@@ -621,7 +622,6 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
-          // ── Progress bar row ──
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
             child: Row(
