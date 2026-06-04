@@ -346,7 +346,8 @@ class _RankRibbonOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: double.infinity,
+        // 6px wider on each side than the card
+        margin: const EdgeInsets.symmetric(horizontal: -6),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -367,12 +368,18 @@ class _RankRibbonOverlay extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(
-          _rankEmoji(starRatio),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 42,
-            color: Colors.white,
+        child: ColorFiltered(
+          colorFilter: const ColorFilter.matrix(<double>[
+            // Desaturate fully then push to white
+            0.33, 0.33, 0.33, 0, 180,
+            0.33, 0.33, 0.33, 0, 180,
+            0.33, 0.33, 0.33, 0, 180,
+            0,    0,    0,    1, 0,
+          ]),
+          child: Text(
+            _rankEmoji(starRatio),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 42),
           ),
         ),
       ),
