@@ -12,7 +12,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 enum NodeStatus { completed, current, locked }
 
-class TreasureMapPath extends ConsumerWidget {
+// ── Treasure map path ─────────────────────────────────────────────────────────
+
+class TreasureMapPath extends ConsumerStatefulWidget {
   final List<Riddle> riddles;
   final String mapId;
   final VoidCallback? onCurrentNodeTap;
@@ -37,26 +39,104 @@ class TreasureMapPath extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TreasureMapPath> createState() => _TreasureMapPathState();
+}
+
+class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fogController;
+  late Animation<double> _fogAnimation;
+  double _fogTargetFraction = 0.0;
+  double _fogCurrentFraction = 0.0;
+  final GlobalKey _columnKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _fogController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _fogAnimation = CurvedAnimation(
+      parent: _fogController,
+      curve: Curves.easeInOut,
+    );
+    _fogAnimation.addListener(() {
+      setState(() {
+        _fogCurrentFraction = _fogStartFraction +
+            (_fogTargetFraction - _fogStartFraction) *
+                _fogAnimation.value;
+      });
+    });
+  }
+
+  double _fogStartFraction = 0.0;
+
+  void _animateFogTo(double target) {
+    _fogStartFraction = _fogCurrentFraction;
+    _fogTargetFraction = target;
+    _fogController.forward(from: 0.0);
+  }
+
+  // Fraction of the column height at which the fog top edge sits.
+  // We want it to sit just below the "visible ahead" threshold.
+  // visibleAhead = 2 means we show current + 1 locked node before fog.
+  double _computeFogFraction(int lastCompleted, int total) {
+    if (total == 0) return 0.0;
+    // Each node row is 1/total of the column height.
+    // We reveal up to lastCompleted + 1 (current) + 1 (preview) = lastCompleted + 2.5
+    // The +0.5 gives a half-row buffer so the fog starts mid-row,
+    // making the next clouded node peek out from the fog edge.
+    const double visibleAhead = 2.5;
+    final double revealedRows = (lastCompleted + visibleAhead).clamp(0.0, total.toDouble());
+    return revealedRows / total;
+  }
+
+  @override
+  void didUpdateWidget(TreasureMapPath old) {
+    super.didUpdateWidget(old);
+    final int lastCompleted = widget.lastCompletedIndex ?? -1;
+    final int oldLastCompleted = old.lastCompletedIndex ?? -1;
+    if (lastCompleted != oldLastCompleted) {
+      final target = _computeFogFraction(lastCompleted, widget.riddles.length);
+      _animateFogTo(target);
+    }
+  }
+
+  @override
+  void dispose() {
+    _fogController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context, ) {
     final int lastCompleted;
-    if (lastCompletedIndex != null) {
-      lastCompleted = lastCompletedIndex!;
+    if (widget.lastCompletedIndex != null) {
+      lastCompleted = widget.lastCompletedIndex!;
     } else {
-      final sessionAsync = ref.watch(latestSessionProvider(mapId));
+      final sessionAsync = ref.watch(latestSessionProvider(widget.mapId));
       lastCompleted = sessionAsync.valueOrNull?.lastCompletedIndex ?? -1;
     }
 
-    // Nodes at index <= lastCompleted + 2 are visible (completed, current, next-preview)
-    // Everything beyond is clouded
+    // Compute initial fog fraction (no animation on first build)
+    final initialFog = _computeFogFraction(lastCompleted, widget.riddles.length);
+    if (_fogController.isDismissed && _fogCurrentFraction == 0.0 && initialFog > 0.0) {
+      // Sync without animation on first build
+      _fogCurrentFraction = initialFog;
+      _fogTargetFraction = initialFog;
+      _fogStartFraction = initialFog;
+    }
+
     const int visibleAhead = 2;
 
-    return Column(
-      children: List.generate(riddles.length, (index) {
+    final nodeColumn = Column(
+      key: _columnKey,
+      children: List.generate(widget.riddles.length, (index) {
         final isEvenRow = index % 2 == 0;
-        final isLast = index == riddles.length - 1;
+        final isLast = index == widget.riddles.length - 1;
         final isCompleted = index <= lastCompleted;
         final isCurrent = index == lastCompleted + 1;
-        final isClouded = index > lastCompleted + visibleAhead;
 
         final status = isCompleted
             ? NodeStatus.completed
@@ -64,24 +144,25 @@ class TreasureMapPath extends ConsumerWidget {
                 ? NodeStatus.current
                 : NodeStatus.locked;
 
-        final stars = index < riddleStars.length ? riddleStars[index] : 0;
+        final stars = index < widget.riddleStars.length
+            ? widget.riddleStars[index]
+            : 0;
 
-        nodeKeys.putIfAbsent(index, () => GlobalKey());
+        widget.nodeKeys.putIfAbsent(index, () => GlobalKey());
 
         final nodeWidget = _RiddleNode(
-          key: nodeKeys[index],
+          key: widget.nodeKeys[index],
           riddleIndex: index,
           index: index + 1,
           status: status,
           stars: stars,
-          imageBytes: imageBytes,
-          immediateActivation: immediateActivation,
-          isClouded: isClouded,
-          onTap: isCurrent && onCurrentNodeTap != null
-              ? onCurrentNodeTap
+          imageBytes: widget.imageBytes,
+          immediateActivation: widget.immediateActivation,
+          onTap: isCurrent && widget.onCurrentNodeTap != null
+              ? widget.onCurrentNodeTap
               : null,
-          onCompletedTap: isCompleted && onCompletedNodeTap != null
-              ? () => onCompletedNodeTap!(index)
+          onCompletedTap: isCompleted && widget.onCompletedNodeTap != null
+              ? () => widget.onCompletedNodeTap!(index)
               : null,
         );
 
@@ -134,7 +215,153 @@ class TreasureMapPath extends ConsumerWidget {
         );
       }),
     );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Total column height = riddles.length * 110px per row
+        final double totalHeight = widget.riddles.length * 110.0;
+        final double fogTopY = totalHeight * _fogCurrentFraction;
+
+        return Stack(
+          children: [
+            nodeColumn,
+            // Fog overlay — covers from fogTopY downward
+            Positioned(
+              top: fogTopY,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _FogBankPainter(),
+                  size: Size(constraints.maxWidth, totalHeight - fogTopY),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
+}
+
+// ── Fog bank painter ──────────────────────────────────────────────────────────
+
+class _FogBankPainter extends CustomPainter {
+  const _FogBankPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // ── 1. Solid fog body (bottom ~85% of the fog area) ──────────────────────
+    final bodyPaint = Paint()
+      ..color = const Color(0xFFF1F6FC)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height * 0.18, size.width, size.height * 0.82),
+      bodyPaint,
+    );
+
+    // ── 2. Gradient fade from transparent → solid (top 25%) ─────────────────
+    final fadePaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0x00F1F6FC),
+          Color(0xFFF1F6FC),
+        ],
+        stops: [0.0, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.35));
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height * 0.35),
+      fadePaint,
+    );
+
+    // ── 3. Cloud puff row along the top edge ─────────────────────────────────
+    _drawCloudRow(canvas, size);
+  }
+
+  void _drawCloudRow(Canvas canvas, Size size) {
+    // We paint a horizontal row of cloud puffs that sits right at the fog edge.
+    // Using a fixed seed so the puffs are stable (don't re-randomise on repaint).
+    final rng = math.Random(42);
+
+    // Shadow layer
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFCCDDEE).withValues(alpha: 0.45)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+
+    // Fill
+    final fillPaint = Paint()
+      ..color = const Color(0xFFF1F6FC)
+      ..style = PaintingStyle.fill;
+
+    // Stroke
+    final strokePaint = Paint()
+      ..color = const Color(0xFFBBCCDD).withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    // Lay out cloud clusters across the full width
+    double x = -20;
+    while (x < size.width + 40) {
+      final clusterWidth = 60.0 + rng.nextDouble() * 60.0;
+      final baseR = 22.0 + rng.nextDouble() * 18.0;
+      final cy = size.height * 0.04 + rng.nextDouble() * 8.0;
+
+      _drawCloudCluster(
+        canvas,
+        center: Offset(x + clusterWidth / 2, cy),
+        baseRadius: baseR,
+        shadowPaint: shadowPaint,
+        fillPaint: fillPaint,
+        strokePaint: strokePaint,
+        rng: rng,
+      );
+
+      x += clusterWidth * 0.75; // overlap clusters slightly
+    }
+  }
+
+  void _drawCloudCluster(
+    Canvas canvas, {
+    required Offset center,
+    required double baseRadius,
+    required Paint shadowPaint,
+    required Paint fillPaint,
+    required Paint strokePaint,
+    required math.Random rng,
+  }) {
+    final puffs = [
+      Offset(0, 0),
+      Offset(-baseRadius * 0.6, baseRadius * 0.2),
+      Offset(baseRadius * 0.6, baseRadius * 0.2),
+      Offset(-baseRadius * 0.3, -baseRadius * 0.4),
+      Offset(baseRadius * 0.3, -baseRadius * 0.4),
+      Offset(0, -baseRadius * 0.55),
+    ];
+    final radii = [
+      baseRadius,
+      baseRadius * 0.70,
+      baseRadius * 0.70,
+      baseRadius * 0.55,
+      baseRadius * 0.55,
+      baseRadius * 0.48,
+    ];
+
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], radii[i], shadowPaint);
+    }
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], radii[i], fillPaint);
+    }
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], radii[i], strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FogBankPainter old) => false;
 }
 
 // ── Node ──────────────────────────────────────────────────────────────────────
@@ -148,7 +375,6 @@ class _RiddleNode extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onCompletedTap;
   final bool immediateActivation;
-  final bool isClouded;
 
   const _RiddleNode({
     super.key,
@@ -160,7 +386,6 @@ class _RiddleNode extends StatefulWidget {
     this.onTap,
     this.onCompletedTap,
     this.immediateActivation = false,
-    this.isClouded = false,
   });
 
   @override
@@ -168,37 +393,19 @@ class _RiddleNode extends StatefulWidget {
 }
 
 class _RiddleNodeState extends State<_RiddleNode>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
-  late final AnimationController _cloudReveal;
-  late final Animation<double> _cloudOpacity;
   bool _isReached = false;
-  bool _wasClouded = false;
 
   @override
   void initState() {
     super.initState();
-
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
       lowerBound: 0.92,
       upperBound: 1.08,
     );
-
-    _wasClouded = widget.isClouded;
-
-    _cloudReveal = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-      value: widget.isClouded ? 1.0 : 0.0,
-    );
-
-    _cloudOpacity = CurvedAnimation(
-      parent: _cloudReveal,
-      curve: Curves.easeOut,
-    );
-
     _checkActivation();
   }
 
@@ -225,28 +432,14 @@ class _RiddleNodeState extends State<_RiddleNode>
   @override
   void didUpdateWidget(_RiddleNode old) {
     super.didUpdateWidget(old);
-
     if (widget.status != old.status) {
       _checkActivation();
-    }
-
-    // Cloud was showing, now it should disappear → animate out
-    if (_wasClouded && !widget.isClouded) {
-      _wasClouded = false;
-      // Small delay so the node "appears" just after the previous one is solved
-      Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted) _cloudReveal.reverse();
-      });
-    } else if (!_wasClouded && widget.isClouded) {
-      _wasClouded = true;
-      _cloudReveal.forward();
     }
   }
 
   @override
   void dispose() {
     _pulse.dispose();
-    _cloudReveal.dispose();
     super.dispose();
   }
 
@@ -274,30 +467,12 @@ class _RiddleNodeState extends State<_RiddleNode>
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
-              // ── Node box ───────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
                 child: _buildBox(isCompleted, isCurrentReached, isLocked),
               ),
               if (isCompleted)
                 Positioned(top: 0, child: _StarsRow(stars: widget.stars)),
-
-              // ── Cloud overlay ──────────────────────────────────────
-              Positioned.fill(
-                child: FadeTransition(
-                  opacity: _cloudOpacity,
-                  child: IgnorePointer(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: CustomPaint(
-                        painter: _CloudPainter(
-                          seed: widget.riddleIndex,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -385,104 +560,6 @@ class _RiddleNodeState extends State<_RiddleNode>
       ),
     );
   }
-}
-
-// ── Cloud Painter ─────────────────────────────────────────────────────────────
-
-class _CloudPainter extends CustomPainter {
-  final int seed;
-
-  const _CloudPainter({required this.seed});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rng = math.Random(seed * 7 + 3);
-
-    // Each cloud is a cluster of overlapping circles
-    // We paint 2 cloud puffs to fill the node area generously
-    _drawCloud(
-      canvas,
-      center: Offset(
-        size.width * (0.35 + rng.nextDouble() * 0.15),
-        size.height * (0.52 + rng.nextDouble() * 0.08),
-      ),
-      scale: 0.78 + rng.nextDouble() * 0.18,
-      size: size,
-      rng: rng,
-    );
-
-    _drawCloud(
-      canvas,
-      center: Offset(
-        size.width * (0.52 + rng.nextDouble() * 0.15),
-        size.height * (0.44 + rng.nextDouble() * 0.12),
-      ),
-      scale: 0.62 + rng.nextDouble() * 0.2,
-      size: size,
-      rng: rng,
-    );
-  }
-
-  void _drawCloud(
-    Canvas canvas, {
-    required Offset center,
-    required double scale,
-    required Size size,
-    required math.Random rng,
-  }) {
-    final baseRadius = size.shortestSide * 0.28 * scale;
-
-    // Shadow / depth layer
-    final shadowPaint = Paint()
-      ..color = const Color(0xFFDDE8F5).withValues(alpha: 0.55)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-
-    // Main cloud fill
-    final fillPaint = Paint()
-      ..color = const Color(0xFFEEF4FB)
-      ..style = PaintingStyle.fill;
-
-    // Slight border for definition
-    final strokePaint = Paint()
-      ..color = const Color(0xFFCCDDEE).withValues(alpha: 0.7)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    // Puff offsets — classic cloud silhouette
-    final puffs = [
-      Offset(0, 0),
-      Offset(-baseRadius * 0.55, baseRadius * 0.15),
-      Offset(baseRadius * 0.55, baseRadius * 0.15),
-      Offset(-baseRadius * 0.28, -baseRadius * 0.38),
-      Offset(baseRadius * 0.28, -baseRadius * 0.38),
-    ];
-
-    final radii = [
-      baseRadius,
-      baseRadius * 0.72,
-      baseRadius * 0.72,
-      baseRadius * 0.58,
-      baseRadius * 0.58,
-    ];
-
-    // Shadow pass
-    for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], radii[i], shadowPaint);
-    }
-
-    // Fill pass
-    for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], radii[i], fillPaint);
-    }
-
-    // Stroke pass (only outer edge puffs)
-    for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], radii[i], strokePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_CloudPainter old) => old.seed != seed;
 }
 
 // ── Stars row ─────────────────────────────────────────────────────────────────
