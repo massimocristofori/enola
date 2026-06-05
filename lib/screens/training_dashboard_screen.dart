@@ -17,7 +17,6 @@ class TrainingDashboardScreen extends StatefulWidget {
 }
 
 class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
-  // Cached futures so they don't rebuild on every stream tick
   late Future<int> _streakFuture;
   late Future<Map<String, MasteryProgress>> _masteryFuture;
 
@@ -39,7 +38,6 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // Always navigate to home on back
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
@@ -57,13 +55,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text('Training'),
-            backgroundColor: Colors.transparent,
-            foregroundColor: EnolaTheme.textPrimary,
-            elevation: 0,
-            automaticallyImplyLeading: false, // Removes the top back button
-          ),
+          // No AppBar — header is inline in the scroll view
           floatingActionButton: _BackFab(
             onTap: () {
               Navigator.of(context)
@@ -71,106 +63,112 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
             },
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-          body: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: StreamBuilder<List<TrainingRiddleItem>>(
-                stream: DriftService.instance.watchAllTrainingRiddles(),
-                builder: (context, snapshot) {
-                  final allItems = snapshot.data ?? [];
+          body: SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: StreamBuilder<List<TrainingRiddleItem>>(
+                  stream: DriftService.instance.watchAllTrainingRiddles(),
+                  builder: (context, snapshot) {
+                    final allItems = snapshot.data ?? [];
 
-                  final failed = allItems
-                      .where((i) => i.status == TrainingRiddleStatus.failedNotified)
-                      .toList();
-                  final pending = allItems
-                      .where((i) => i.status == TrainingRiddleStatus.pendingNotified)
-                      .toList();
-                  final upcoming = allItems
-                      .where((i) => i.status == TrainingRiddleStatus.notYetNotified)
-                      .toList();
+                    final failed = allItems
+                        .where((i) => i.status == TrainingRiddleStatus.failedNotified)
+                        .toList();
+                    final pending = allItems
+                        .where((i) => i.status == TrainingRiddleStatus.pendingNotified)
+                        .toList();
+                    final upcoming = allItems
+                        .where((i) => i.status == TrainingRiddleStatus.notYetNotified)
+                        .toList();
 
-                  final activeCount = failed.length + pending.length;
+                    final activeCount = failed.length + pending.length;
 
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      setState(() => _refreshSummary());
-                    },
-                    child: CustomScrollView(
-                      slivers: [
-                        // ── Summary header ──────────────────────────────
-                        SliverToBoxAdapter(
-                          child: FutureBuilder<(int, Map<String, MasteryProgress>)>(
-                            future: Future.wait([_streakFuture, _masteryFuture])
-                                .then((r) => (
-                                      r[0] as int,
-                                      r[1] as Map<String, MasteryProgress>,
-                                    )),
-                            builder: (context, snap) {
-                              final streak = snap.data?.$1 ?? 0;
-                              final mastery = snap.data?.$2 ?? {};
-                              return _SummaryHeader(
-                                streak: streak,
-                                mastery: mastery,
-                              );
-                            },
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        setState(() => _refreshSummary());
+                      },
+                      child: CustomScrollView(
+                        slivers: [
+                          // ── Inline header (mirrors HomeScreen) ──────────
+                          const SliverToBoxAdapter(
+                            child: _DashboardHeader(),
                           ),
-                        ),
 
-                        // ── Empty state ─────────────────────────────────
-                        if (allItems.isEmpty)
-                          const SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _EmptyPendingState(),
-                          )
-                        else ...[
-
-                          // ── "Waiting for you" section ────────────────
-                          if (failed.isNotEmpty || pending.isNotEmpty) ...[
-                            _sectionHeader('Waiting for you', activeCount),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final item = [...failed, ...pending][index];
-                                  return _RiddleCard(
-                                    item: item,
-                                    index: index,
-                                    onTap: () => openTrainingRiddle(
-                                      item.mapId,
-                                      item.riddle.id,
-                                    ),
-                                  );
-                                },
-                                childCount: failed.length + pending.length,
-                              ),
+                          // ── Summary header ───────────────────────────────
+                          SliverToBoxAdapter(
+                            child: FutureBuilder<(int, Map<String, MasteryProgress>)>(
+                              future: Future.wait([_streakFuture, _masteryFuture])
+                                  .then((r) => (
+                                        r[0] as int,
+                                        r[1] as Map<String, MasteryProgress>,
+                                      )),
+                              builder: (context, snap) {
+                                final streak = snap.data?.$1 ?? 0;
+                                final mastery = snap.data?.$2 ?? {};
+                                return _SummaryHeader(
+                                  streak: streak,
+                                  mastery: mastery,
+                                );
+                              },
                             ),
-                          ],
+                          ),
 
-                          // ── "Coming up" section ──────────────────────
-                          if (upcoming.isNotEmpty) ...[
-                            _sectionHeader('Coming up', null),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final item = upcoming[index];
-                                  return _RiddleCard(
-                                    item: item,
-                                    index: index,
-                                    onTap: null,
-                                  );
-                                },
-                                childCount: upcoming.length,
+                          // ── Empty state ──────────────────────────────────
+                          if (allItems.isEmpty)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _EmptyPendingState(),
+                            )
+                          else ...[
+
+                            // ── "Waiting for you" section ────────────────
+                            if (failed.isNotEmpty || pending.isNotEmpty) ...[
+                              _sectionHeader('Waiting for you', activeCount),
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final item = [...failed, ...pending][index];
+                                    return _RiddleCard(
+                                      item: item,
+                                      index: index,
+                                      onTap: () => openTrainingRiddle(
+                                        item.mapId,
+                                        item.riddle.id,
+                                      ),
+                                    );
+                                  },
+                                  childCount: failed.length + pending.length,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
 
-                          // Added extra padding so the FAB doesn't cover the last item
-                          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                            // ── "Coming up" section ──────────────────────
+                            if (upcoming.isNotEmpty) ...[
+                              _sectionHeader('Coming up', null),
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final item = upcoming[index];
+                                    return _RiddleCard(
+                                      item: item,
+                                      index: index,
+                                      onTap: null,
+                                    );
+                                  },
+                                  childCount: upcoming.length,
+                                ),
+                              ),
+                            ],
+
+                            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                          ],
                         ],
-                      ],
-                    ),
-                  );
-                },
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -208,6 +206,44 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
         ),
       ),
     );
+  }
+}
+
+// ── Dashboard Header (mirrors _Header in HomeScreen) ─────────────────────────
+
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Training Dashboard',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: EnolaTheme.textPrimary,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Tap a riddle to keep the momentum going',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: EnolaTheme.textSecond,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.15, end: 0);
   }
 }
 
@@ -415,7 +451,6 @@ class _RiddleCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        // Blur the question text when disabled
                         child: isDisabled
                             ? ImageFiltered(
                                 imageFilter: ImageFilter.blur(
@@ -561,8 +596,7 @@ class _BackFab extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
