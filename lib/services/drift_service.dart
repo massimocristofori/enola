@@ -359,35 +359,35 @@ class DriftService {
         .get();
   }
 
-/// Consecutive correct answers across active sessions only, most recent first.
-Future<int> getTrainingStreak() async {
-  final activeSessions = await (db.select(db.trainingSessions)
-        ..where((t) => t.completedAt.isNull()))
-      .get();
+  /// Consecutive correct answers across active sessions only, most recent first.
+  Future<int> getTrainingStreak() async {
+    final activeSessions = await (db.select(db.trainingSessions)
+          ..where((t) => t.completedAt.isNull()))
+        .get();
 
-  final now = DateTime.now();
-  final activeIds = activeSessions
-      .where((s) => now.isBefore(s.endsAt))
-      .map((s) => s.id)
-      .toList();
+    final now = DateTime.now();
+    final activeIds = activeSessions
+        .where((s) => now.isBefore(s.endsAt))
+        .map((s) => s.id)
+        .toList();
 
-  if (activeIds.isEmpty) return 0;
+    if (activeIds.isEmpty) return 0;
 
-  final attempts = await (db.select(db.trainingAttempts)
-        ..where((t) => t.sessionId.isIn(activeIds))
-        ..orderBy([(t) => OrderingTerm.desc(t.answeredAt)]))
-      .get();
+    final attempts = await (db.select(db.trainingAttempts)
+          ..where((t) => t.sessionId.isIn(activeIds))
+          ..orderBy([(t) => OrderingTerm.desc(t.answeredAt)]))
+        .get();
 
-  int streak = 0;
-  for (final attempt in attempts) {
-    if (attempt.correct) {
-      streak++;
-    } else {
-      break;
+    int streak = 0;
+    for (final attempt in attempts) {
+      if (attempt.correct) {
+        streak++;
+      } else {
+        break;
+      }
     }
+    return streak;
   }
-  return streak;
-}
 
   Future<Map<String, _MasteryProgress>> getMasteryPerMap() async {
     final sessions = await (db.select(db.trainingSessions)
@@ -424,6 +424,9 @@ Future<int> getTrainingStreak() async {
   /// Streams all riddles across all active training sessions, classified by
   /// status. Order: failedNotified → pendingNotified → notYetNotified.
   /// Riddles answered correctly are excluded (their notified row is deleted).
+  /// Riddles whose scheduled slot has already fired are auto-inserted into
+  /// TrainingNotifiedRiddles so they appear as actionable even if the user
+  /// never tapped the notification.
   Stream<List<TrainingRiddleItem>> watchAllTrainingRiddles() {
     final notifiedStream = watchPendingNotifiedRiddles();
     final sessionsStream = (db.select(db.trainingSessions)
@@ -445,14 +448,37 @@ Future<int> getTrainingStreak() async {
 
       if (activeSessions.isEmpty) return [];
 
+      // ── Auto-insert any past-due slots that were never tapped ────────────
+      // This covers the case where the notification fired but the user
+      // opened the app directly instead of tapping the notification banner.
+      final alreadyNotifiedIds = latestNotified.map((p) => p.riddle.id).toSet();
+
+      for (final session in activeSessions) {
+        final slots = _parseSlotsJson(session.scheduledJson);
+        for (final slot in slots) {
+          if (slot.scheduledAt.isBefore(now) &&
+              !alreadyNotifiedIds.contains(slot.riddleId)) {
+            await insertNotifiedRiddle(
+              sessionId: session.id,
+              mapId: session.mapId,
+              riddleId: slot.riddleId,
+            );
+            // Add to the local set so subsequent slots in this same
+            // compute() pass don't insert the same riddle twice.
+            alreadyNotifiedIds.add(slot.riddleId);
+            // Refresh latestNotified so the status logic below sees it.
+            latestNotified = await watchPendingNotifiedRiddles().first;
+          }
+        }
+      }
+
       final items = <TrainingRiddleItem>[];
 
       final notifiedMap = {
         for (final p in latestNotified) p.riddle.id: p,
       };
 
-      // Collect all riddle IDs that have at least one wrong attempt,
-      // across all active sessions
+      // Collect all riddle IDs that have at least one wrong attempt
       final wrongAttemptRiddleIds = <int>{};
       for (final session in activeSessions) {
         final attempts = await (db.select(db.trainingAttempts)
@@ -550,6 +576,16 @@ Future<int> getTrainingStreak() async {
       return [];
     }
   }
+
+  List<TrainingSlot> _parseSlotsJson(String json) {
+    try {
+      return (jsonDecode(json) as List)
+          .map((e) => TrainingSlot.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 // ── Supporting data classes ───────────────────────────────────────────────────
@@ -603,4 +639,24 @@ class TrainingRiddleItem {
     required this.status,
     this.notifiedAt,
   });
+}
+
+// ── Training slot (mirrors TrainingService) ───────────────────────────────────
+
+class TrainingSlot {
+  final int riddleId;
+  final DateTime scheduledAt;
+  final int notificationId;
+
+  const TrainingSlot({
+    required this.riddleId,
+    required this.scheduledAt,
+    required this.notificationId,
+  });
+
+  factory TrainingSlot.fromJson(Map<String, dynamic> json) => TrainingSlot(
+        riddleId: json['riddleId'] as int,
+        scheduledAt: DateTime.parse(json['scheduledAt'] as String),
+        notificationId: json['notificationId'] as int,
+      );
 }
