@@ -43,20 +43,14 @@ class TreasureMapPath extends ConsumerStatefulWidget {
 }
 
 class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
 
-  // Fog slide animation
   late AnimationController _fogSlideController;
   late Animation<double> _fogSlideAnimation;
 
-  // Fog shimmer / pulse animation (looping, gives the mist a living feel)
-  late AnimationController _fogPulseController;
-  late Animation<double> _fogPulseAnimation;
-
   double _fogFromFraction = 0.0;
-  double _fogToFraction = 0.0;
+  double _fogToFraction   = 0.0;
 
-  // The currently displayed fraction (lerped by the slide animation)
   double get _fogFraction =>
       _fogFromFraction +
       (_fogToFraction - _fogFromFraction) * _fogSlideAnimation.value;
@@ -74,21 +68,12 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
       curve: Curves.easeInOutCubic,
     )..addListener(() => setState(() {}));
 
-    _fogPulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3200),
-    )..repeat(reverse: true);
-    _fogPulseAnimation = CurvedAnimation(
-      parent: _fogPulseController,
-      curve: Curves.easeInOut,
-    )..addListener(() => setState(() {}));
-
-    // Initialise fog position without animation
+    // Initialise without animation
     final lastCompleted = widget.lastCompletedIndex ?? -1;
     final initial = _computeFogFraction(lastCompleted, widget.riddles.length);
     _fogFromFraction = initial;
-    _fogToFraction = initial;
-    _fogSlideController.value = 1.0; // already "at destination"
+    _fogToFraction   = initial;
+    _fogSlideController.value = 1.0;
   }
 
   @override
@@ -96,18 +81,15 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
     super.didUpdateWidget(old);
 
     final newLast = widget.lastCompletedIndex ?? -1;
-    final oldLast = old.lastCompletedIndex ?? -1;
+    final oldLast = old.lastCompletedIndex    ?? -1;
 
     if (newLast != oldLast) {
-      final target =
-          _computeFogFraction(newLast, widget.riddles.length);
-
-      // Snapshot where we are right now, animate to new target.
-      // Delay ~1 s so the node unlock + dot fill animations play first.
+      final target = _computeFogFraction(newLast, widget.riddles.length);
       _fogFromFraction = _fogFraction;
-      _fogToFraction = target;
+      _fogToFraction   = target;
       _fogSlideController.value = 0.0;
 
+      // Wait for node-unlock + dot-fill animations (~800–2000 ms) then reveal
       Future.delayed(const Duration(milliseconds: 1000), () {
         if (mounted) _fogSlideController.forward();
       });
@@ -117,15 +99,14 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
   @override
   void dispose() {
     _fogSlideController.dispose();
-    _fogPulseController.dispose();
     super.dispose();
   }
 
-  /// Each row is 110 px tall. We reveal up to lastCompleted + 2.5 rows
-  /// (current node + one preview node + half a row buffer so the fog
-  /// bisects the first hidden row, giving a "peek from the mist" effect).
   double _computeFogFraction(int lastCompleted, int total) {
-    if (total == 0) return 0.0;
+    if (total == 0) return 1.0;
+    // At the last node (lastCompleted == total - 1) return 1.0 → fog gone
+    if (lastCompleted >= total - 1) return 1.0;
+    // Show current + 1 preview node, then fog starts mid-way into the next row
     const double visibleAhead = 2.5;
     final double revealedRows =
         (lastCompleted + visibleAhead).clamp(0.0, total.toDouble());
@@ -144,10 +125,10 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 
     final nodeColumn = Column(
       children: List.generate(widget.riddles.length, (index) {
-        final isEvenRow = index % 2 == 0;
-        final isLast = index == widget.riddles.length - 1;
+        final isEvenRow  = index % 2 == 0;
+        final isLast     = index == widget.riddles.length - 1;
         final isCompleted = index <= lastCompleted;
-        final isCurrent = index == lastCompleted + 1;
+        final isCurrent   = index == lastCompleted + 1;
 
         final status = isCompleted
             ? NodeStatus.completed
@@ -176,9 +157,13 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
               : null,
         );
 
+        // Dot at position `index` connects row `index` → row `index+1`.
+        // It should be filled once row `index` is completed.
         final dotsWidget = isLast
             ? const SizedBox.shrink()
             : _DotConnector(
+                // Explicit key so Flutter never reuses state across positions
+                key: ValueKey('dot-$index'),
                 isUnlocked: isCompleted,
                 isEvenRow: isEvenRow,
                 seed: index,
@@ -229,24 +214,20 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
     return LayoutBuilder(
       builder: (context, constraints) {
         final double totalHeight = widget.riddles.length * 110.0;
-        final double fogTopY = totalHeight * _fogFraction;
-        final double availableHeight = totalHeight - fogTopY;
+        final double fogTopY     = totalHeight * _fogFraction;
 
         return Stack(
           children: [
             nodeColumn,
-            if (availableHeight > 0)
+            if (_fogFraction < 1.0)
               Positioned(
                 top: fogTopY,
                 left: 0,
                 right: 0,
-                // Extend below the column so fog always fills to screen bottom
-                bottom: -400,
+                bottom: -400, // extend well below so fog fills scroll area
                 child: IgnorePointer(
                   child: CustomPaint(
-                    painter: _FogBankPainter(
-                      pulse: _fogPulseAnimation.value,
-                    ),
+                    painter: const _FogBankPainter(),
                   ),
                 ),
               ),
@@ -260,93 +241,98 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 // ── Fog bank painter ──────────────────────────────────────────────────────────
 
 class _FogBankPainter extends CustomPainter {
-  final double pulse; // 0.0 – 1.0, drives subtle shimmer
+  const _FogBankPainter();
 
-  const _FogBankPainter({required this.pulse});
-
-  // Fog colour palette — deep RPG purple-blue mist
-  static const Color _fogDeep = Color(0xFF1A1F3A);      // darkest core
-  static const Color _fogMid = Color(0xFF2E3560);       // mid body
-  static const Color _fogEdge = Color(0xFF4A5490);      // lighter wisps
-  static const Color _fogGlow = Color(0xFF6B7DB8);      // shimmer highlight
+  // All whites / very light greys so the fog contrasts with the #F1F4F8 bg
+  static const Color _fogSolid    = Color(0xFFFFFFFF);
+  static const Color _fogNearSolid = Color(0xFFF8FAFC);
+  static const Color _puffFill    = Color(0xFFFFFFFF);
+  static const Color _puffShadow  = Color(0xFFDDE8F0);
+  static const Color _puffStroke  = Color(0xFFCCDAE5);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // ── 1. Deep solid base (below the cloud row) ─────────────────────────────
-    final basePaint = Paint()
-      ..shader = LinearGradient(
+    // ── 1. Gradient fade: transparent → solid white (top 30%) ───────────────
+    final fadePaint = Paint()
+      ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          _fogMid.withValues(alpha: 0.0),
-          _fogMid.withValues(alpha: 0.82),
-          _fogDeep.withValues(alpha: 0.96),
+          Color(0x00FFFFFF),
+          Color(0xFFFFFFFF),
         ],
-        stops: const [0.0, 0.28, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+        stops: [0.0, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.38));
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      basePaint,
+      Rect.fromLTWH(0, 0, size.width, size.height * 0.38),
+      fadePaint,
     );
 
-    // ── 2. Subtle radial shimmer that pulses (gives the mist life) ────────────
-    final shimmerOpacity = 0.06 + pulse * 0.08;
-    final shimmerPaint = Paint()
-      ..shader = RadialGradient(
-        center: Alignment(0.2 + pulse * 0.3, 0.15),
-        radius: 0.7,
-        colors: [
-          _fogGlow.withValues(alpha: shimmerOpacity),
-          _fogGlow.withValues(alpha: 0.0),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    // ── 2. Solid white body below the fade zone ───────────────────────────────
+    final bodyPaint = Paint()..color = _fogSolid;
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      shimmerPaint,
+      Rect.fromLTWH(0, size.height * 0.32, size.width, size.height * 0.68),
+      bodyPaint,
     );
 
-    // ── 3. Cloud puff row at the fog edge ─────────────────────────────────────
-    _drawMistRow(canvas, size);
+    // ── 3. Cloud puff row along the top edge ─────────────────────────────────
+    _drawCloudRow(canvas, size);
   }
 
-  void _drawMistRow(Canvas canvas, Size size) {
-    final rng = math.Random(99);
+  void _drawCloudRow(Canvas canvas, Size size) {
+    final rng = math.Random(42);
 
-    // Three layered passes — back (dark), mid, front (lightest wisps)
-    final layers = [
-      (offset: 18.0,  alpha: 0.55, colorBase: _fogMid,  radiusMult: 1.15),
-      (offset: 6.0,   alpha: 0.75, colorBase: _fogEdge,  radiusMult: 1.0),
-      (offset: -6.0,  alpha: 0.50, colorBase: _fogGlow,  radiusMult: 0.78),
-    ];
+    final shadowPaint = Paint()
+      ..color = _puffShadow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
-    for (final layer in layers) {
-      final layerRng = math.Random(rng.nextInt(9999));
-      double x = -30.0;
+    final fillPaint = Paint()
+      ..color = _puffFill
+      ..style = PaintingStyle.fill;
 
-      while (x < size.width + 50) {
-        final clusterW = 55.0 + layerRng.nextDouble() * 65.0;
-        final baseR    = 20.0 + layerRng.nextDouble() * 22.0;
-        final cy       = layer.offset + layerRng.nextDouble() * 10.0 - 5.0;
+    final strokePaint = Paint()
+      ..color = _puffStroke
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
 
-        // Subtle pulse nudges the front layer up/down slightly
-        final pulseOffset = (layer.radiusMult < 0.9) ? pulse * 4.0 : 0.0;
+    // Back row (slightly larger, offset down a touch — gives depth)
+    _drawRow(canvas, size, rng: math.Random(77),
+        yBase: 10.0, radiusMin: 26.0, radiusMax: 20.0,
+        shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
 
-        final paint = Paint()
-          ..color = layer.colorBase.withValues(alpha: layer.alpha)
-          ..maskFilter = MaskFilter.blur(
-            BlurStyle.normal,
-            3.0 + layer.radiusMult * 3.0,
-          );
+    // Front row (slightly smaller, sits higher — the "fluffy top edge")
+    _drawRow(canvas, size, rng: math.Random(42),
+        yBase: -2.0, radiusMin: 20.0, radiusMax: 16.0,
+        shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
+  }
 
-        _drawCluster(
-          canvas,
-          center: Offset(x + clusterW / 2, cy - pulseOffset),
-          baseRadius: baseR * layer.radiusMult,
-          paint: paint,
-        );
+  void _drawRow(
+    Canvas canvas,
+    Size size, {
+    required math.Random rng,
+    required double yBase,
+    required double radiusMin,
+    required double radiusMax,
+    required Paint shadowPaint,
+    required Paint fillPaint,
+    required Paint strokePaint,
+  }) {
+    double x = -30.0;
+    while (x < size.width + 50) {
+      final clusterW = 58.0 + rng.nextDouble() * 58.0;
+      final baseR    = radiusMin + rng.nextDouble() * radiusMax;
+      final cy       = yBase + rng.nextDouble() * 8.0;
 
-        x += clusterW * 0.72;
-      }
+      _drawCluster(
+        canvas,
+        center: Offset(x + clusterW / 2, cy),
+        baseRadius: baseR,
+        shadowPaint: shadowPaint,
+        fillPaint: fillPaint,
+        strokePaint: strokePaint,
+      );
+
+      x += clusterW * 0.74;
     }
   }
 
@@ -354,26 +340,33 @@ class _FogBankPainter extends CustomPainter {
     Canvas canvas, {
     required Offset center,
     required double baseRadius,
-    required Paint paint,
+    required Paint shadowPaint,
+    required Paint fillPaint,
+    required Paint strokePaint,
   }) {
-    // 6-puff silhouette: wide base + rising centre tower
     final puffs = [
-      Offset(0, 0),
-      Offset(-baseRadius * 0.58, baseRadius * 0.22),
-      Offset( baseRadius * 0.58, baseRadius * 0.22),
-      Offset(-baseRadius * 0.28, -baseRadius * 0.42),
-      Offset( baseRadius * 0.28, -baseRadius * 0.42),
-      Offset(0, -baseRadius * 0.62),
+      Offset.zero,
+      Offset(-baseRadius * 0.60,  baseRadius * 0.22),
+      Offset( baseRadius * 0.60,  baseRadius * 0.22),
+      Offset(-baseRadius * 0.30, -baseRadius * 0.40),
+      Offset( baseRadius * 0.30, -baseRadius * 0.40),
+      Offset(0,                  -baseRadius * 0.58),
     ];
-    final radii = [1.0, 0.68, 0.68, 0.54, 0.54, 0.44];
+    final radii = [1.0, 0.70, 0.70, 0.55, 0.55, 0.46];
 
     for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], paint);
+      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], shadowPaint);
+    }
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], fillPaint);
+    }
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], strokePaint);
     }
   }
 
   @override
-  bool shouldRepaint(_FogBankPainter old) => old.pulse != pulse;
+  bool shouldRepaint(_FogBankPainter old) => false;
 }
 
 // ── Node ──────────────────────────────────────────────────────────────────────
@@ -590,7 +583,7 @@ class _StarsRow extends StatelessWidget {
         children: List.generate(3, (i) {
           final isFilled = i < stars;
           double horizontalOffset = (i - 1) * 22.0;
-          double verticalOffset = (i == 1) ? -3.0 : 0.0;
+          double verticalOffset   = (i == 1) ? -3.0 : 0.0;
 
           return Transform.translate(
             offset: Offset(horizontalOffset, verticalOffset),
@@ -636,6 +629,7 @@ class _DotConnector extends StatefulWidget {
   final int seed;
 
   const _DotConnector({
+    super.key,
     required this.isUnlocked,
     required this.isEvenRow,
     required this.seed,
@@ -665,11 +659,13 @@ class _DotConnectorState extends State<_DotConnector>
   void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
+      // Delay matches the node's own unlock delay so dots light up after
+      // the completed node's star row appears (~800 ms)
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted) _fill.forward();
       });
-    } else if (!widget.isUnlocked) {
-      _fill.value = 0.0;
+    } else if (!widget.isUnlocked && old.isUnlocked) {
+      _fill.reverse();
     }
   }
 
@@ -721,11 +717,11 @@ class _GridDotPainter extends CustomPainter {
     final Offset dot2;
 
     if (isEvenRow) {
-      dot1 = Offset(size.width * 0, size.height * 0.80);
-      dot2 = Offset(size.width * 0.20, size.height * 1);
+      dot1 = Offset(size.width * 0,    size.height * 0.80);
+      dot2 = Offset(size.width * 0.20, size.height * 1.0);
     } else {
-      dot1 = Offset(size.width * 1, size.height * 0.80);
-      dot2 = Offset(size.width * 0.80, size.height * 1);
+      dot1 = Offset(size.width * 1.0,  size.height * 0.80);
+      dot2 = Offset(size.width * 0.80, size.height * 1.0);
     }
 
     final random = math.Random(seed);
