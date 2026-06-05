@@ -46,12 +46,17 @@ class TreasureMapPath extends ConsumerWidget {
       lastCompleted = sessionAsync.valueOrNull?.lastCompletedIndex ?? -1;
     }
 
+    // Nodes at index <= lastCompleted + 2 are visible (completed, current, next-preview)
+    // Everything beyond is clouded
+    const int visibleAhead = 2;
+
     return Column(
       children: List.generate(riddles.length, (index) {
         final isEvenRow = index % 2 == 0;
         final isLast = index == riddles.length - 1;
         final isCompleted = index <= lastCompleted;
         final isCurrent = index == lastCompleted + 1;
+        final isClouded = index > lastCompleted + visibleAhead;
 
         final status = isCompleted
             ? NodeStatus.completed
@@ -61,7 +66,6 @@ class TreasureMapPath extends ConsumerWidget {
 
         final stars = index < riddleStars.length ? riddleStars[index] : 0;
 
-        // Ensure a GlobalKey exists for every node index
         nodeKeys.putIfAbsent(index, () => GlobalKey());
 
         final nodeWidget = _RiddleNode(
@@ -72,6 +76,7 @@ class TreasureMapPath extends ConsumerWidget {
           stars: stars,
           imageBytes: imageBytes,
           immediateActivation: immediateActivation,
+          isClouded: isClouded,
           onTap: isCurrent && onCurrentNodeTap != null
               ? onCurrentNodeTap
               : null,
@@ -143,6 +148,7 @@ class _RiddleNode extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onCompletedTap;
   final bool immediateActivation;
+  final bool isClouded;
 
   const _RiddleNode({
     super.key,
@@ -154,6 +160,7 @@ class _RiddleNode extends StatefulWidget {
     this.onTap,
     this.onCompletedTap,
     this.immediateActivation = false,
+    this.isClouded = false,
   });
 
   @override
@@ -161,19 +168,37 @@ class _RiddleNode extends StatefulWidget {
 }
 
 class _RiddleNodeState extends State<_RiddleNode>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _pulse;
+  late final AnimationController _cloudReveal;
+  late final Animation<double> _cloudOpacity;
   bool _isReached = false;
+  bool _wasClouded = false;
 
   @override
   void initState() {
     super.initState();
+
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
       lowerBound: 0.92,
       upperBound: 1.08,
     );
+
+    _wasClouded = widget.isClouded;
+
+    _cloudReveal = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+      value: widget.isClouded ? 1.0 : 0.0,
+    );
+
+    _cloudOpacity = CurvedAnimation(
+      parent: _cloudReveal,
+      curve: Curves.easeOut,
+    );
+
     _checkActivation();
   }
 
@@ -200,14 +225,28 @@ class _RiddleNodeState extends State<_RiddleNode>
   @override
   void didUpdateWidget(_RiddleNode old) {
     super.didUpdateWidget(old);
+
     if (widget.status != old.status) {
       _checkActivation();
+    }
+
+    // Cloud was showing, now it should disappear → animate out
+    if (_wasClouded && !widget.isClouded) {
+      _wasClouded = false;
+      // Small delay so the node "appears" just after the previous one is solved
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _cloudReveal.reverse();
+      });
+    } else if (!_wasClouded && widget.isClouded) {
+      _wasClouded = true;
+      _cloudReveal.forward();
     }
   }
 
   @override
   void dispose() {
     _pulse.dispose();
+    _cloudReveal.dispose();
     super.dispose();
   }
 
@@ -235,12 +274,30 @@ class _RiddleNodeState extends State<_RiddleNode>
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
+              // ── Node box ───────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.only(top: 18.0),
                 child: _buildBox(isCompleted, isCurrentReached, isLocked),
               ),
               if (isCompleted)
                 Positioned(top: 0, child: _StarsRow(stars: widget.stars)),
+
+              // ── Cloud overlay ──────────────────────────────────────
+              Positioned.fill(
+                child: FadeTransition(
+                  opacity: _cloudOpacity,
+                  child: IgnorePointer(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: CustomPaint(
+                        painter: _CloudPainter(
+                          seed: widget.riddleIndex,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -328,6 +385,104 @@ class _RiddleNodeState extends State<_RiddleNode>
       ),
     );
   }
+}
+
+// ── Cloud Painter ─────────────────────────────────────────────────────────────
+
+class _CloudPainter extends CustomPainter {
+  final int seed;
+
+  const _CloudPainter({required this.seed});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rng = math.Random(seed * 7 + 3);
+
+    // Each cloud is a cluster of overlapping circles
+    // We paint 2 cloud puffs to fill the node area generously
+    _drawCloud(
+      canvas,
+      center: Offset(
+        size.width * (0.35 + rng.nextDouble() * 0.15),
+        size.height * (0.52 + rng.nextDouble() * 0.08),
+      ),
+      scale: 0.78 + rng.nextDouble() * 0.18,
+      size: size,
+      rng: rng,
+    );
+
+    _drawCloud(
+      canvas,
+      center: Offset(
+        size.width * (0.52 + rng.nextDouble() * 0.15),
+        size.height * (0.44 + rng.nextDouble() * 0.12),
+      ),
+      scale: 0.62 + rng.nextDouble() * 0.2,
+      size: size,
+      rng: rng,
+    );
+  }
+
+  void _drawCloud(
+    Canvas canvas, {
+    required Offset center,
+    required double scale,
+    required Size size,
+    required math.Random rng,
+  }) {
+    final baseRadius = size.shortestSide * 0.28 * scale;
+
+    // Shadow / depth layer
+    final shadowPaint = Paint()
+      ..color = const Color(0xFFDDE8F5).withValues(alpha: 0.55)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+
+    // Main cloud fill
+    final fillPaint = Paint()
+      ..color = const Color(0xFFEEF4FB)
+      ..style = PaintingStyle.fill;
+
+    // Slight border for definition
+    final strokePaint = Paint()
+      ..color = const Color(0xFFCCDDEE).withValues(alpha: 0.7)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    // Puff offsets — classic cloud silhouette
+    final puffs = [
+      Offset(0, 0),
+      Offset(-baseRadius * 0.55, baseRadius * 0.15),
+      Offset(baseRadius * 0.55, baseRadius * 0.15),
+      Offset(-baseRadius * 0.28, -baseRadius * 0.38),
+      Offset(baseRadius * 0.28, -baseRadius * 0.38),
+    ];
+
+    final radii = [
+      baseRadius,
+      baseRadius * 0.72,
+      baseRadius * 0.72,
+      baseRadius * 0.58,
+      baseRadius * 0.58,
+    ];
+
+    // Shadow pass
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], radii[i], shadowPaint);
+    }
+
+    // Fill pass
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], radii[i], fillPaint);
+    }
+
+    // Stroke pass (only outer edge puffs)
+    for (int i = 0; i < puffs.length; i++) {
+      canvas.drawCircle(center + puffs[i], radii[i], strokePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CloudPainter old) => old.seed != seed;
 }
 
 // ── Stars row ─────────────────────────────────────────────────────────────────
