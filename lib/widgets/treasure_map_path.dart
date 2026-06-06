@@ -61,7 +61,7 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 
     _fogSlideController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 900),
     );
     _fogSlideAnimation = CurvedAnimation(
       parent: _fogSlideController,
@@ -89,8 +89,8 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
       _fogToFraction   = target;
       _fogSlideController.value = 0.0;
 
-      // Wait for node-unlock + dot-fill animations (~800–2000 ms) then reveal
-      Future.delayed(const Duration(milliseconds: 1000), () {
+      // THIRD: fog slides after stars (FIRST ~700ms) + dots (SECOND ~500ms)
+      Future.delayed(const Duration(milliseconds: 1200), () {
         if (mounted) _fogSlideController.forward();
       });
     }
@@ -104,9 +104,7 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 
   double _computeFogFraction(int lastCompleted, int total) {
     if (total == 0) return 1.0;
-    // At the last node (lastCompleted == total - 1) return 1.0 → fog gone
     if (lastCompleted >= total - 1) return 1.0;
-    // Show current + 1 preview node, then fog starts mid-way into the next row
     const double visibleAhead = 2.5;
     final double revealedRows =
         (lastCompleted + visibleAhead).clamp(0.0, total.toDouble());
@@ -125,8 +123,8 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 
     final nodeColumn = Column(
       children: List.generate(widget.riddles.length, (index) {
-        final isEvenRow  = index % 2 == 0;
-        final isLast     = index == widget.riddles.length - 1;
+        final isEvenRow   = index % 2 == 0;
+        final isLast      = index == widget.riddles.length - 1;
         final isCompleted = index <= lastCompleted;
         final isCurrent   = index == lastCompleted + 1;
 
@@ -162,11 +160,14 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
         final dotsWidget = isLast
             ? const SizedBox.shrink()
             : _DotConnector(
-                // Explicit key so Flutter never reuses state across positions
                 key: ValueKey('dot-$index'),
                 isUnlocked: isCompleted,
                 isEvenRow: isEvenRow,
                 seed: index,
+                // Pass whether this dot was JUST unlocked (i.e. it's the
+                // connector immediately after the node just completed).
+                // That triggers the sequential fill animation with correct delay.
+                animateUnlock: isCompleted && index == lastCompleted,
               );
 
         return Row(
@@ -224,7 +225,7 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
                 top: fogTopY,
                 left: 0,
                 right: 0,
-                bottom: -400, // extend well below so fog fills scroll area
+                bottom: -400,
                 child: IgnorePointer(
                   child: CustomPaint(
                     painter: const _FogBankPainter(),
@@ -243,30 +244,27 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 class _FogBankPainter extends CustomPainter {
   const _FogBankPainter();
 
-  static const Color _fogTop     = Color(0xFFFFFFFF); // white
-  static const Color _fogBottom  = Color(0xFFE2E8EF); // light grey
+  static const Color _fogTop     = Color(0xFFFFFFFF);
+  static const Color _fogBottom  = Color(0xFFE2E8EF);
   static const Color _puffFill   = Color(0xFFFFFFFF);
   static const Color _puffShadow = Color(0xFFDDE8F0);
   static const Color _puffStroke = Color(0xFFCCDAE5);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // ── 1. Gradient fade: transparent → white (top ~30%) ─────────────────────
+    // ── 1. Gradient fade: transparent → white (top ~38%) ─────────────────────
     final fadePaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Color(0x00FFFFFF),
-          Color(0xFFFFFFFF),
-        ],
+        colors: [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.38));
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height * 0.38),
       fadePaint,
     );
 
-    // ── 2. White → light grey gradient for the solid body ────────────────────
+    // ── 2. White → light grey gradient body ───────────────────────────────────
     final bodyPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
@@ -280,7 +278,7 @@ class _FogBankPainter extends CustomPainter {
       bodyPaint,
     );
 
-    // ── 3. Cloud puff row along the top edge ─────────────────────────────────
+    // ── 3. Cloud puff row ─────────────────────────────────────────────────────
     _drawCloudRow(canvas, size);
   }
 
@@ -288,19 +286,17 @@ class _FogBankPainter extends CustomPainter {
     final shadowPaint = Paint()
       ..color = _puffShadow
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    final fillPaint  = Paint()..color = _puffFill..style = PaintingStyle.fill;
+    final fillPaint   = Paint()..color = _puffFill..style = PaintingStyle.fill;
     final strokePaint = Paint()
       ..color = _puffStroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
-    // Back row — slightly larger, sits a touch lower for depth
     _drawRow(canvas, size,
         rng: math.Random(77),
         yBase: 10.0, radiusMin: 26.0, radiusMax: 20.0,
         shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
 
-    // Front row — smaller, sits higher (fluffy top edge)
     _drawRow(canvas, size,
         rng: math.Random(42),
         yBase: -2.0, radiusMin: 20.0, radiusMax: 16.0,
@@ -318,7 +314,6 @@ class _FogBankPainter extends CustomPainter {
     required Paint fillPaint,
     required Paint strokePaint,
   }) {
-    // Start further left and end further right to guarantee full-width coverage
     double x = -60.0;
     while (x < size.width + 80) {
       final clusterW = 58.0 + rng.nextDouble() * 58.0;
@@ -338,7 +333,6 @@ class _FogBankPainter extends CustomPainter {
     }
   }
 
-  // _drawCluster stays exactly the same
   void _drawCluster(
     Canvas canvas, {
     required Offset center,
@@ -371,7 +365,6 @@ class _FogBankPainter extends CustomPainter {
   @override
   bool shouldRepaint(_FogBankPainter old) => false;
 }
-
 
 // ── Node ──────────────────────────────────────────────────────────────────────
 
@@ -426,7 +419,8 @@ class _RiddleNodeState extends State<_RiddleNode>
           _pulse.repeat(reverse: true);
         }
       } else {
-        Future.delayed(const Duration(milliseconds: 2000), () {
+        // THIRD: activate after FIRST (~700ms) + SECOND dots (~500ms)
+        Future.delayed(const Duration(milliseconds: 1200), () {
           if (mounted) {
             setState(() => _isReached = true);
             _pulse.repeat(reverse: true);
@@ -631,12 +625,14 @@ class _DotConnector extends StatefulWidget {
   final bool isUnlocked;
   final bool isEvenRow;
   final int seed;
+  final bool animateUnlock;
 
   const _DotConnector({
     super.key,
     required this.isUnlocked,
     required this.isEvenRow,
     required this.seed,
+    this.animateUnlock = false,
   });
 
   @override
@@ -653,19 +649,28 @@ class _DotConnectorState extends State<_DotConnector>
     super.initState();
     _fill = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
-      value: widget.isUnlocked ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 500),
+      // If already unlocked AND not the one being freshly animated,
+      // start fully filled. If animateUnlock is true, start at 0
+      // and fire the sequence immediately on first frame.
+      value: (widget.isUnlocked && !widget.animateUnlock) ? 1.0 : 0.0,
     );
     _progress = CurvedAnimation(parent: _fill, curve: Curves.easeInOut);
+
+    // SECOND: dots that were JUST unlocked animate after FIRST (~700ms)
+    if (widget.isUnlocked && widget.animateUnlock) {
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) _fill.forward();
+      });
+    }
   }
 
   @override
   void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
-      // Delay matches the node's own unlock delay so dots light up after
-      // the completed node's star row appears (~800 ms)
-      Future.delayed(const Duration(milliseconds: 800), () {
+      // Newly unlocked mid-session (shouldn't normally happen but kept as fallback)
+      Future.delayed(const Duration(milliseconds: 700), () {
         if (mounted) _fill.forward();
       });
     } else if (!widget.isUnlocked && old.isUnlocked) {
