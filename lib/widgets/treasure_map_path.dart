@@ -243,16 +243,15 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
 class _FogBankPainter extends CustomPainter {
   const _FogBankPainter();
 
-  // All whites / very light greys so the fog contrasts with the #F1F4F8 bg
-  static const Color _fogSolid    = Color(0xFFFFFFFF);
-  static const Color _fogNearSolid = Color(0xFFF8FAFC);
-  static const Color _puffFill    = Color(0xFFFFFFFF);
-  static const Color _puffShadow  = Color(0xFFDDE8F0);
-  static const Color _puffStroke  = Color(0xFFCCDAE5);
+  static const Color _fogTop     = Color(0xFFFFFFFF); // white
+  static const Color _fogBottom  = Color(0xFFE2E8EF); // light grey
+  static const Color _puffFill   = Color(0xFFFFFFFF);
+  static const Color _puffShadow = Color(0xFFDDE8F0);
+  static const Color _puffStroke = Color(0xFFCCDAE5);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // ── 1. Gradient fade: transparent → solid white (top 30%) ───────────────
+    // ── 1. Gradient fade: transparent → white (top ~30%) ─────────────────────
     final fadePaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
@@ -261,15 +260,21 @@ class _FogBankPainter extends CustomPainter {
           Color(0x00FFFFFF),
           Color(0xFFFFFFFF),
         ],
-        stops: [0.0, 1.0],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.38));
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height * 0.38),
       fadePaint,
     );
 
-    // ── 2. Solid white body below the fade zone ───────────────────────────────
-    final bodyPaint = Paint()..color = _fogSolid;
+    // ── 2. White → light grey gradient for the solid body ────────────────────
+    final bodyPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [_fogTop, _fogBottom],
+      ).createShader(
+        Rect.fromLTWH(0, size.height * 0.32, size.width, size.height * 0.68),
+      );
     canvas.drawRect(
       Rect.fromLTWH(0, size.height * 0.32, size.width, size.height * 0.68),
       bodyPaint,
@@ -280,28 +285,24 @@ class _FogBankPainter extends CustomPainter {
   }
 
   void _drawCloudRow(Canvas canvas, Size size) {
-    final rng = math.Random(42);
-
     final shadowPaint = Paint()
       ..color = _puffShadow
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-
-    final fillPaint = Paint()
-      ..color = _puffFill
-      ..style = PaintingStyle.fill;
-
+    final fillPaint  = Paint()..color = _puffFill..style = PaintingStyle.fill;
     final strokePaint = Paint()
       ..color = _puffStroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
-    // Back row (slightly larger, offset down a touch — gives depth)
-    _drawRow(canvas, size, rng: math.Random(77),
+    // Back row — slightly larger, sits a touch lower for depth
+    _drawRow(canvas, size,
+        rng: math.Random(77),
         yBase: 10.0, radiusMin: 26.0, radiusMax: 20.0,
         shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
 
-    // Front row (slightly smaller, sits higher — the "fluffy top edge")
-    _drawRow(canvas, size, rng: math.Random(42),
+    // Front row — smaller, sits higher (fluffy top edge)
+    _drawRow(canvas, size,
+        rng: math.Random(42),
         yBase: -2.0, radiusMin: 20.0, radiusMax: 16.0,
         shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
   }
@@ -317,8 +318,9 @@ class _FogBankPainter extends CustomPainter {
     required Paint fillPaint,
     required Paint strokePaint,
   }) {
-    double x = -30.0;
-    while (x < size.width + 50) {
+    // Start further left and end further right to guarantee full-width coverage
+    double x = -60.0;
+    while (x < size.width + 80) {
       final clusterW = 58.0 + rng.nextDouble() * 58.0;
       final baseR    = radiusMin + rng.nextDouble() * radiusMax;
       final cy       = yBase + rng.nextDouble() * 8.0;
@@ -336,6 +338,7 @@ class _FogBankPainter extends CustomPainter {
     }
   }
 
+  // _drawCluster stays exactly the same
   void _drawCluster(
     Canvas canvas, {
     required Offset center,
@@ -368,6 +371,7 @@ class _FogBankPainter extends CustomPainter {
   @override
   bool shouldRepaint(_FogBankPainter old) => false;
 }
+
 
 // ── Node ──────────────────────────────────────────────────────────────────────
 
