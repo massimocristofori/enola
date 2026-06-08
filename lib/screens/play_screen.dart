@@ -11,6 +11,7 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/treasure_map_path.dart';
 import 'package:enola/screens/riddle_screen.dart';
 import 'package:enola/screens/result_screen.dart';
+import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/services/drift_service.dart';
 import 'package:enola/services/training_service.dart';
 import 'package:enola/services/notification_service.dart';
@@ -482,6 +483,56 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     await _loadSession();
   }
 
+  // ── Edit map ───────────────────────────────────────────────────────────────
+
+  void _onEditMap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateMapScreen(existingMapId: widget.mapId),
+      ),
+    );
+  }
+
+  // ── Delete map ─────────────────────────────────────────────────────────────
+
+  Future<void> _onDeleteMap() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Map?'),
+        content: const Text(
+            'This will permanently delete the map and all its riddles and progress. This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final db = DriftService.instance.db;
+    await (db.delete(db.riddles)
+          ..where((t) => t.mapId.equals(widget.mapId)))
+        .go();
+    await (db.delete(db.playSessions)
+          ..where((t) => t.mapId.equals(widget.mapId)))
+        .go();
+    await (db.delete(db.riddleMaps)
+          ..where((t) => t.id.equals(widget.mapId)))
+        .go();
+    ref.invalidate(allMapsProvider);
+
+    if (mounted) Navigator.pop(context);
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -615,6 +666,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                     hasBeenPlayed: hasBeenPlayed,
                     compact: riddleActive,
                     starKey: _headerStarKey,
+                    onEdit: _onEditMap,
+                    onDelete: _onDeleteMap,
                   ),
                 ),
               ],
@@ -946,6 +999,8 @@ class _PlayHeader extends StatelessWidget {
   final bool hasBeenPlayed;
   final bool compact;
   final GlobalKey starKey;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _PlayHeader({
     required this.mapId,
@@ -955,114 +1010,169 @@ class _PlayHeader extends StatelessWidget {
     required this.hasBeenPlayed,
     required this.starKey,
     this.compact = false,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Hero(
-        tag: 'map-card-$mapId',
-        child: Material(
-          type: MaterialType.transparency,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            height: compact ? kPlayHeaderCompact : kPlayHeaderHeight,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(8)),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x18000000),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRect(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── Title row — collapses to 0 in compact mode ──
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    height: compact ? 0 : 38,
-                    child: SingleChildScrollView(
-                      physics: const NeverScrollableScrollPhysics(),
-                      child: Container(
-                        height: 38,
-                        alignment: Alignment.center,
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF9FAFB),
-                          border: Border(
-                            top: BorderSide(
-                                color: Color(0xFFE5E7EB), width: 1),
-                            bottom: BorderSide(
-                                color: Color(0xFFE5E7EB), width: 1),
-                          ),
-                        ),
-                        child: Text(
-                          title,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                            color: EnolaTheme.textPrimary,
-                            height: 1.3,
-                            letterSpacing: 0.1,
-                          ),
+    return Hero(
+      tag: 'map-card-$mapId',
+      child: Material(
+        type: MaterialType.transparency,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          height: compact ? kPlayHeaderCompact : kPlayHeaderHeight,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.vertical(bottom: Radius.circular(8)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x18000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRect(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Title row — collapses to 0 in compact mode ──
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  height: compact ? 0 : 38,
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF9FAFB),
+                        border: Border(
+                          top: BorderSide(
+                              color: Color(0xFFE5E7EB), width: 1),
+                          bottom: BorderSide(
+                              color: Color(0xFFE5E7EB), width: 1),
                         ),
                       ),
-                    ),
-                  ),
-                  // ── Star row — always 38px ──
-                  SizedBox(
-                    height: 38,
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12),
                       child: Row(
                         children: [
-                          Text(
-                            '$achievedStars',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF555555),
+                          // ── Back chevron ──
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Icon(
+                                Icons.chevron_left_rounded,
+                                size: 22,
+                                color: EnolaTheme.textSecond,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          // ── Title ──
                           Expanded(
-                            child: _StarProgressBar(
-                              progress: maxStars > 0 && hasBeenPlayed
-                                  ? achievedStars / maxStars
-                                  : 0.0,
-                              starKey: starKey,
+                            child: Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
+                                color: EnolaTheme.textPrimary,
+                                height: 1.3,
+                                letterSpacing: 0.1,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            '$maxStars',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF555555),
+                          // ── More menu ──
+                          PopupMenuButton<String>(
+                            icon: const Icon(
+                              Icons.more_vert_rounded,
+                              size: 22,
+                              color: EnolaTheme.textSecond,
                             ),
+                            onSelected: (value) {
+                              if (value == 'edit') onEdit?.call();
+                              if (value == 'delete') onDelete?.call();
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit_outlined,
+                                        size: 18,
+                                        color: EnolaTheme.textPrimary),
+                                    SizedBox(width: 12),
+                                    Text('Edit Map'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_outline_rounded,
+                                        size: 18, color: Colors.red),
+                                    SizedBox(width: 12),
+                                    Text('Delete Map',
+                                        style:
+                                            TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                // ── Star row — always 38px ──
+                SizedBox(
+                  height: 38,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Text(
+                          '$achievedStars',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF555555),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _StarProgressBar(
+                            progress: maxStars > 0 && hasBeenPlayed
+                                ? achievedStars / maxStars
+                                : 0.0,
+                            starKey: starKey,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '$maxStars',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF555555),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
