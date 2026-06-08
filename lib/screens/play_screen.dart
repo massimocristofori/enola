@@ -838,12 +838,12 @@ class _MapViewState extends State<_MapView> {
                         horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: widget.trainingActive
-                          ? EnolaTheme.accent.withAlpha(20)
+                          ? EnolaTheme.secondary.withAlpha(20)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: widget.trainingActive
-                            ? EnolaTheme.accent
+                            ? EnolaTheme.secondary
                             : EnolaTheme.border,
                       ),
                     ),
@@ -855,7 +855,7 @@ class _MapViewState extends State<_MapView> {
                               : Icons.school_outlined,
                           size: 18,
                           color: widget.trainingActive
-                              ? EnolaTheme.accent
+                              ? EnolaTheme.secondary
                               : EnolaTheme.textSecond,
                         ),
                         const SizedBox(width: 10),
@@ -868,7 +868,7 @@ class _MapViewState extends State<_MapView> {
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: widget.trainingActive
-                                  ? EnolaTheme.accent
+                                  ? EnolaTheme.secondary
                                   : EnolaTheme.textSecond,
                             ),
                           ),
@@ -882,7 +882,7 @@ class _MapViewState extends State<_MapView> {
                                 : Icons.toggle_off_rounded,
                             size: 32,
                             color: widget.trainingActive
-                                ? EnolaTheme.accent
+                                ? EnolaTheme.secondary
                                 : EnolaTheme.textSecond,
                           ),
                         ),
