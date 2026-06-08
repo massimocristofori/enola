@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/theme/enola_theme.dart';
-
 import 'package:enola/providers/map_providers.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -42,74 +41,7 @@ class TreasureMapPath extends ConsumerStatefulWidget {
   ConsumerState<TreasureMapPath> createState() => _TreasureMapPathState();
 }
 
-class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
-    with SingleTickerProviderStateMixin {
-
-  late AnimationController _fogSlideController;
-  late Animation<double> _fogSlideAnimation;
-
-  double _fogFromFraction = 0.0;
-  double _fogToFraction   = 0.0;
-
-  double get _fogFraction =>
-      _fogFromFraction +
-      (_fogToFraction - _fogFromFraction) * _fogSlideAnimation.value;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _fogSlideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _fogSlideAnimation = CurvedAnimation(
-      parent: _fogSlideController,
-      curve: Curves.easeInOutCubic,
-    )..addListener(() => setState(() {}));
-
-    // Initialise without animation
-    final lastCompleted = widget.lastCompletedIndex ?? -1;
-    final initial = _computeFogFraction(lastCompleted, widget.riddles.length);
-    _fogFromFraction = initial;
-    _fogToFraction   = initial;
-    _fogSlideController.value = 1.0;
-  }
-
-  @override
-  void didUpdateWidget(TreasureMapPath old) {
-    super.didUpdateWidget(old);
-
-    final newLast = widget.lastCompletedIndex ?? -1;
-    final oldLast = old.lastCompletedIndex    ?? -1;
-
-    if (newLast != oldLast) {
-      final target = _computeFogFraction(newLast, widget.riddles.length);
-      _fogFromFraction = _fogFraction;
-      _fogToFraction   = target;
-      _fogSlideController.value = 0.0;
-
-      // THIRD: fog slides after stars (FIRST ~700ms) + dots (SECOND ~500ms)
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (mounted) _fogSlideController.forward();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _fogSlideController.dispose();
-    super.dispose();
-  }
-
-  double _computeFogFraction(int lastCompleted, int total) {
-    if (total == 0) return 1.0;
-    if (lastCompleted >= total - 1) return 1.0;
-    const double visibleAhead = 2.5;
-    final double revealedRows =
-        (lastCompleted + visibleAhead).clamp(0.0, total.toDouble());
-    return revealedRows / total;
-  }
+class _TreasureMapPathState extends ConsumerState<TreasureMapPath> {
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +53,7 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
       lastCompleted = sessionAsync.valueOrNull?.lastCompletedIndex ?? -1;
     }
 
-    final nodeColumn = Column(
+    return Column(
       children: List.generate(widget.riddles.length, (index) {
         final isEvenRow   = index % 2 == 0;
         final isLast      = index == widget.riddles.length - 1;
@@ -155,8 +87,6 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
               : null,
         );
 
-        // Dot at position `index` connects row `index` → row `index+1`.
-        // It should be filled once row `index` is completed.
         final dotsWidget = isLast
             ? const SizedBox.shrink()
             : _DotConnector(
@@ -164,9 +94,6 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
                 isUnlocked: isCompleted,
                 isEvenRow: isEvenRow,
                 seed: index,
-                // Pass whether this dot was JUST unlocked (i.e. it's the
-                // connector immediately after the node just completed).
-                // That triggers the sequential fill animation with correct delay.
                 animateUnlock: isCompleted && index == lastCompleted,
               );
 
@@ -211,159 +138,7 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath>
         );
       }),
     );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double totalHeight = widget.riddles.length * 110.0;
-        final double fogTopY     = totalHeight * _fogFraction;
-
-        return Stack(
-          children: [
-            nodeColumn,
-            if (_fogFraction < 1.0)
-              Positioned(
-                top: fogTopY,
-                left: 0,
-                right: 0,
-                bottom: -400,
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: const _FogBankPainter(),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
   }
-}
-
-// ── Fog bank painter ──────────────────────────────────────────────────────────
-
-class _FogBankPainter extends CustomPainter {
-  const _FogBankPainter();
-
-  static const Color _fogTop     = Color(0xFFFFFFFF);
-  static const Color _fogBottom  = Color(0xFFE2E8EF);
-  static const Color _puffFill   = Color(0xFFFFFFFF);
-  static const Color _puffShadow = Color(0xFFDDE8F0);
-  static const Color _puffStroke = Color(0xFFCCDAE5);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // ── 1. Gradient fade: transparent → white (top ~38%) ─────────────────────
-    final fadePaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.38));
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height * 0.38),
-      fadePaint,
-    );
-
-    // ── 2. White → light grey gradient body ───────────────────────────────────
-    final bodyPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [_fogTop, _fogBottom],
-      ).createShader(
-        Rect.fromLTWH(0, size.height * 0.32, size.width, size.height * 0.68),
-      );
-    canvas.drawRect(
-      Rect.fromLTWH(0, size.height * 0.32, size.width, size.height * 0.68),
-      bodyPaint,
-    );
-
-    // ── 3. Cloud puff row ─────────────────────────────────────────────────────
-    _drawCloudRow(canvas, size);
-  }
-
-  void _drawCloudRow(Canvas canvas, Size size) {
-    final shadowPaint = Paint()
-      ..color = _puffShadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    final fillPaint   = Paint()..color = _puffFill..style = PaintingStyle.fill;
-    final strokePaint = Paint()
-      ..color = _puffStroke
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    _drawRow(canvas, size,
-        rng: math.Random(77),
-        yBase: 10.0, radiusMin: 26.0, radiusMax: 20.0,
-        shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
-
-    _drawRow(canvas, size,
-        rng: math.Random(42),
-        yBase: -2.0, radiusMin: 20.0, radiusMax: 16.0,
-        shadowPaint: shadowPaint, fillPaint: fillPaint, strokePaint: strokePaint);
-  }
-
-  void _drawRow(
-    Canvas canvas,
-    Size size, {
-    required math.Random rng,
-    required double yBase,
-    required double radiusMin,
-    required double radiusMax,
-    required Paint shadowPaint,
-    required Paint fillPaint,
-    required Paint strokePaint,
-  }) {
-    double x = -60.0;
-    while (x < size.width + 80) {
-      final clusterW = 58.0 + rng.nextDouble() * 58.0;
-      final baseR    = radiusMin + rng.nextDouble() * radiusMax;
-      final cy       = yBase + rng.nextDouble() * 8.0;
-
-      _drawCluster(
-        canvas,
-        center: Offset(x + clusterW / 2, cy),
-        baseRadius: baseR,
-        shadowPaint: shadowPaint,
-        fillPaint: fillPaint,
-        strokePaint: strokePaint,
-      );
-
-      x += clusterW * 0.74;
-    }
-  }
-
-  void _drawCluster(
-    Canvas canvas, {
-    required Offset center,
-    required double baseRadius,
-    required Paint shadowPaint,
-    required Paint fillPaint,
-    required Paint strokePaint,
-  }) {
-    final puffs = [
-      Offset.zero,
-      Offset(-baseRadius * 0.60,  baseRadius * 0.22),
-      Offset( baseRadius * 0.60,  baseRadius * 0.22),
-      Offset(-baseRadius * 0.30, -baseRadius * 0.40),
-      Offset( baseRadius * 0.30, -baseRadius * 0.40),
-      Offset(0,                  -baseRadius * 0.58),
-    ];
-    final radii = [1.0, 0.70, 0.70, 0.55, 0.55, 0.46];
-
-    for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], shadowPaint);
-    }
-    for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], fillPaint);
-    }
-    for (int i = 0; i < puffs.length; i++) {
-      canvas.drawCircle(center + puffs[i], baseRadius * radii[i], strokePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_FogBankPainter old) => false;
 }
 
 // ── Node ──────────────────────────────────────────────────────────────────────
@@ -650,14 +425,10 @@ class _DotConnectorState extends State<_DotConnector>
     _fill = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
-      // If already unlocked AND not the one being freshly animated,
-      // start fully filled. If animateUnlock is true, start at 0
-      // and fire the sequence immediately on first frame.
       value: (widget.isUnlocked && !widget.animateUnlock) ? 1.0 : 0.0,
     );
     _progress = CurvedAnimation(parent: _fill, curve: Curves.easeInOut);
 
-    // SECOND: dots that were JUST unlocked animate after FIRST (~700ms)
     if (widget.isUnlocked && widget.animateUnlock) {
       Future.delayed(const Duration(milliseconds: 700), () {
         if (mounted) _fill.forward();
@@ -669,7 +440,6 @@ class _DotConnectorState extends State<_DotConnector>
   void didUpdateWidget(_DotConnector old) {
     super.didUpdateWidget(old);
     if (widget.isUnlocked && !old.isUnlocked) {
-      // Newly unlocked mid-session (shouldn't normally happen but kept as fallback)
       Future.delayed(const Duration(milliseconds: 700), () {
         if (mounted) _fill.forward();
       });
