@@ -1062,15 +1062,18 @@ class _PlayHeader extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          // ── Back chevron ──
+                          // ── Edit Button ──
                           GestureDetector(
-                            onTap: () => Navigator.pop(context),
+                            onTap: onEdit,
                             child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: Icon(
-                                Icons.chevron_left_rounded,
-                                size: 22,
-                                color: EnolaTheme.textSecond,
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                'Edit',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: EnolaTheme.textPrimary,
+                                ),
                               ),
                             ),
                           ),
@@ -1090,44 +1093,20 @@ class _PlayHeader extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // ── More menu ──
-                          PopupMenuButton<String>(
-                            icon: const Icon(
-                              Icons.more_vert_rounded,
-                              size: 22,
-                              color: EnolaTheme.textSecond,
+                          // ── Delete Button ──
+                          GestureDetector(
+                            onTap: onDelete,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                'Delete',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red,
+                                ),
+                              ),
                             ),
-                            onSelected: (value) {
-                              if (value == 'edit') onEdit?.call();
-                              if (value == 'delete') onDelete?.call();
-                            },
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit_outlined,
-                                        size: 18,
-                                        color: EnolaTheme.textPrimary),
-                                    SizedBox(width: 12),
-                                    Text('Edit Map'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete_outline_rounded,
-                                        size: 18, color: Colors.red),
-                                    SizedBox(width: 12),
-                                    Text('Delete Map',
-                                        style:
-                                            TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
