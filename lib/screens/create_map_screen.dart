@@ -14,8 +14,13 @@ import 'package:enola/screens/riddles_pager_screen.dart';
 
 class CreateMapScreen extends ConsumerStatefulWidget {
   final String? existingMapId;
+  final int? initialFolderId; // non-null when launched from inside a folder
 
-  const CreateMapScreen({super.key, this.existingMapId});
+  const CreateMapScreen({
+    super.key,
+    this.existingMapId,
+    this.initialFolderId,
+  });
 
   @override
   ConsumerState<CreateMapScreen> createState() => _CreateMapScreenState();
@@ -132,6 +137,12 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
         _subjectCtrl.text.trim().isEmpty ? null : _subjectCtrl.text.trim(),
         imageBytes: _imageBytes,
       );
+
+      // Assign to folder if launched from inside one, and this is a new map
+      if (widget.initialFolderId != null && _savedMap == null) {
+        await DriftService.instance.setMapFolder(mapId, widget.initialFolderId);
+      }
+
       final db = DriftService.instance.db;
       _savedMap = await (db.select(db.riddleMaps)
             ..where((t) => t.id.equals(mapId)))
@@ -140,6 +151,10 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
       ref.invalidate(allMapsProvider);
       ref.invalidate(mapProvider(mapId));
       ref.invalidate(riddleCountProvider(mapId));
+      if (widget.initialFolderId != null) {
+        ref.invalidate(mapsInFolderProvider(widget.initialFolderId!));
+        ref.invalidate(folderStatsProvider(widget.initialFolderId!));
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -534,7 +549,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                     Text(
                       'AI Riddle Generator',
                       style: TextStyle(
-                        color: locked ? EnolaTheme.textPrimary : Colors.white,
+                        color:
+                            locked ? EnolaTheme.textPrimary : Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
