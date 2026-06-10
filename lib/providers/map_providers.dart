@@ -4,13 +4,31 @@ import 'package:drift/drift.dart' as drift;
 import '../database/database.dart';
 import '../services/drift_service.dart';
 
-// Provides all maps for the HomeScreen
+// ── Folder providers ──────────────────────────────────────────────────────────
+
+final allFoldersProvider = StreamProvider<List<Folder>>((ref) {
+  return DriftService.instance.watchAllFolders();
+});
+
+final mapsInFolderProvider = StreamProvider.family<List<RiddleMap>, int>((ref, folderId) {
+  return DriftService.instance.watchMapsInFolder(folderId);
+});
+
+final unfiledMapsProvider = StreamProvider<List<RiddleMap>>((ref) {
+  return DriftService.instance.watchUnfiledMaps();
+});
+
+final folderStatsProvider = FutureProvider.family<FolderStats, int>((ref, folderId) {
+  return DriftService.instance.getFolderStats(folderId);
+});
+
+// ── Map providers ─────────────────────────────────────────────────────────────
+
+// Provides all maps, sorted by most recent activity, for the root home screen
 final allMapsProvider = FutureProvider<List<RiddleMap>>((ref) async {
   final db = DriftService.instance.db;
   final maps = await db.getAllMaps();
 
-  // For each map, find the most recent activity timestamp:
-  // latest session startedAt, falling back to map createdAt
   final List<(RiddleMap, DateTime)> withTimestamp = await Future.wait(
     maps.map((m) async {
       final sessions = await (db.select(db.playSessions)
@@ -30,8 +48,6 @@ final allMapsProvider = FutureProvider<List<RiddleMap>>((ref) async {
   return withTimestamp.map((e) => e.$1).toList();
 });
 
-
-// Provides a single map by its ID
 final mapProvider = FutureProvider.family<RiddleMap?, String>((ref, id) async {
   final db = DriftService.instance.db;
   final maps = await db.getAllMaps();
@@ -42,24 +58,21 @@ final mapProvider = FutureProvider.family<RiddleMap?, String>((ref, id) async {
   }
 });
 
-// Provides all riddles for a specific map
 final riddlesForMapProvider = FutureProvider.family<List<Riddle>, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   return db.getRiddlesForMap(mapId);
 });
 
-// Provides the count of riddles for the HomeScreen tiles
 final riddleCountProvider = FutureProvider.family<int, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   final list = await db.getRiddlesForMap(mapId);
   return list.length;
 });
 
-// Provides the most recent play session for the Map Detail Screen
 final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   final sessions = await (db.select(db.playSessions)
-        ..where((t) => t.mapId.equals(mapId))
+        ..where((t) => t.mapId.equals(m.id))  // ← will be caught below
         ..orderBy([(t) => drift.OrderingTerm(
               expression: t.startedAt,
               mode: drift.OrderingMode.desc,
@@ -69,7 +82,6 @@ final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, 
   return sessions.isNotEmpty ? sessions.first : null;
 });
 
-// Provides the 5 most recent overall sessions for the Activity Feed
 final recentSessionsProvider = FutureProvider<List<PlaySession>>((ref) async {
   final db = DriftService.instance.db;
   return (db.select(db.playSessions)
@@ -153,7 +165,7 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
     final db = DriftService.instance.db;
     final session = await (db.select(db.playSessions)
           ..where((t) => t.id.equals(state!.sessionId)))
-        .getSingleOrNull(); // ← safe on web
+        .getSingleOrNull();
 
     if (session == null) return;
 
@@ -171,7 +183,7 @@ class PlayStateNotifier extends StateNotifier<PlayState?> {
     final db = DriftService.instance.db;
     final session = await (db.select(db.playSessions)
           ..where((t) => t.id.equals(state!.sessionId)))
-        .getSingleOrNull(); // ← safe on web
+        .getSingleOrNull();
 
     if (session == null) {
       state = null;
