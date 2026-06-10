@@ -50,11 +50,11 @@ class HomeScreen extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
               child: _isRoot
-                  ? _RootScrollView(onCreate: () => _openCreate(context, ref))
+                  ? _RootScrollView(onCreate: () => _openCreate(context))
                   : _FolderScrollView(
                       folderId: folderId!,
                       folderName: folderName!,
-                      onCreate: () => _openCreate(context, ref),
+                      onCreate: () => _openCreate(context),
                     ),
             ),
           ),
@@ -67,14 +67,14 @@ class HomeScreen extends ConsumerWidget {
               const _TrainingFab(),
               const SizedBox(width: 12),
             ],
-            _CreateFab(onTap: () => _openCreate(context, ref)),
+            _CreateFab(onTap: () => _openCreate(context)),
           ],
         ),
       ),
     );
   }
 
-  void _openCreate(BuildContext context, WidgetRef ref) {
+  void _openCreate(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CreateMapScreen()),
@@ -115,7 +115,7 @@ class _RootScrollView extends ConsumerWidget {
 
     return CustomScrollView(
       slivers: [
-        // ── Static header ──
+        // ── Header with folder creation button ──
         SliverToBoxAdapter(
           child: _Header(),
         ),
@@ -148,7 +148,8 @@ class _RootScrollView extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(40, 20, 40, 4),
                 child: Row(
                   children: [
-                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                    const Expanded(
+                        child: Divider(color: Color(0xFFE5E7EB))),
                     const SizedBox(width: 12),
                     Text(
                       'Unfiled',
@@ -160,7 +161,8 @@ class _RootScrollView extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+                    const Expanded(
+                        child: Divider(color: Color(0xFFE5E7EB))),
                   ],
                 ),
               ),
@@ -196,7 +198,7 @@ class _RootScrollView extends ConsumerWidget {
             ),
           ),
 
-        // ── Bottom padding if only folders (no unfiled) ──
+        // ── Bottom padding if only folders and no unfiled ──
         if (unfiled.isEmpty)
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
@@ -239,7 +241,8 @@ class _FolderScrollView extends ConsumerWidget {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: _FolderHeader(folderName: folderName, folderId: folderId),
+          child: _FolderHeader(
+              folderName: folderName, folderId: folderId),
         ),
         if (maps.isEmpty)
           SliverToBoxAdapter(
@@ -275,33 +278,162 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 28, 12, 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Ready for a Riddle?',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: EnolaTheme.textPrimary,
-                    ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Tap a map to explore or play',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: EnolaTheme.textSecond,
-                    ),
-              ),
-            ],
+          // ── Title + subtitle ──
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ready for a Riddle?',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: EnolaTheme.textPrimary,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tap a map to explore or play',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: EnolaTheme.textSecond,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          // ── New folder button ──
+          IconButton(
+            onPressed: () => _showCreateFolderSheet(context),
+            icon: const Icon(Icons.create_new_folder_outlined),
+            color: EnolaTheme.textSecond,
+            tooltip: 'New Folder',
           ),
         ],
       ),
     ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.15, end: 0);
+  }
+
+  void _showCreateFolderSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => const _CreateFolderSheet(),
+    );
+  }
+}
+
+// ── Create Folder Sheet ───────────────────────────────────────────────────────
+
+class _CreateFolderSheet extends StatefulWidget {
+  const _CreateFolderSheet();
+
+  @override
+  State<_CreateFolderSheet> createState() => _CreateFolderSheetState();
+}
+
+class _CreateFolderSheetState extends State<_CreateFolderSheet> {
+  final _controller = TextEditingController();
+  bool _canCreate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      final canCreate = _controller.text.trim().isNotEmpty;
+      if (canCreate != _canCreate) setState(() => _canCreate = canCreate);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _create() async {
+    final title = _controller.text.trim();
+    if (title.isEmpty) return;
+    await DriftService.instance.saveFolder(title);
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Drag handle ──
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'New Folder',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: EnolaTheme.textPrimary,
+                ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              hintText: 'e.g. Geography, History…',
+              hintStyle: TextStyle(color: EnolaTheme.textSecond.withValues(alpha: 0.5)),
+              filled: true,
+              fillColor: const Color(0xFFF1F4F8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 14),
+            ),
+            onSubmitted: (_) => _canCreate ? _create() : null,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _canCreate ? _create : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: EnolaTheme.accent,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFFE5E7EB),
+              disabledForegroundColor: const Color(0xFFAAAAAA),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Create Folder',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -323,7 +455,6 @@ class _FolderHeader extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Back chevron
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded, size: 32),
             color: EnolaTheme.textPrimary,
@@ -405,7 +536,6 @@ class _FolderCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Mini map grid cover ──
             Expanded(
               child: ClipRRect(
                 borderRadius:
@@ -413,7 +543,6 @@ class _FolderCard extends ConsumerWidget {
                 child: _FolderCoverGrid(maps: maps),
               ),
             ),
-            // ── Info bar ──
             _FolderInfoBar(
               title: folder.title,
               stats: stats,
@@ -425,13 +554,12 @@ class _FolderCard extends ConsumerWidget {
   }
 }
 
-// ── Folder Cover Grid (iPhone-style mini squares) ─────────────────────────────
+// ── Folder Cover Grid ─────────────────────────────────────────────────────────
 
 class _FolderCoverGrid extends ConsumerWidget {
   final List<RiddleMap> maps;
   const _FolderCoverGrid({required this.maps});
 
-  /// Map completion color based on latest session stars
   Color _colorForMap(RiddleMap map, int riddleCount, PlaySession? session) {
     if (riddleCount == 0 || session == null) return const Color(0xFFE5E7EB);
 
@@ -447,13 +575,11 @@ class _FolderCoverGrid extends ConsumerWidget {
 
     final isComplete = completedCount >= riddleCount;
     if (isComplete) {
-      // Gold if complete
       final ratio = riddleCount > 0 ? achieved / (riddleCount * 3) : 0.0;
       if (ratio >= 0.9) return const Color(0xFFFFD700);
       if (ratio >= 0.5) return const Color(0xFFFFD700).withValues(alpha: 0.7);
       return const Color(0xFFFFD700).withValues(alpha: 0.5);
     }
-    // Teal if in progress
     return EnolaTheme.accent.withValues(alpha: 0.65);
   }
 
@@ -487,14 +613,15 @@ class _FolderCoverGrid extends ConsumerWidget {
                 itemCount: displayMaps.length,
                 itemBuilder: (context, i) {
                   final map = displayMaps[i];
-                  final isLast = i == displayMaps.length - 1 && overflow > 0;
+                  final isLast =
+                      i == displayMaps.length - 1 && overflow > 0;
 
-                  // Watch riddle count and latest session for this map
-                  final countAsync = ref.watch(riddleCountProvider(map.id));
-                  final sessionAsync = ref.watch(latestSessionProvider(map.id));
+                  final countAsync =
+                      ref.watch(riddleCountProvider(map.id));
+                  final sessionAsync =
+                      ref.watch(latestSessionProvider(map.id));
                   final count = countAsync.valueOrNull ?? 0;
                   final session = sessionAsync.valueOrNull;
-
                   final color = _colorForMap(map, count, session);
 
                   return ClipRRect(
@@ -545,7 +672,8 @@ class _FolderInfoBar extends StatelessWidget {
           // Title row — 38px
           Container(
             height: 38,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF9FAFB),
               border: Border(
@@ -690,7 +818,6 @@ class _MapCard extends ConsumerWidget {
     );
   }
 
-  /// Shows a bottom sheet to move this map to a folder (or unfile it).
   Future<void> _showMoveToFolder(BuildContext context) async {
     final folders = await DriftService.instance.watchAllFolders().first;
 
@@ -737,13 +864,13 @@ class _MapCard extends ConsumerWidget {
                   ),
                 )
               else ...[
-                // Option to unfile
                 ListTile(
                   leading: const Icon(Icons.folder_off_outlined,
                       color: EnolaTheme.textSecond),
                   title: const Text('Unfiled'),
                   onTap: () async {
-                    await DriftService.instance.setMapFolder(map.id, null);
+                    await DriftService.instance
+                        .setMapFolder(map.id, null);
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                 ),
@@ -754,7 +881,8 @@ class _MapCard extends ConsumerWidget {
                         color: EnolaTheme.accent),
                     title: Text(f.title),
                     onTap: () async {
-                      await DriftService.instance.setMapFolder(map.id, f.id);
+                      await DriftService.instance
+                          .setMapFolder(map.id, f.id);
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
                   ),
@@ -813,7 +941,8 @@ class _MapCard extends ConsumerWidget {
         builder: (context, _) {
           final t = animation.value;
           final imageHeight =
-              ((fromHeight - infoBarHeight) * (1.0 - t)).clamp(0.0, double.infinity);
+              ((fromHeight - infoBarHeight) * (1.0 - t))
+                  .clamp(0.0, double.infinity);
 
           return Material(
             type: MaterialType.transparency,
@@ -905,7 +1034,6 @@ class _MapCard extends ConsumerWidget {
                   hasBeenPlayed: hasBeenPlayed,
                   isComplete: isComplete,
                 ),
-
                 if (isComplete)
                   Positioned(
                     left: -4,
@@ -914,7 +1042,6 @@ class _MapCard extends ConsumerWidget {
                     bottom: 20,
                     child: _RankRibbonOverlay(starRatio: starRatio),
                   ),
-
                 Positioned(
                   top: -8,
                   right: -8,
@@ -925,8 +1052,9 @@ class _MapCard extends ConsumerWidget {
                     iconColor: isTrainingOn
                         ? Colors.white
                         : EnolaTheme.textSecond.withValues(alpha: 0.95),
-                    backgroundColor:
-                        isTrainingOn ? EnolaTheme.secondary : Colors.white,
+                    backgroundColor: isTrainingOn
+                        ? EnolaTheme.secondary
+                        : Colors.white,
                     onTap: () => _toggleTraining(context),
                   ),
                 ),
@@ -1004,7 +1132,6 @@ class _RankRibbonOverlay extends StatelessWidget {
 
 class _StarProgressBar extends StatelessWidget {
   final double progress;
-
   const _StarProgressBar({required this.progress});
 
   @override
@@ -1014,7 +1141,6 @@ class _StarProgressBar extends StatelessWidget {
         final double width = constraints.maxWidth;
         const double starSize = 26.0;
         const double barHeight = 8.0;
-
         final double leftOffset = width * progress.clamp(0.0, 1.0);
 
         return SizedBox(
@@ -1044,8 +1170,8 @@ class _StarProgressBar extends StatelessWidget {
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform: Matrix4.translationValues(
-                      -starSize / 2, -2.0, 0),
+                  transform:
+                      Matrix4.translationValues(-starSize / 2, -2.0, 0),
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
@@ -1377,7 +1503,6 @@ class _TrainingFabState extends State<_TrainingFab> {
           builder: (context, sessionSnap) {
             final hasActiveSessions =
                 (sessionSnap.data ?? []).isNotEmpty;
-
             final totalCount = snapshot.data?.length ?? 0;
 
             if (!hasActiveSessions) return const SizedBox.shrink();
