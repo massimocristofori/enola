@@ -72,7 +72,7 @@ final riddleCountProvider = FutureProvider.family<int, String>((ref, mapId) asyn
 final latestSessionProvider = FutureProvider.family<PlaySession?, String>((ref, mapId) async {
   final db = DriftService.instance.db;
   final sessions = await (db.select(db.playSessions)
-        ..where((t) => t.mapId.equals(m.id))  // ← will be caught below
+        ..where((t) => t.mapId.equals(mapId))
         ..orderBy([(t) => drift.OrderingTerm(
               expression: t.startedAt,
               mode: drift.OrderingMode.desc,
