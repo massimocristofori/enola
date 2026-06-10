@@ -17,6 +17,86 @@ class DriftService {
 
   Future<void> ensureReady() => _ready;
 
+  // ── FOLDERS ───────────────────────────────────────────────────────────────
+
+  Stream<List<Folder>> watchAllFolders() {
+    return (db.select(db.folders)
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .watch();
+  }
+
+  Future<int> saveFolder(String title) async {
+    return await db.into(db.folders).insert(
+      FoldersCompanion.insert(title: title),
+    );
+  }
+
+  Future<void> updateFolderTitle(int folderId, String title) async {
+    await (db.update(db.folders)..where((t) => t.id.equals(folderId)))
+        .write(FoldersCompanion(title: Value(title)));
+  }
+
+  Future<void> deleteFolder(int folderId) async {
+    // FK onDelete: setNull — maps in this folder become unfiled automatically
+    await (db.delete(db.folders)..where((t) => t.id.equals(folderId))).go();
+  }
+
+  Future<void> setMapFolder(String mapId, int? folderId) async {
+    await (db.update(db.riddleMaps)..where((t) => t.id.equals(mapId)))
+        .write(RiddleMapsCompanion(folderId: Value(folderId)));
+  }
+
+  Stream<List<RiddleMap>> watchMapsInFolder(int folderId) {
+    return (db.select(db.riddleMaps)
+          ..where((t) => t.folderId.equals(folderId)))
+        .watch();
+  }
+
+  Stream<List<RiddleMap>> watchUnfiledMaps() {
+    return (db.select(db.riddleMaps)
+          ..where((t) => t.folderId.isNull()))
+        .watch();
+  }
+
+  /// Aggregates star counts across all maps in a folder.
+  /// Returns [FolderStats] with mapCount, totalStars, achievedStars.
+  Future<FolderStats> getFolderStats(int folderId) async {
+    final maps = await (db.select(db.riddleMaps)
+          ..where((t) => t.folderId.equals(folderId)))
+        .get();
+
+    int totalStars = 0;
+    int achievedStars = 0;
+
+    for (final map in maps) {
+      // Total possible stars = riddle count × 3
+      final riddles = await (db.select(db.riddles)
+            ..where((t) => t.mapId.equals(map.id)))
+          .get();
+      totalStars += riddles.length * 3;
+
+      // Achieved stars from most recent session
+      final sessions = await (db.select(db.playSessions)
+            ..where((t) => t.mapId.equals(map.id))
+            ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
+            ..limit(1))
+          .get();
+
+      if (sessions.isNotEmpty && sessions.first.riddleStarsJson != null) {
+        try {
+          final list = jsonDecode(sessions.first.riddleStarsJson!) as List;
+          achievedStars += list.fold<int>(0, (sum, e) => sum + (e as int));
+        } catch (_) {}
+      }
+    }
+
+    return FolderStats(
+      mapCount: maps.length,
+      totalStars: totalStars,
+      achievedStars: achievedStars,
+    );
+  }
+
   // ── MAPS ──────────────────────────────────────────────────────────────────
 
   Future<void> saveMap(
@@ -257,6 +337,7 @@ class DriftService {
       await db.delete(db.playSessions).go();
       await db.delete(db.riddles).go();
       await db.delete(db.riddleMaps).go();
+      await db.delete(db.folders).go();
     });
   }
 
@@ -359,7 +440,6 @@ class DriftService {
         .get();
   }
 
-  /// Consecutive correct answers across active sessions only, most recent first.
   Future<int> getTrainingStreak() async {
     final activeSessions = await (db.select(db.trainingSessions)
           ..where((t) => t.completedAt.isNull()))
@@ -421,12 +501,6 @@ class DriftService {
 
   // ── ALL TRAINING RIDDLES STREAM ───────────────────────────────────────────
 
-  /// Streams all riddles across all active training sessions, classified by
-  /// status. Order: failedNotified → pendingNotified → notYetNotified.
-  /// Riddles answered correctly are excluded (their notified row is deleted).
-  /// Riddles whose scheduled slot has already fired are auto-inserted into
-  /// TrainingNotifiedRiddles so they appear as actionable even if the user
-  /// never tapped the notification.
   Stream<List<TrainingRiddleItem>> watchAllTrainingRiddles() {
     final notifiedStream = watchPendingNotifiedRiddles();
     final sessionsStream = (db.select(db.trainingSessions)
@@ -448,9 +522,6 @@ class DriftService {
 
       if (activeSessions.isEmpty) return [];
 
-      // ── Auto-insert any past-due slots that were never tapped ────────────
-      // This covers the case where the notification fired but the user
-      // opened the app directly instead of tapping the notification banner.
       final alreadyNotifiedIds = latestNotified.map((p) => p.riddle.id).toSet();
 
       for (final session in activeSessions) {
@@ -463,10 +534,7 @@ class DriftService {
               mapId: session.mapId,
               riddleId: slot.riddleId,
             );
-            // Add to the local set so subsequent slots in this same
-            // compute() pass don't insert the same riddle twice.
             alreadyNotifiedIds.add(slot.riddleId);
-            // Refresh latestNotified so the status logic below sees it.
             latestNotified = await watchPendingNotifiedRiddles().first;
           }
         }
@@ -478,7 +546,6 @@ class DriftService {
         for (final p in latestNotified) p.riddle.id: p,
       };
 
-      // Collect all riddle IDs that have at least one wrong attempt
       final wrongAttemptRiddleIds = <int>{};
       for (final session in activeSessions) {
         final attempts = await (db.select(db.trainingAttempts)
@@ -590,6 +657,18 @@ class DriftService {
 
 // ── Supporting data classes ───────────────────────────────────────────────────
 
+class FolderStats {
+  final int mapCount;
+  final int totalStars;
+  final int achievedStars;
+
+  const FolderStats({
+    required this.mapCount,
+    required this.totalStars,
+    required this.achievedStars,
+  });
+}
+
 class PendingTrainingRiddle {
   final TrainingNotifiedRiddle notified;
   final Riddle riddle;
@@ -614,14 +693,9 @@ class MasteryProgress {
   const MasteryProgress({required this.mastered, required this.total});
 }
 
-// ── Training riddle status ────────────────────────────────────────────────────
-
 enum TrainingRiddleStatus {
-  /// Notified and answered at least once incorrectly (no correct answer yet)
   failedNotified,
-  /// Notified but never attempted yet
   pendingNotified,
-  /// In the pool but not yet notified
   notYetNotified,
 }
 
@@ -640,8 +714,6 @@ class TrainingRiddleItem {
     this.notifiedAt,
   });
 }
-
-// ── Training slot (mirrors TrainingService) ───────────────────────────────────
 
 class TrainingSlot {
   final int riddleId;
