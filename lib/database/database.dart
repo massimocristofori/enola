@@ -7,6 +7,12 @@ part 'database.g.dart';
 
 // ---
 
+class Folders extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text().withLength(min: 1, max: 100)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class RiddleMaps extends Table {
   TextColumn get id => text()();
   TextColumn get title => text().withLength(min: 1, max: 100)();
@@ -15,6 +21,7 @@ class RiddleMaps extends Table {
   BlobColumn get imageBytes => blob().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
+  IntColumn get folderId => integer().nullable().references(Folders, #id, onDelete: KeyAction.setNull)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -54,8 +61,6 @@ class TrainingSessions extends Table {
   TextColumn get scheduledJson => text().withDefault(const Constant('[]'))();
   DateTimeColumn get completedAt => dateTime().nullable()();
 }
-
-// ── NEW ───────────────────────────────────────────────────────────────────────
 
 class TrainingNotifiedRiddles extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -133,18 +138,19 @@ class OrderingPayload extends RiddlePayload {
 // ---
 
 @DriftDatabase(tables: [
+  Folders,
   RiddleMaps,
   Riddles,
   PlaySessions,
   TrainingSessions,
-  TrainingNotifiedRiddles, // NEW
-  TrainingAttempts,        // NEW
+  TrainingNotifiedRiddles,
+  TrainingAttempts,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -171,6 +177,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 8) {
         await m.createTable(trainingNotifiedRiddles);
         await m.createTable(trainingAttempts);
+      }
+      if (from < 9) {
+        await m.createTable(folders);
+        await m.addColumn(riddleMaps, riddleMaps.folderId);
       }
     },
     beforeOpen: (details) async {
