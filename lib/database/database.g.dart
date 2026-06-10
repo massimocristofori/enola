@@ -3,6 +3,102 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
+class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder>{
+@override final GeneratedDatabase attachedDatabase;
+final String? _alias;
+$FoldersTable(this.attachedDatabase, [this._alias]);
+static const VerificationMeta _idMeta = const VerificationMeta('id');
+@override
+late final GeneratedColumn<int> id = GeneratedColumn<int>('id', aliasedName, false, hasAutoIncrement: true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+static const VerificationMeta _titleMeta = const VerificationMeta('title');
+@override
+late final GeneratedColumn<String> title = GeneratedColumn<String>('title', aliasedName, false, additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1,maxTextLength: 100), type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+@override
+late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('created_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+@override
+List<GeneratedColumn> get $columns => [id, title, createdAt];
+@override
+String get aliasedName => _alias ?? actualTableName;
+@override
+ String get actualTableName => $name;
+static const String $name = 'folders';
+@override
+VerificationContext validateIntegrity(Insertable<Folder> instance, {bool isInserting = false}) {
+final context = VerificationContext();
+final data = instance.toColumns(true);
+if (data.containsKey('id')) {
+context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));}if (data.containsKey('title')) {
+context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));} else if (isInserting) {
+context.missing(_titleMeta);
+}
+if (data.containsKey('created_at')) {
+context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));}return context;
+}
+@override
+Set<GeneratedColumn> get $primaryKey => {id};
+@override Folder map(Map<String, dynamic> data, {String? tablePrefix})  {
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return Folder(id: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}id'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!, );
+}
+@override
+$FoldersTable createAlias(String alias) {
+return $FoldersTable(attachedDatabase, alias);}}class Folder extends DataClass implements Insertable<Folder> 
+{
+final int id;
+final String title;
+final DateTime createdAt;
+const Folder({required this.id, required this.title, required this.createdAt});@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};map['id'] = Variable<int>(id);
+map['title'] = Variable<String>(title);
+map['created_at'] = Variable<DateTime>(createdAt);
+return map; 
+}
+FoldersCompanion toCompanion(bool nullToAbsent) {
+return FoldersCompanion(id: Value(id),title: Value(title),createdAt: Value(createdAt),);
+}
+factory Folder.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return Folder(id: serializer.fromJson<int>(json['id']),title: serializer.fromJson<String>(json['title']),createdAt: serializer.fromJson<DateTime>(json['createdAt']),);}
+@override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return <String, dynamic>{
+'id': serializer.toJson<int>(id),'title': serializer.toJson<String>(title),'createdAt': serializer.toJson<DateTime>(createdAt),};}Folder copyWith({int? id,String? title,DateTime? createdAt}) => Folder(id: id ?? this.id,title: title ?? this.title,createdAt: createdAt ?? this.createdAt,);Folder copyWithCompanion(FoldersCompanion data) {
+return Folder(
+id: data.id.present ? data.id.value : this.id,title: data.title.present ? data.title.value : this.title,createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,);
+}
+@override
+String toString() {return (StringBuffer('Folder(')..write('id: $id, ')..write('title: $title, ')..write('createdAt: $createdAt')..write(')')).toString();}
+@override
+ int get hashCode => Object.hash(id, title, createdAt);@override
+bool operator ==(Object other) => identical(this, other) || (other is Folder && other.id == this.id && other.title == this.title && other.createdAt == this.createdAt);
+}class FoldersCompanion extends UpdateCompanion<Folder> {
+final Value<int> id;
+final Value<String> title;
+final Value<DateTime> createdAt;
+const FoldersCompanion({this.id = const Value.absent(),this.title = const Value.absent(),this.createdAt = const Value.absent(),});
+FoldersCompanion.insert({this.id = const Value.absent(),required String title,this.createdAt = const Value.absent(),}): title = Value(title);
+static Insertable<Folder> custom({Expression<int>? id, 
+Expression<String>? title, 
+Expression<DateTime>? createdAt, 
+}) {
+return RawValuesInsertable({if (id != null)'id': id,if (title != null)'title': title,if (createdAt != null)'created_at': createdAt,});
+}FoldersCompanion copyWith({Value<int>? id, Value<String>? title, Value<DateTime>? createdAt}) {
+return FoldersCompanion(id: id ?? this.id,title: title ?? this.title,createdAt: createdAt ?? this.createdAt,);
+}
+@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};if (id.present) {
+map['id'] = Variable<int>(id.value);}
+if (title.present) {
+map['title'] = Variable<String>(title.value);}
+if (createdAt.present) {
+map['created_at'] = Variable<DateTime>(createdAt.value);}
+return map; 
+}
+@override
+String toString() {return (StringBuffer('FoldersCompanion(')..write('id: $id, ')..write('title: $title, ')..write('createdAt: $createdAt')..write(')')).toString();}
+}
 class $RiddleMapsTable extends RiddleMaps with TableInfo<$RiddleMapsTable, RiddleMap>{
 @override final GeneratedDatabase attachedDatabase;
 final String? _alias;
@@ -28,8 +124,11 @@ late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>('crea
 static const VerificationMeta _riddlesVersionMeta = const VerificationMeta('riddlesVersion');
 @override
 late final GeneratedColumn<int> riddlesVersion = GeneratedColumn<int>('riddles_version', aliasedName, false, type: DriftSqlType.int, requiredDuringInsert: false, defaultValue: const Constant(0));
+static const VerificationMeta _folderIdMeta = const VerificationMeta('folderId');
 @override
-List<GeneratedColumn> get $columns => [id, title, description, subject, imageBytes, createdAt, riddlesVersion];
+late final GeneratedColumn<int> folderId = GeneratedColumn<int>('folder_id', aliasedName, true, type: DriftSqlType.int, requiredDuringInsert: false, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES folders (id) ON DELETE SET NULL'));
+@override
+List<GeneratedColumn> get $columns => [id, title, description, subject, imageBytes, createdAt, riddlesVersion, folderId];
 @override
 String get aliasedName => _alias ?? actualTableName;
 @override
@@ -52,12 +151,13 @@ context.handle(_descriptionMeta, description.isAcceptableOrUnknown(data['descrip
 context.handle(_subjectMeta, subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta));}if (data.containsKey('image_bytes')) {
 context.handle(_imageBytesMeta, imageBytes.isAcceptableOrUnknown(data['image_bytes']!, _imageBytesMeta));}if (data.containsKey('created_at')) {
 context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));}if (data.containsKey('riddles_version')) {
-context.handle(_riddlesVersionMeta, riddlesVersion.isAcceptableOrUnknown(data['riddles_version']!, _riddlesVersionMeta));}return context;
+context.handle(_riddlesVersionMeta, riddlesVersion.isAcceptableOrUnknown(data['riddles_version']!, _riddlesVersionMeta));}if (data.containsKey('folder_id')) {
+context.handle(_folderIdMeta, folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta));}return context;
 }
 @override
 Set<GeneratedColumn> get $primaryKey => {id};
 @override RiddleMap map(Map<String, dynamic> data, {String? tablePrefix})  {
-final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return RiddleMap(id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, description: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}description']), subject: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}subject']), imageBytes: attachedDatabase.typeMapping.read(DriftSqlType.blob, data['${effectivePrefix}image_bytes']), createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!, riddlesVersion: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}riddles_version'])!, );
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return RiddleMap(id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, description: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}description']), subject: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}subject']), imageBytes: attachedDatabase.typeMapping.read(DriftSqlType.blob, data['${effectivePrefix}image_bytes']), createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!, riddlesVersion: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}riddles_version'])!, folderId: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}folder_id']), );
 }
 @override
 $RiddleMapsTable createAlias(String alias) {
@@ -70,7 +170,8 @@ final String? subject;
 final Uint8List? imageBytes;
 final DateTime createdAt;
 final int riddlesVersion;
-const RiddleMap({required this.id, required this.title, this.description, this.subject, this.imageBytes, required this.createdAt, required this.riddlesVersion});@override
+final int? folderId;
+const RiddleMap({required this.id, required this.title, this.description, this.subject, this.imageBytes, required this.createdAt, required this.riddlesVersion, this.folderId});@override
 Map<String, Expression> toColumns(bool nullToAbsent) {
 final map = <String, Expression> {};map['id'] = Variable<String>(id);
 map['title'] = Variable<String>(title);
@@ -79,26 +180,27 @@ if (!nullToAbsent || description != null){map['description'] = Variable<String>(
 }if (!nullToAbsent || imageBytes != null){map['image_bytes'] = Variable<Uint8List>(imageBytes);
 }map['created_at'] = Variable<DateTime>(createdAt);
 map['riddles_version'] = Variable<int>(riddlesVersion);
-return map; 
+if (!nullToAbsent || folderId != null){map['folder_id'] = Variable<int>(folderId);
+}return map; 
 }
 RiddleMapsCompanion toCompanion(bool nullToAbsent) {
-return RiddleMapsCompanion(id: Value(id),title: Value(title),description: description == null && nullToAbsent ? const Value.absent() : Value(description),subject: subject == null && nullToAbsent ? const Value.absent() : Value(subject),imageBytes: imageBytes == null && nullToAbsent ? const Value.absent() : Value(imageBytes),createdAt: Value(createdAt),riddlesVersion: Value(riddlesVersion),);
+return RiddleMapsCompanion(id: Value(id),title: Value(title),description: description == null && nullToAbsent ? const Value.absent() : Value(description),subject: subject == null && nullToAbsent ? const Value.absent() : Value(subject),imageBytes: imageBytes == null && nullToAbsent ? const Value.absent() : Value(imageBytes),createdAt: Value(createdAt),riddlesVersion: Value(riddlesVersion),folderId: folderId == null && nullToAbsent ? const Value.absent() : Value(folderId),);
 }
 factory RiddleMap.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
-return RiddleMap(id: serializer.fromJson<String>(json['id']),title: serializer.fromJson<String>(json['title']),description: serializer.fromJson<String?>(json['description']),subject: serializer.fromJson<String?>(json['subject']),imageBytes: serializer.fromJson<Uint8List?>(json['imageBytes']),createdAt: serializer.fromJson<DateTime>(json['createdAt']),riddlesVersion: serializer.fromJson<int>(json['riddlesVersion']),);}
+return RiddleMap(id: serializer.fromJson<String>(json['id']),title: serializer.fromJson<String>(json['title']),description: serializer.fromJson<String?>(json['description']),subject: serializer.fromJson<String?>(json['subject']),imageBytes: serializer.fromJson<Uint8List?>(json['imageBytes']),createdAt: serializer.fromJson<DateTime>(json['createdAt']),riddlesVersion: serializer.fromJson<int>(json['riddlesVersion']),folderId: serializer.fromJson<int?>(json['folderId']),);}
 @override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
 serializer ??= driftRuntimeOptions.defaultSerializer;
 return <String, dynamic>{
-'id': serializer.toJson<String>(id),'title': serializer.toJson<String>(title),'description': serializer.toJson<String?>(description),'subject': serializer.toJson<String?>(subject),'imageBytes': serializer.toJson<Uint8List?>(imageBytes),'createdAt': serializer.toJson<DateTime>(createdAt),'riddlesVersion': serializer.toJson<int>(riddlesVersion),};}RiddleMap copyWith({String? id,String? title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),DateTime? createdAt,int? riddlesVersion}) => RiddleMap(id: id ?? this.id,title: title ?? this.title,description: description.present ? description.value : this.description,subject: subject.present ? subject.value : this.subject,imageBytes: imageBytes.present ? imageBytes.value : this.imageBytes,createdAt: createdAt ?? this.createdAt,riddlesVersion: riddlesVersion ?? this.riddlesVersion,);RiddleMap copyWithCompanion(RiddleMapsCompanion data) {
+'id': serializer.toJson<String>(id),'title': serializer.toJson<String>(title),'description': serializer.toJson<String?>(description),'subject': serializer.toJson<String?>(subject),'imageBytes': serializer.toJson<Uint8List?>(imageBytes),'createdAt': serializer.toJson<DateTime>(createdAt),'riddlesVersion': serializer.toJson<int>(riddlesVersion),'folderId': serializer.toJson<int?>(folderId),};}RiddleMap copyWith({String? id,String? title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),DateTime? createdAt,int? riddlesVersion,Value<int?> folderId = const Value.absent()}) => RiddleMap(id: id ?? this.id,title: title ?? this.title,description: description.present ? description.value : this.description,subject: subject.present ? subject.value : this.subject,imageBytes: imageBytes.present ? imageBytes.value : this.imageBytes,createdAt: createdAt ?? this.createdAt,riddlesVersion: riddlesVersion ?? this.riddlesVersion,folderId: folderId.present ? folderId.value : this.folderId,);RiddleMap copyWithCompanion(RiddleMapsCompanion data) {
 return RiddleMap(
-id: data.id.present ? data.id.value : this.id,title: data.title.present ? data.title.value : this.title,description: data.description.present ? data.description.value : this.description,subject: data.subject.present ? data.subject.value : this.subject,imageBytes: data.imageBytes.present ? data.imageBytes.value : this.imageBytes,createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,riddlesVersion: data.riddlesVersion.present ? data.riddlesVersion.value : this.riddlesVersion,);
+id: data.id.present ? data.id.value : this.id,title: data.title.present ? data.title.value : this.title,description: data.description.present ? data.description.value : this.description,subject: data.subject.present ? data.subject.value : this.subject,imageBytes: data.imageBytes.present ? data.imageBytes.value : this.imageBytes,createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,riddlesVersion: data.riddlesVersion.present ? data.riddlesVersion.value : this.riddlesVersion,folderId: data.folderId.present ? data.folderId.value : this.folderId,);
 }
 @override
-String toString() {return (StringBuffer('RiddleMap(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('riddlesVersion: $riddlesVersion')..write(')')).toString();}
+String toString() {return (StringBuffer('RiddleMap(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('riddlesVersion: $riddlesVersion, ')..write('folderId: $folderId')..write(')')).toString();}
 @override
- int get hashCode => Object.hash(id, title, description, subject, $driftBlobEquality.hash(imageBytes), createdAt, riddlesVersion);@override
-bool operator ==(Object other) => identical(this, other) || (other is RiddleMap && other.id == this.id && other.title == this.title && other.description == this.description && other.subject == this.subject && $driftBlobEquality.equals(other.imageBytes, this.imageBytes) && other.createdAt == this.createdAt && other.riddlesVersion == this.riddlesVersion);
+ int get hashCode => Object.hash(id, title, description, subject, $driftBlobEquality.hash(imageBytes), createdAt, riddlesVersion, folderId);@override
+bool operator ==(Object other) => identical(this, other) || (other is RiddleMap && other.id == this.id && other.title == this.title && other.description == this.description && other.subject == this.subject && $driftBlobEquality.equals(other.imageBytes, this.imageBytes) && other.createdAt == this.createdAt && other.riddlesVersion == this.riddlesVersion && other.folderId == this.folderId);
 }class RiddleMapsCompanion extends UpdateCompanion<RiddleMap> {
 final Value<String> id;
 final Value<String> title;
@@ -107,9 +209,10 @@ final Value<String?> subject;
 final Value<Uint8List?> imageBytes;
 final Value<DateTime> createdAt;
 final Value<int> riddlesVersion;
+final Value<int?> folderId;
 final Value<int> rowid;
-const RiddleMapsCompanion({this.id = const Value.absent(),this.title = const Value.absent(),this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.riddlesVersion = const Value.absent(),this.rowid = const Value.absent(),});
-RiddleMapsCompanion.insert({required String id,required String title,this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.riddlesVersion = const Value.absent(),this.rowid = const Value.absent(),}): id = Value(id), title = Value(title);
+const RiddleMapsCompanion({this.id = const Value.absent(),this.title = const Value.absent(),this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.riddlesVersion = const Value.absent(),this.folderId = const Value.absent(),this.rowid = const Value.absent(),});
+RiddleMapsCompanion.insert({required String id,required String title,this.description = const Value.absent(),this.subject = const Value.absent(),this.imageBytes = const Value.absent(),this.createdAt = const Value.absent(),this.riddlesVersion = const Value.absent(),this.folderId = const Value.absent(),this.rowid = const Value.absent(),}): id = Value(id), title = Value(title);
 static Insertable<RiddleMap> custom({Expression<String>? id, 
 Expression<String>? title, 
 Expression<String>? description, 
@@ -117,11 +220,12 @@ Expression<String>? subject,
 Expression<Uint8List>? imageBytes, 
 Expression<DateTime>? createdAt, 
 Expression<int>? riddlesVersion, 
+Expression<int>? folderId, 
 Expression<int>? rowid, 
 }) {
-return RawValuesInsertable({if (id != null)'id': id,if (title != null)'title': title,if (description != null)'description': description,if (subject != null)'subject': subject,if (imageBytes != null)'image_bytes': imageBytes,if (createdAt != null)'created_at': createdAt,if (riddlesVersion != null)'riddles_version': riddlesVersion,if (rowid != null)'rowid': rowid,});
-}RiddleMapsCompanion copyWith({Value<String>? id, Value<String>? title, Value<String?>? description, Value<String?>? subject, Value<Uint8List?>? imageBytes, Value<DateTime>? createdAt, Value<int>? riddlesVersion, Value<int>? rowid}) {
-return RiddleMapsCompanion(id: id ?? this.id,title: title ?? this.title,description: description ?? this.description,subject: subject ?? this.subject,imageBytes: imageBytes ?? this.imageBytes,createdAt: createdAt ?? this.createdAt,riddlesVersion: riddlesVersion ?? this.riddlesVersion,rowid: rowid ?? this.rowid,);
+return RawValuesInsertable({if (id != null)'id': id,if (title != null)'title': title,if (description != null)'description': description,if (subject != null)'subject': subject,if (imageBytes != null)'image_bytes': imageBytes,if (createdAt != null)'created_at': createdAt,if (riddlesVersion != null)'riddles_version': riddlesVersion,if (folderId != null)'folder_id': folderId,if (rowid != null)'rowid': rowid,});
+}RiddleMapsCompanion copyWith({Value<String>? id, Value<String>? title, Value<String?>? description, Value<String?>? subject, Value<Uint8List?>? imageBytes, Value<DateTime>? createdAt, Value<int>? riddlesVersion, Value<int?>? folderId, Value<int>? rowid}) {
+return RiddleMapsCompanion(id: id ?? this.id,title: title ?? this.title,description: description ?? this.description,subject: subject ?? this.subject,imageBytes: imageBytes ?? this.imageBytes,createdAt: createdAt ?? this.createdAt,riddlesVersion: riddlesVersion ?? this.riddlesVersion,folderId: folderId ?? this.folderId,rowid: rowid ?? this.rowid,);
 }
 @override
 Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -139,12 +243,14 @@ if (createdAt.present) {
 map['created_at'] = Variable<DateTime>(createdAt.value);}
 if (riddlesVersion.present) {
 map['riddles_version'] = Variable<int>(riddlesVersion.value);}
+if (folderId.present) {
+map['folder_id'] = Variable<int>(folderId.value);}
 if (rowid.present) {
 map['rowid'] = Variable<int>(rowid.value);}
 return map; 
 }
 @override
-String toString() {return (StringBuffer('RiddleMapsCompanion(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('riddlesVersion: $riddlesVersion, ')..write('rowid: $rowid')..write(')')).toString();}
+String toString() {return (StringBuffer('RiddleMapsCompanion(')..write('id: $id, ')..write('title: $title, ')..write('description: $description, ')..write('subject: $subject, ')..write('imageBytes: $imageBytes, ')..write('createdAt: $createdAt, ')..write('riddlesVersion: $riddlesVersion, ')..write('folderId: $folderId, ')..write('rowid: $rowid')..write(')')).toString();}
 }
 class $RiddlesTable extends Riddles with TableInfo<$RiddlesTable, Riddle>{
 @override final GeneratedDatabase attachedDatabase;
@@ -863,6 +969,7 @@ String toString() {return (StringBuffer('TrainingAttemptsCompanion(')..write('id
 abstract class _$AppDatabase extends GeneratedDatabase{
 _$AppDatabase(QueryExecutor e): super(e);
 $AppDatabaseManager get managers => $AppDatabaseManager(this);
+late final $FoldersTable folders = $FoldersTable(this);
 late final $RiddleMapsTable riddleMaps = $RiddleMapsTable(this);
 late final $RiddlesTable riddles = $RiddlesTable(this);
 late final $PlaySessionsTable playSessions = $PlaySessionsTable(this);
@@ -872,19 +979,248 @@ late final $TrainingAttemptsTable trainingAttempts = $TrainingAttemptsTable(this
 @override
 Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
 @override
-List<DatabaseSchemaEntity> get allSchemaEntities => [riddleMaps, riddles, playSessions, trainingSessions, trainingNotifiedRiddles, trainingAttempts];
+List<DatabaseSchemaEntity> get allSchemaEntities => [folders, riddleMaps, riddles, playSessions, trainingSessions, trainingNotifiedRiddles, trainingAttempts];
 @override
-StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), ],);
+StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('folders' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddle_maps', kind: UpdateKind.update), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), ],);
 }
-typedef $$RiddleMapsTableCreateCompanionBuilder = RiddleMapsCompanion Function({required String id,required String title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
-typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({Value<String> id,Value<String> title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int> rowid,});
+typedef $$FoldersTableCreateCompanionBuilder = FoldersCompanion Function({Value<int> id,required String title,Value<DateTime> createdAt,});
+typedef $$FoldersTableUpdateCompanionBuilder = FoldersCompanion Function({Value<int> id,Value<String> title,Value<DateTime> createdAt,});
+      final class $$FoldersTableReferences extends BaseReferences<
+        _$AppDatabase,
+        $FoldersTable,
+        Folder> {
+        $$FoldersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+        
+                  
+                  static MultiTypedResultKey<
+          $RiddleMapsTable,
+          List<RiddleMap>
+        > _riddleMapsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.riddleMaps, 
+          aliasName: $_aliasNameGenerator(
+            db.folders.id,
+            db.riddleMaps.folderId)
+        );
+
+          $$RiddleMapsTableProcessedTableManager get riddleMapsRefs {
+        final manager = $$RiddleMapsTableTableManager(
+            $_db, $_db.riddleMaps
+            ).filter(
+              (f) => f.folderId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_riddleMapsRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
+
+      }class $$FoldersTableFilterComposer extends Composer<
+        _$AppDatabase,
+        $FoldersTable> {
+        $$FoldersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+        Expression<bool> riddleMapsRefs(
+          Expression<bool> Function( $$RiddleMapsTableFilterComposer f) f
+        ) {
+                final $$RiddleMapsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.riddleMaps,
+      getReferencedColumn: (t) => t.folderId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddleMapsTableFilterComposer(
+              $db: $db,
+              $table: $db.riddleMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        }
+      class $$FoldersTableOrderingComposer extends Composer<
+        _$AppDatabase,
+        $FoldersTable> {
+        $$FoldersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+        }
+      class $$FoldersTableAnnotationComposer extends Composer<
+        _$AppDatabase,
+        $FoldersTable> {
+        $$FoldersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          GeneratedColumn<int> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get title => $composableBuilder(
+      column: $table.title,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt,
+      builder: (column) => column);
+      
+        Expression<T> riddleMapsRefs<T extends Object>(
+          Expression<T> Function( $$RiddleMapsTableAnnotationComposer a) f
+        ) {
+                final $$RiddleMapsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.riddleMaps,
+      getReferencedColumn: (t) => t.folderId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$RiddleMapsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.riddleMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        }
+      class $$FoldersTableTableManager extends RootTableManager    <_$AppDatabase,
+    $FoldersTable,
+    Folder,
+    $$FoldersTableFilterComposer,
+    $$FoldersTableOrderingComposer,
+    $$FoldersTableAnnotationComposer,
+    $$FoldersTableCreateCompanionBuilder,
+    $$FoldersTableUpdateCompanionBuilder,
+    (Folder,$$FoldersTableReferences),
+    Folder,
+    PrefetchHooks Function({bool riddleMapsRefs})
+    > {
+    $$FoldersTableTableManager(_$AppDatabase db, $FoldersTable table) : super(
+      TableManagerState(
+        db: db,
+        table: table,
+        createFilteringComposer: () => $$FoldersTableFilterComposer($db: db,$table:table),
+        createOrderingComposer: () => $$FoldersTableOrderingComposer($db: db,$table:table),
+        createComputedFieldComposer: () => $$FoldersTableAnnotationComposer($db: db,$table:table),
+        updateCompanionCallback: ({Value<int> id = const Value.absent(),Value<String> title = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),})=> FoldersCompanion(id: id,title: title,createdAt: createdAt,),
+        createCompanionCallback: ({Value<int> id = const Value.absent(),required String title,Value<DateTime> createdAt = const Value.absent(),})=> FoldersCompanion.insert(id: id,title: title,createdAt: createdAt,),
+        withReferenceMapper: (p0) => p0
+              .map(
+                  (e) =>
+                     (e.readTable(table), $$FoldersTableReferences(db, table, e))
+                  )
+              .toList(),
+        prefetchHooksCallback:         ({riddleMapsRefs = false}){
+          return PrefetchHooks(
+            db: db,
+            explicitlyWatchedTables: [
+             if (riddleMapsRefs) db.riddleMaps
+            ],
+            addJoins: null,
+            getPrefetchedDataCallback: (items) async {
+            return [
+                      if (riddleMapsRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$FoldersTableReferences._riddleMapsRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$FoldersTableReferences(db, table, p0).riddleMapsRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.folderId == item.id),
+                  typedResults: items)
+            
+                ];
+              },
+          );
+        }
+,
+        ));
+        }
+    typedef $$FoldersTableProcessedTableManager = ProcessedTableManager    <_$AppDatabase,
+    $FoldersTable,
+    Folder,
+    $$FoldersTableFilterComposer,
+    $$FoldersTableOrderingComposer,
+    $$FoldersTableAnnotationComposer,
+    $$FoldersTableCreateCompanionBuilder,
+    $$FoldersTableUpdateCompanionBuilder,
+    (Folder,$$FoldersTableReferences),
+    Folder,
+    PrefetchHooks Function({bool riddleMapsRefs})
+    >;typedef $$RiddleMapsTableCreateCompanionBuilder = RiddleMapsCompanion Function({required String id,required String title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int?> folderId,Value<int> rowid,});
+typedef $$RiddleMapsTableUpdateCompanionBuilder = RiddleMapsCompanion Function({Value<String> id,Value<String> title,Value<String?> description,Value<String?> subject,Value<Uint8List?> imageBytes,Value<DateTime> createdAt,Value<int> riddlesVersion,Value<int?> folderId,Value<int> rowid,});
       final class $$RiddleMapsTableReferences extends BaseReferences<
         _$AppDatabase,
         $RiddleMapsTable,
         RiddleMap> {
         $$RiddleMapsTableReferences(super.$_db, super.$_table, super.$_typedResult);
         
-                  
+                          static $FoldersTable _folderIdTable(_$AppDatabase db) => 
+            db.folders.createAlias($_aliasNameGenerator(
+            db.riddleMaps.folderId,
+            db.folders.id));
+          
+
+        $$FoldersTableProcessedTableManager? get folderId {
+          if ($_item.folderId == null) return null;
+          final manager = $$FoldersTableTableManager($_db, $_db.folders).filter((f) => f.id($_item.folderId!));
+          final item = $_typedResult.readTableOrNull(_folderIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+          
                   static MultiTypedResultKey<
           $RiddlesTable,
           List<Riddle>
@@ -1011,6 +1347,23 @@ ColumnFilters<int> get riddlesVersion => $composableBuilder(
       builder: (column) => 
       ColumnFilters(column));
       
+        $$FoldersTableFilterComposer get folderId {
+                final $$FoldersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.folderId,
+      referencedTable: $db.folders,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$FoldersTableFilterComposer(
+              $db: $db,
+              $table: $db.folders,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
         Expression<bool> riddlesRefs(
           Expression<bool> Function( $$RiddlesTableFilterComposer f) f
         ) {
@@ -1117,6 +1470,23 @@ ColumnOrderings<int> get riddlesVersion => $composableBuilder(
       builder: (column) => 
       ColumnOrderings(column));
       
+        $$FoldersTableOrderingComposer get folderId {
+                final $$FoldersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.folderId,
+      referencedTable: $db.folders,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$FoldersTableOrderingComposer(
+              $db: $db,
+              $table: $db.folders,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
         }
       class $$RiddleMapsTableAnnotationComposer extends Composer<
         _$AppDatabase,
@@ -1156,6 +1526,23 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
       column: $table.riddlesVersion,
       builder: (column) => column);
       
+        $$FoldersTableAnnotationComposer get folderId {
+                final $$FoldersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.folderId,
+      referencedTable: $db.folders,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$FoldersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.folders,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
         Expression<T> riddlesRefs<T extends Object>(
           Expression<T> Function( $$RiddlesTableAnnotationComposer a) f
         ) {
@@ -1227,7 +1614,7 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
     $$RiddleMapsTableUpdateCompanionBuilder,
     (RiddleMap,$$RiddleMapsTableReferences),
     RiddleMap,
-    PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs,bool trainingSessionsRefs})
+    PrefetchHooks Function({bool folderId,bool riddlesRefs,bool playSessionsRefs,bool trainingSessionsRefs})
     > {
     $$RiddleMapsTableTableManager(_$AppDatabase db, $RiddleMapsTable table) : super(
       TableManagerState(
@@ -1236,21 +1623,36 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
         createFilteringComposer: () => $$RiddleMapsTableFilterComposer($db: db,$table:table),
         createOrderingComposer: () => $$RiddleMapsTableOrderingComposer($db: db,$table:table),
         createComputedFieldComposer: () => $$RiddleMapsTableAnnotationComposer($db: db,$table:table),
-        updateCompanionCallback: ({Value<String> id = const Value.absent(),Value<String> title = const Value.absent(),Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,riddlesVersion: riddlesVersion,rowid: rowid,),
-        createCompanionCallback: ({required String id,required String title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion.insert(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,riddlesVersion: riddlesVersion,rowid: rowid,),
+        updateCompanionCallback: ({Value<String> id = const Value.absent(),Value<String> title = const Value.absent(),Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),Value<int?> folderId = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,riddlesVersion: riddlesVersion,folderId: folderId,rowid: rowid,),
+        createCompanionCallback: ({required String id,required String title,Value<String?> description = const Value.absent(),Value<String?> subject = const Value.absent(),Value<Uint8List?> imageBytes = const Value.absent(),Value<DateTime> createdAt = const Value.absent(),Value<int> riddlesVersion = const Value.absent(),Value<int?> folderId = const Value.absent(),Value<int> rowid = const Value.absent(),})=> RiddleMapsCompanion.insert(id: id,title: title,description: description,subject: subject,imageBytes: imageBytes,createdAt: createdAt,riddlesVersion: riddlesVersion,folderId: folderId,rowid: rowid,),
         withReferenceMapper: (p0) => p0
               .map(
                   (e) =>
                      (e.readTable(table), $$RiddleMapsTableReferences(db, table, e))
                   )
               .toList(),
-        prefetchHooksCallback:         ({riddlesRefs = false,playSessionsRefs = false,trainingSessionsRefs = false}){
+        prefetchHooksCallback:         ({folderId = false,riddlesRefs = false,playSessionsRefs = false,trainingSessionsRefs = false}){
           return PrefetchHooks(
             db: db,
             explicitlyWatchedTables: [
              if (riddlesRefs) db.riddles,if (playSessionsRefs) db.playSessions,if (trainingSessionsRefs) db.trainingSessions
             ],
-            addJoins: null,
+            addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
+
+                                  if (folderId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.folderId,
+                    referencedTable:
+                        $$RiddleMapsTableReferences._folderIdTable(db),
+                    referencedColumn:
+                        $$RiddleMapsTableReferences._folderIdTable(db).id,
+                  ) as T;
+               }
+
+                return state;
+              }
+,
             getPrefetchedDataCallback: (items) async {
             return [
                       if (riddlesRefs) await $_getPrefetchedData(
@@ -1298,7 +1700,7 @@ GeneratedColumn<int> get riddlesVersion => $composableBuilder(
     $$RiddleMapsTableUpdateCompanionBuilder,
     (RiddleMap,$$RiddleMapsTableReferences),
     RiddleMap,
-    PrefetchHooks Function({bool riddlesRefs,bool playSessionsRefs,bool trainingSessionsRefs})
+    PrefetchHooks Function({bool folderId,bool riddlesRefs,bool playSessionsRefs,bool trainingSessionsRefs})
     >;typedef $$RiddlesTableCreateCompanionBuilder = RiddlesCompanion Function({Value<int> id,required String mapId,required String question,required int typeIndex,required int orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,Value<String?> sourceExcerpt,});
 typedef $$RiddlesTableUpdateCompanionBuilder = RiddlesCompanion Function({Value<int> id,Value<String> mapId,Value<String> question,Value<int> typeIndex,Value<int> orderInMap,Value<String?> payloadJson,Value<String?> choicesJson,Value<int?> correctIndex,Value<String?> sourceExcerpt,});
       final class $$RiddlesTableReferences extends BaseReferences<
@@ -3047,6 +3449,7 @@ GeneratedColumn<DateTime> get answeredAt => $composableBuilder(
     >;class $AppDatabaseManager {
 final _$AppDatabase _db;
 $AppDatabaseManager(this._db);
+$$FoldersTableTableManager get folders => $$FoldersTableTableManager(_db, _db.folders);
 $$RiddleMapsTableTableManager get riddleMaps => $$RiddleMapsTableTableManager(_db, _db.riddleMaps);
 $$RiddlesTableTableManager get riddles => $$RiddlesTableTableManager(_db, _db.riddles);
 $$PlaySessionsTableTableManager get playSessions => $$PlaySessionsTableTableManager(_db, _db.playSessions);
