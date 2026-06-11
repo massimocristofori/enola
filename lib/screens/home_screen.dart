@@ -18,6 +18,9 @@ import 'package:enola/services/training_service.dart';
 
 import 'package:drift/drift.dart' as drift_orm;
 
+// Card aspect ratio — single source of truth used by both grid and drag feedback
+const double kCardAspectRatio = 0.84;
+
 class HomeScreen extends ConsumerWidget {
   final int? folderId;
   final String? folderName;
@@ -83,6 +86,18 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+int _crossAxisCount(double width) => width >= 500 ? 3 : 2;
+
+/// Computes exact card width matching the SliverGrid layout.
+double _cardWidth(BuildContext context) {
+  final w = math.min(MediaQuery.of(context).size.width, 600.0);
+  final cols = _crossAxisCount(w);
+  // 40px left + 40px right padding, 24px gap between cols
+  return (w - 80 - (cols - 1) * 24) / cols;
+}
+
 // ── Root scroll view ──────────────────────────────────────────────────────────
 
 class _RootScrollView extends ConsumerStatefulWidget {
@@ -96,8 +111,6 @@ class _RootScrollView extends ConsumerStatefulWidget {
 class _RootScrollViewState extends ConsumerState<_RootScrollView> {
   int? _hoveredFolderId;
   bool _unfiledHovered = false;
-
-  int _crossAxisCount(double width) => width >= 500 ? 3 : 2;
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +139,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
       slivers: [
         SliverToBoxAdapter(child: _Header()),
 
-        // ── Folders ──
+        // ── Folders section ──
         if (folders.isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
@@ -135,7 +148,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                 crossAxisCount: cols,
                 crossAxisSpacing: 24,
                 mainAxisSpacing: 14,
-                childAspectRatio: 0.84,
+                childAspectRatio: kCardAspectRatio,
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
@@ -146,9 +159,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                       setState(() => _hoveredFolderId = folder.id);
                       return true;
                     },
-                    onLeave: (_) {
-                      setState(() => _hoveredFolderId = null);
-                    },
+                    onLeave: (_) => setState(() => _hoveredFolderId = null),
                     onAcceptWithDetails: (details) {
                       setState(() => _hoveredFolderId = null);
                       DriftService.instance
@@ -188,54 +199,56 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
             ),
           ),
 
-        // ── Unfiled divider — DragTarget to unfile ──
-        if (unfiled.isNotEmpty || folders.isNotEmpty)
-          SliverToBoxAdapter(
-            child: DragTarget<RiddleMap>(
-              onWillAcceptWithDetails: (details) {
-                if (details.data.folderId == null) return false;
-                setState(() => _unfiledHovered = true);
-                return true;
-              },
-              onLeave: (_) => setState(() => _unfiledHovered = false),
-              onAcceptWithDetails: (details) {
-                setState(() => _unfiledHovered = false);
-                DriftService.instance.setMapFolder(details.data.id, null);
-              },
-              builder: (context, candidateData, rejectedData) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  margin: const EdgeInsets.fromLTRB(40, 20, 40, 4),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _unfiledHovered
-                        ? EnolaTheme.accent.withValues(alpha: 0.08)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: _unfiledHovered
-                        ? Border.all(
-                            color: EnolaTheme.accent.withValues(alpha: 0.4),
-                            width: 1.5)
-                        : null,
-                  ),
+        // ── Divider between folders and maps — also DragTarget to unfile ──
+        SliverToBoxAdapter(
+          child: DragTarget<RiddleMap>(
+            onWillAcceptWithDetails: (details) {
+              if (details.data.folderId == null) return false;
+              setState(() => _unfiledHovered = true);
+              return true;
+            },
+            onLeave: (_) => setState(() => _unfiledHovered = false),
+            onAcceptWithDetails: (details) {
+              setState(() => _unfiledHovered = false);
+              DriftService.instance.setMapFolder(details.data.id, null);
+            },
+            builder: (context, candidateData, rejectedData) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                decoration: BoxDecoration(
+                  color: _unfiledHovered
+                      ? EnolaTheme.accent.withValues(alpha: 0.06)
+                      : const Color(0xFFF9FAFB),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20)),
+                  border: _unfiledHovered
+                      ? Border.all(
+                          color: EnolaTheme.accent.withValues(alpha: 0.3),
+                          width: 1.5)
+                      : null,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(40, 16, 40, 4),
                   child: Row(
                     children: [
                       Expanded(
                         child: Divider(
                           color: _unfiledHovered
-                              ? EnolaTheme.accent
+                              ? EnolaTheme.accent.withValues(alpha: 0.4)
                               : const Color(0xFFE5E7EB),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        _unfiledHovered ? 'Drop to unfile' : 'Unfiled',
+                        _unfiledHovered ? 'Drop to unfile' : 'Maps',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: _unfiledHovered
                               ? EnolaTheme.accent
-                              : EnolaTheme.textSecond.withValues(alpha: 0.7),
+                              : EnolaTheme.textSecond
+                                  .withValues(alpha: 0.7),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -243,48 +256,62 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                       Expanded(
                         child: Divider(
                           color: _unfiledHovered
-                              ? EnolaTheme.accent
+                              ? EnolaTheme.accent.withValues(alpha: 0.4)
                               : const Color(0xFFE5E7EB),
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
+        ),
 
-        // ── Unfiled maps ──
+        // ── Unfiled maps — on the light background ──
         if (unfiled.isNotEmpty)
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              40,
-              folders.isEmpty ? 4 : 8,
-              40,
-              100,
-            ),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.84,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) {
-                  final offset = folders.length;
-                  return _MapCard(map: unfiled[i])
-                      .animate(delay: ((offset + i) * 60).ms)
-                      .fadeIn(duration: 350.ms)
-                      .scale(begin: const Offset(0.95, 0.95));
-                },
-                childCount: unfiled.length,
+          SliverToBoxAdapter(
+            child: ColoredBox(
+              color: const Color(0xFFF9FAFB),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(40, 8, 40, 100),
+                child: Builder(
+                  builder: (context) {
+                    final cols2 =
+                        _crossAxisCount(MediaQuery.of(context).size.width);
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: cols2,
+                        crossAxisSpacing: 24,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: kCardAspectRatio,
+                      ),
+                      itemCount: unfiled.length,
+                      itemBuilder: (context, i) {
+                        final offset = folders.length;
+                        return _MapCard(map: unfiled[i])
+                            .animate(delay: ((offset + i) * 60).ms)
+                            .fadeIn(duration: 350.ms)
+                            .scale(begin: const Offset(0.95, 0.95));
+                      },
+                    );
+                  },
+                ),
               ),
             ),
           ),
 
+        // ── When no unfiled maps, close the light background area ──
         if (unfiled.isEmpty)
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const SliverToBoxAdapter(
+            child: ColoredBox(
+              color: Color(0xFFF9FAFB),
+              child: SizedBox(height: 100),
+            ),
+          ),
       ],
     );
   }
@@ -309,8 +336,6 @@ class _FolderScrollView extends ConsumerStatefulWidget {
 
 class _FolderScrollViewState extends ConsumerState<_FolderScrollView> {
   bool _moveOutHovered = false;
-
-  int _crossAxisCount(double width) => width >= 500 ? 3 : 2;
 
   @override
   Widget build(BuildContext context) {
@@ -352,8 +377,8 @@ class _FolderScrollViewState extends ConsumerState<_FolderScrollView> {
             builder: (context, candidateData, rejectedData) {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
-                margin: const EdgeInsets.fromLTRB(40, 0, 40, 12),
-                height: _moveOutHovered ? 52 : 28,
+                margin: const EdgeInsets.fromLTRB(40, 0, 40, 0),
+                height: _moveOutHovered ? 52 : 24,
                 decoration: BoxDecoration(
                   color: _moveOutHovered
                       ? EnolaTheme.accent.withValues(alpha: 0.08)
@@ -385,21 +410,26 @@ class _FolderScrollViewState extends ConsumerState<_FolderScrollView> {
             child: _EmptyFolderState(onCreate: widget.onCreate),
           )
         else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(40, 4, 40, 100),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.84,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) => _MapCard(map: maps[i])
-                    .animate(delay: (i * 60).ms)
-                    .fadeIn(duration: 350.ms)
-                    .scale(begin: const Offset(0.95, 0.95)),
-                childCount: maps.length,
+          SliverToBoxAdapter(
+            child: ColoredBox(
+              color: const Color(0xFFF9FAFB),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(40, 8, 40, 100),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    crossAxisSpacing: 24,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: kCardAspectRatio,
+                  ),
+                  itemCount: maps.length,
+                  itemBuilder: (context, i) => _MapCard(map: maps[i])
+                      .animate(delay: (i * 60).ms)
+                      .fadeIn(duration: 350.ms)
+                      .scale(begin: const Offset(0.95, 0.95)),
+                ),
               ),
             ),
           ),
@@ -652,6 +682,11 @@ class _FolderCard extends ConsumerWidget {
     final maps = mapsAsync.valueOrNull ?? [];
     final stats = statsAsync.valueOrNull;
 
+    // Derive progress bar inputs from FolderStats
+    final achievedStars = stats?.achievedStars ?? 0;
+    final totalStars = stats?.totalStars ?? 0;
+    final hasBeenPlayed = achievedStars > 0 || (stats?.mapCount ?? 0) > 0;
+
     return GestureDetector(
       onTap: () => _openFolder(context),
       child: Container(
@@ -676,7 +711,14 @@ class _FolderCard extends ConsumerWidget {
                 child: _FolderCoverGrid(maps: maps),
               ),
             ),
-            _FolderInfoBar(title: folder.title, stats: stats),
+            // Reuse _CardInfoBar with folder title + aggregate stars
+            _CardInfoBar(
+              title: folder.title,
+              achievedStars: achievedStars,
+              maxStars: totalStars,
+              hasBeenPlayed: hasBeenPlayed,
+              isComplete: totalStars > 0 && achievedStars >= totalStars,
+            ),
           ],
         ),
       ),
@@ -705,7 +747,8 @@ class _FolderCoverGrid extends ConsumerWidget {
     if (isComplete) {
       final ratio = riddleCount > 0 ? achieved / (riddleCount * 3) : 0.0;
       if (ratio >= 0.9) return const Color(0xFFFFD700);
-      if (ratio >= 0.5) return const Color(0xFFFFD700).withValues(alpha: 0.7);
+      if (ratio >= 0.5)
+        return const Color(0xFFFFD700).withValues(alpha: 0.7);
       return const Color(0xFFFFD700).withValues(alpha: 0.5);
     }
     return EnolaTheme.accent.withValues(alpha: 0.65);
@@ -719,7 +762,7 @@ class _FolderCoverGrid extends ConsumerWidget {
     final overflow = maps.length - maxVisible;
 
     return Container(
-      color: Colors.white,          // ← white background
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: maps.isEmpty
@@ -776,116 +819,6 @@ class _FolderCoverGrid extends ConsumerWidget {
   }
 }
 
-// ── Folder Info Bar ───────────────────────────────────────────────────────────
-
-class _FolderInfoBar extends StatelessWidget {
-  final String title;
-  final FolderStats? stats;
-
-  const _FolderInfoBar({required this.title, required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    final s = stats;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 38,
-            padding:
-                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF9FAFB),
-              border: Border(
-                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.folder_rounded,
-                    size: 14, color: EnolaTheme.textSecond),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: EnolaTheme.textPrimary,
-                      height: 1.3,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 38,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (s != null) ...[
-                    Text(
-                      '${s.mapCount} maps',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      width: 3,
-                      height: 3,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFCCCCCC),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.star_rounded,
-                        size: 13, color: Color(0xFFF1C40F)),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${s.achievedStars} / ${s.totalStars}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                  ] else
-                    const Text(
-                      'Empty folder',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFAAAAAA),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Map Card ──────────────────────────────────────────────────────────────────
 
 class _MapCard extends ConsumerWidget {
@@ -914,17 +847,14 @@ class _MapCard extends ConsumerWidget {
 
   Future<void> _toggleTraining(BuildContext context) async {
     final isActive = await TrainingService.instance.isTrainingActive(map.id);
-
     if (isActive) {
       await TrainingService.instance.stopTraining(map.id);
       return;
     }
-
     final riddles = await (DriftService.instance.db.select(
       DriftService.instance.db.riddles,
     )..where((t) => t.mapId.equals(map.id)))
         .get();
-
     if (riddles.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -935,7 +865,6 @@ class _MapCard extends ConsumerWidget {
       }
       return;
     }
-
     await TrainingService.instance.startTraining(
       mapId: map.id,
       riddles: riddles,
@@ -1022,8 +951,7 @@ class _MapCard extends ConsumerWidget {
                                     ? Image.memory(imageBytes,
                                         fit: BoxFit.cover,
                                         width: double.infinity)
-                                    : Image.asset(
-                                        'assets/images/0.jpeg',
+                                    : Image.asset('assets/images/0.jpeg',
                                         fit: BoxFit.cover,
                                         width: double.infinity),
                               ),
@@ -1057,35 +985,6 @@ class _MapCard extends ConsumerWidget {
       isComplete: isComplete,
     );
 
-    // Feedback widget: same size as card, no scale,
-    // deeper shadow + slight image dim via ColorFiltered
-    final dragFeedback = SizedBox(
-      // Card width = (constrained width - 2×40 padding - (cols-1)×24 gap) / cols
-      // We use LayoutBuilder via MediaQuery; cols is 2 or 3 based on screen width
-      width: (() {
-        final w = math.min(MediaQuery.of(context).size.width, 600.0);
-        final cols = w >= 500 ? 3 : 2;
-        return (w - 80 - (cols - 1) * 24) / cols;
-      })(),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(90),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          // Slightly dim the whole card during drag
-          child: Opacity(opacity: 0.88, child: cardShell),
-        ),
-      ),
-    );
-
     return Hero(
       tag: 'map-card-${map.id}',
       flightShuttleBuilder: flightShuttle,
@@ -1105,11 +1004,42 @@ class _MapCard extends ConsumerWidget {
           final isTrainingOn = rawSession != null &&
               DateTime.now().isBefore(rawSession.endsAt);
 
+          // Exact card dimensions matching the SliverGrid cell
+          final cardW = _cardWidth(context);
+          final cardH = cardW / kCardAspectRatio;
+
           return LongPressDraggable<RiddleMap>(
             data: map,
             delay: const Duration(milliseconds: 350),
-            feedback: dragFeedback,
-            // Ghost left behind while dragging — dimmed, same size
+            // Feedback: exact same size, deeper shadow, cover slightly dimmed
+            feedback: SizedBox(
+              width: cardW,
+              height: cardH,
+              child: Material(
+                type: MaterialType.transparency,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(90),
+                        blurRadius: 32,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  // Wrap in a Stack to tint just the image area
+                  child: _CardShellDragging(
+                    imageBytes: imageBytes,
+                    title: map.title,
+                    achievedStars: achievedStars,
+                    maxStars: maxStars,
+                    hasBeenPlayed: hasBeenPlayed,
+                    isComplete: isComplete,
+                  ),
+                ),
+              ),
+            ),
             childWhenDragging: Opacity(
               opacity: 0.35,
               child: cardShell,
@@ -1149,6 +1079,219 @@ class _MapCard extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Card Shell ────────────────────────────────────────────────────────────────
+
+class _CardShell extends StatelessWidget {
+  final Uint8List? imageBytes;
+  final String title;
+  final int achievedStars;
+  final int maxStars;
+  final bool hasBeenPlayed;
+  final bool isComplete;
+
+  const _CardShell({
+    required this.imageBytes,
+    required this.title,
+    required this.achievedStars,
+    required this.maxStars,
+    required this.hasBeenPlayed,
+    required this.isComplete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
+              child: imageBytes != null
+                  ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                  : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+            ),
+          ),
+          _CardInfoBar(
+            title: title,
+            achievedStars: achievedStars,
+            maxStars: maxStars,
+            hasBeenPlayed: hasBeenPlayed,
+            isComplete: isComplete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Card Shell Dragging — cover image slightly dimmed ─────────────────────────
+
+class _CardShellDragging extends StatelessWidget {
+  final Uint8List? imageBytes;
+  final String title;
+  final int achievedStars;
+  final int maxStars;
+  final bool hasBeenPlayed;
+  final bool isComplete;
+
+  const _CardShellDragging({
+    required this.imageBytes,
+    required this.title,
+    required this.achievedStars,
+    required this.maxStars,
+    required this.hasBeenPlayed,
+    required this.isComplete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  imageBytes != null
+                      ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                      : Image.asset('assets/images/0.jpeg',
+                          fit: BoxFit.cover),
+                  // Subtle dark overlay — signals "picked up"
+                  Container(
+                    color: Colors.black.withAlpha(55),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _CardInfoBar(
+            title: title,
+            achievedStars: achievedStars,
+            maxStars: maxStars,
+            hasBeenPlayed: hasBeenPlayed,
+            isComplete: isComplete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Card Info Bar — shared by both map cards and folder cards ─────────────────
+
+class _CardInfoBar extends StatelessWidget {
+  final String title;
+  final int achievedStars;
+  final int maxStars;
+  final bool hasBeenPlayed;
+  final bool isComplete;
+
+  const _CardInfoBar({
+    required this.title,
+    required this.achievedStars,
+    required this.maxStars,
+    required this.hasBeenPlayed,
+    required this.isComplete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 38,
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF9FAFB),
+              border: Border(
+                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+              ),
+            ),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: EnolaTheme.textPrimary,
+                height: 1.3,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 38,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+              child: Row(
+                children: [
+                  Text(
+                    '$achievedStars',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF555555),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StarProgressBar(
+                      progress: maxStars > 0 && hasBeenPlayed
+                          ? achievedStars / maxStars
+                          : 0.0,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '$maxStars',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF555555),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1240,8 +1383,8 @@ class _StarProgressBar extends StatelessWidget {
                 height: barHeight,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF9FAFB),
-                  border: Border.all(
-                      color: const Color(0xFFE5E7EB), width: 1),
+                  border:
+                      Border.all(color: const Color(0xFFE5E7EB), width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -1270,159 +1413,6 @@ class _StarProgressBar extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-// ── Card Shell ────────────────────────────────────────────────────────────────
-
-class _CardShell extends StatelessWidget {
-  final Uint8List? imageBytes;
-  final String title;
-  final int achievedStars;
-  final int maxStars;
-  final bool hasBeenPlayed;
-  final bool isComplete;
-
-  const _CardShell({
-    required this.imageBytes,
-    required this.title,
-    required this.achievedStars,
-    required this.maxStars,
-    required this.hasBeenPlayed,
-    required this.isComplete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(25),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
-              child: imageBytes != null
-                  ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                  : Image.asset('assets/images/0.jpeg',
-                      fit: BoxFit.cover),
-            ),
-          ),
-          _CardInfoBar(
-            title: title,
-            achievedStars: achievedStars,
-            maxStars: maxStars,
-            hasBeenPlayed: hasBeenPlayed,
-            isComplete: isComplete,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Card Info Bar ─────────────────────────────────────────────────────────────
-
-class _CardInfoBar extends StatelessWidget {
-  final String title;
-  final int achievedStars;
-  final int maxStars;
-  final bool hasBeenPlayed;
-  final bool isComplete;
-
-  const _CardInfoBar({
-    required this.title,
-    required this.achievedStars,
-    required this.maxStars,
-    required this.hasBeenPlayed,
-    required this.isComplete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 38,
-            padding:
-                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF9FAFB),
-              border: Border(
-                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-              ),
-            ),
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,           // ← slightly smaller than original
-                fontWeight: FontWeight.w500,
-                color: EnolaTheme.textPrimary,
-                height: 1.3,
-                letterSpacing: 0.1,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 38,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-              child: Row(
-                children: [
-                  Text(
-                    '$achievedStars',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF555555),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _StarProgressBar(
-                      progress: maxStars > 0 && hasBeenPlayed
-                          ? achievedStars / maxStars
-                          : 0.0,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '$maxStars',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF555555),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
