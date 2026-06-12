@@ -18,7 +18,6 @@ import 'package:enola/services/training_service.dart';
 
 import 'package:drift/drift.dart' as drift_orm;
 
-// Card aspect ratio — single source of truth used by both grid and drag feedback
 const double kCardAspectRatio = 0.84;
 
 class HomeScreen extends ConsumerWidget {
@@ -61,17 +60,32 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_isRoot) ...[
-              const _TrainingFab(),
-              const SizedBox(width: 12),
-            ],
-            _CreateFab(onTap: () => _openCreate(context)),
-          ],
-        ),
+        floatingActionButtonLocation:
+            FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: _isRoot
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _TrainingFab(),
+                  const SizedBox(width: 12),
+                  _CreateFab(onTap: () => _openCreate(context)),
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _FolderBackFab(
+                    onBack: () => Navigator.pop(context),
+                    onUnfile: (mapId) async {
+                      await DriftService.instance
+                          .setMapFolder(mapId, null);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  _CreateFab(onTap: () => _openCreate(context)),
+                ],
+              ),
       ),
     );
   }
@@ -90,11 +104,9 @@ class HomeScreen extends ConsumerWidget {
 
 int _crossAxisCount(double width) => width >= 500 ? 3 : 2;
 
-/// Computes exact card width matching the SliverGrid layout.
 double _cardWidth(BuildContext context) {
   final w = math.min(MediaQuery.of(context).size.width, 600.0);
   final cols = _crossAxisCount(w);
-  // 40px left + 40px right padding, 24px gap between cols
   return (w - 80 - (cols - 1) * 24) / cols;
 }
 
@@ -159,7 +171,8 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                       setState(() => _hoveredFolderId = folder.id);
                       return true;
                     },
-                    onLeave: (_) => setState(() => _hoveredFolderId = null),
+                    onLeave: (_) =>
+                        setState(() => _hoveredFolderId = null),
                     onAcceptWithDetails: (details) {
                       setState(() => _hoveredFolderId = null);
                       DriftService.instance
@@ -199,7 +212,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
             ),
           ),
 
-        // ── Divider between folders and maps — also DragTarget to unfile ──
+        // ── Section divider — DragTarget to unfile ──
         SliverToBoxAdapter(
           child: DragTarget<RiddleMap>(
             onWillAcceptWithDetails: (details) {
@@ -210,21 +223,24 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
             onLeave: (_) => setState(() => _unfiledHovered = false),
             onAcceptWithDetails: (details) {
               setState(() => _unfiledHovered = false);
-              DriftService.instance.setMapFolder(details.data.id, null);
+              DriftService.instance
+                  .setMapFolder(details.data.id, null);
             },
             builder: (context, candidateData, rejectedData) {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                 decoration: BoxDecoration(
+                  // Subtle rounded cap — differentiates maps zone
                   color: _unfiledHovered
                       ? EnolaTheme.accent.withValues(alpha: 0.06)
-                      : const Color(0xFFF9FAFB),
+                      : const Color(0xFFF1F4F8),
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20)),
                   border: _unfiledHovered
                       ? Border.all(
-                          color: EnolaTheme.accent.withValues(alpha: 0.3),
+                          color:
+                              EnolaTheme.accent.withValues(alpha: 0.3),
                           width: 1.5)
                       : null,
                 ),
@@ -268,50 +284,37 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
           ),
         ),
 
-        // ── Unfiled maps — on the light background ──
+        // ── Unfiled maps ──
         if (unfiled.isNotEmpty)
-          SliverToBoxAdapter(
-            child: ColoredBox(
-              color: const Color(0xFFF9FAFB),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(40, 8, 40, 100),
-                child: Builder(
-                  builder: (context) {
-                    final cols2 =
-                        _crossAxisCount(MediaQuery.of(context).size.width);
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: cols2,
-                        crossAxisSpacing: 24,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: kCardAspectRatio,
-                      ),
-                      itemCount: unfiled.length,
-                      itemBuilder: (context, i) {
-                        final offset = folders.length;
-                        return _MapCard(map: unfiled[i])
-                            .animate(delay: ((offset + i) * 60).ms)
-                            .fadeIn(duration: 350.ms)
-                            .scale(begin: const Offset(0.95, 0.95));
-                      },
-                    );
-                  },
-                ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              40,
+              folders.isEmpty ? 4 : 8,
+              40,
+              100,
+            ),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                crossAxisSpacing: 24,
+                mainAxisSpacing: 14,
+                childAspectRatio: kCardAspectRatio,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final offset = folders.length;
+                  return _MapCard(map: unfiled[i])
+                      .animate(delay: ((offset + i) * 60).ms)
+                      .fadeIn(duration: 350.ms)
+                      .scale(begin: const Offset(0.95, 0.95));
+                },
+                childCount: unfiled.length,
               ),
             ),
           ),
 
-        // ── When no unfiled maps, close the light background area ──
         if (unfiled.isEmpty)
-          const SliverToBoxAdapter(
-            child: ColoredBox(
-              color: Color(0xFFF9FAFB),
-              child: SizedBox(height: 100),
-            ),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }
@@ -319,7 +322,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
 
 // ── Folder scroll view ────────────────────────────────────────────────────────
 
-class _FolderScrollView extends ConsumerStatefulWidget {
+class _FolderScrollView extends ConsumerWidget {
   final int folderId;
   final String folderName;
   final VoidCallback onCreate;
@@ -331,15 +334,8 @@ class _FolderScrollView extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_FolderScrollView> createState() => _FolderScrollViewState();
-}
-
-class _FolderScrollViewState extends ConsumerState<_FolderScrollView> {
-  bool _moveOutHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final mapsAsync = ref.watch(mapsInFolderProvider(widget.folderId));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mapsAsync = ref.watch(mapsInFolderProvider(folderId));
     final width = MediaQuery.of(context).size.width;
     final cols = _crossAxisCount(width);
     final maps = mapsAsync.valueOrNull ?? [];
@@ -355,81 +351,34 @@ class _FolderScrollViewState extends ConsumerState<_FolderScrollView> {
 
     return CustomScrollView(
       slivers: [
+        // ── Hero header — destination of the folder card hero ──
         SliverToBoxAdapter(
           child: _FolderHeader(
-            folderName: widget.folderName,
-            folderId: widget.folderId,
-          ),
-        ),
-
-        // ── "Remove from folder" drop zone ──
-        SliverToBoxAdapter(
-          child: DragTarget<RiddleMap>(
-            onWillAcceptWithDetails: (details) {
-              setState(() => _moveOutHovered = true);
-              return true;
-            },
-            onLeave: (_) => setState(() => _moveOutHovered = false),
-            onAcceptWithDetails: (details) {
-              setState(() => _moveOutHovered = false);
-              DriftService.instance.setMapFolder(details.data.id, null);
-            },
-            builder: (context, candidateData, rejectedData) {
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                margin: const EdgeInsets.fromLTRB(40, 0, 40, 0),
-                height: _moveOutHovered ? 52 : 24,
-                decoration: BoxDecoration(
-                  color: _moveOutHovered
-                      ? EnolaTheme.accent.withValues(alpha: 0.08)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  border: _moveOutHovered
-                      ? Border.all(
-                          color: EnolaTheme.accent.withValues(alpha: 0.4),
-                          width: 1.5)
-                      : null,
-                ),
-                child: Center(
-                  child: Text(
-                    _moveOutHovered ? 'Drop to remove from folder' : '',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: EnolaTheme.accent,
-                    ),
-                  ),
-                ),
-              );
-            },
+            folderName: folderName,
+            folderId: folderId,
           ),
         ),
 
         if (maps.isEmpty)
           SliverToBoxAdapter(
-            child: _EmptyFolderState(onCreate: widget.onCreate),
+            child: _EmptyFolderState(onCreate: onCreate),
           )
         else
-          SliverToBoxAdapter(
-            child: ColoredBox(
-              color: const Color(0xFFF9FAFB),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(40, 8, 40, 100),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: cols,
-                    crossAxisSpacing: 24,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: kCardAspectRatio,
-                  ),
-                  itemCount: maps.length,
-                  itemBuilder: (context, i) => _MapCard(map: maps[i])
-                      .animate(delay: (i * 60).ms)
-                      .fadeIn(duration: 350.ms)
-                      .scale(begin: const Offset(0.95, 0.95)),
-                ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(40, 4, 40, 100),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                crossAxisSpacing: 24,
+                mainAxisSpacing: 14,
+                childAspectRatio: kCardAspectRatio,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _MapCard(map: maps[i])
+                    .animate(delay: (i * 60).ms)
+                    .fadeIn(duration: 350.ms)
+                    .scale(begin: const Offset(0.95, 0.95)),
+                childCount: maps.length,
               ),
             ),
           ),
@@ -454,18 +403,20 @@ class _Header extends StatelessWidget {
               children: [
                 Text(
                   'Ready for a Riddle?',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: EnolaTheme.textPrimary,
-                      ),
+                  style:
+                      Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: EnolaTheme.textPrimary,
+                          ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Tap a map to explore or play',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: EnolaTheme.textSecond,
-                      ),
+                  style:
+                      Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: EnolaTheme.textSecond,
+                          ),
                 ),
               ],
             ),
@@ -511,7 +462,8 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
     super.initState();
     _controller.addListener(() {
       final canCreate = _controller.text.trim().isNotEmpty;
-      if (canCreate != _canCreate) setState(() => _canCreate = canCreate);
+      if (canCreate != _canCreate)
+        setState(() => _canCreate = canCreate);
     });
   }
 
@@ -591,7 +543,8 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
             ),
             child: const Text(
               'Create Folder',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              style:
+                  TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
           ),
         ],
@@ -601,58 +554,112 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
 }
 
 // ── Header (folder) ───────────────────────────────────────────────────────────
+// Hero destination — matches tag 'folder-{id}' from _FolderCard
 
 class _FolderHeader extends ConsumerWidget {
   final String folderName;
   final int folderId;
 
-  const _FolderHeader({required this.folderName, required this.folderId});
+  const _FolderHeader({
+    required this.folderName,
+    required this.folderId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(folderStatsProvider(folderId));
     final stats = statsAsync.valueOrNull;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 20, 20, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 32),
-            color: EnolaTheme.textPrimary,
-            onPressed: () => Navigator.pop(context),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    return Hero(
+      tag: 'folder-$folderId',
+      flightShuttleBuilder: _shuttle,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                folderName,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: EnolaTheme.textPrimary,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (stats != null) ...[
+                const SizedBox(height: 2),
                 Text(
-                  folderName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: EnolaTheme.textPrimary,
+                  '${stats.mapCount} maps · '
+                  '${stats.achievedStars} / ${stats.totalStars} ★',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: EnolaTheme.textSecond,
                       ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (stats != null)
-                  Text(
-                    '${stats.mapCount} maps · ${stats.achievedStars} / ${stats.totalStars} ★',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: EnolaTheme.textSecond,
-                        ),
-                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // The shuttle grows from the card's rounded white box into a full-width
+  // transparent header, border-radius interpolating 8 → 0.
+  Widget _shuttle(
+    BuildContext flightContext,
+    Animation<double> animation,
+    HeroFlightDirection direction,
+    BuildContext fromCtx,
+    BuildContext toCtx,
+  ) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (_, __) {
+        final t = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOut,
+        ).value;
+        return Material(
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 1.0 - t * 0.5),
+              borderRadius: BorderRadius.circular(8 * (1.0 - t)),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      Colors.black.withAlpha((25 * (1.0 - t)).round()),
+                  blurRadius: 16 * (1.0 - t),
+                  offset: Offset(0, 4 * (1.0 - t)),
+                ),
               ],
             ),
+            padding: EdgeInsets.lerp(
+              const EdgeInsets.all(8),
+              const EdgeInsets.fromLTRB(20, 28, 20, 16),
+              t,
+            ),
+            child: Opacity(
+              opacity: t,
+              child: Text(
+                folderName,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: EnolaTheme.textPrimary.withValues(alpha: t),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.15, end: 0);
+        );
+      },
+    );
   }
 }
 
@@ -665,10 +672,19 @@ class _FolderCard extends ConsumerWidget {
   void _openFolder(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => HomeScreen(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 450),
+        reverseTransitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, __, ___) => HomeScreen(
           folderId: folder.id,
           folderName: folder.title,
+        ),
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+          ),
+          child: child,
         ),
       ),
     );
@@ -682,44 +698,51 @@ class _FolderCard extends ConsumerWidget {
     final maps = mapsAsync.valueOrNull ?? [];
     final stats = statsAsync.valueOrNull;
 
-    // Derive progress bar inputs from FolderStats
     final achievedStars = stats?.achievedStars ?? 0;
     final totalStars = stats?.totalStars ?? 0;
-    final hasBeenPlayed = achievedStars > 0 || (stats?.mapCount ?? 0) > 0;
+    final hasBeenPlayed =
+        achievedStars > 0 || (stats?.mapCount ?? 0) > 0;
 
     return GestureDetector(
       onTap: () => _openFolder(context),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(25),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+      child: Hero(
+        tag: 'folder-${folder.id}',
+        // No custom shuttle here — defined on the destination (_FolderHeader)
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(8)),
-                child: _FolderCoverGrid(maps: maps),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(8)),
+                    child: _FolderCoverGrid(maps: maps),
+                  ),
+                ),
+                _CardInfoBar(
+                  title: folder.title,
+                  achievedStars: achievedStars,
+                  maxStars: totalStars,
+                  hasBeenPlayed: hasBeenPlayed,
+                  isComplete:
+                      totalStars > 0 && achievedStars >= totalStars,
+                ),
+              ],
             ),
-            // Reuse _CardInfoBar with folder title + aggregate stars
-            _CardInfoBar(
-              title: folder.title,
-              achievedStars: achievedStars,
-              maxStars: totalStars,
-              hasBeenPlayed: hasBeenPlayed,
-              isComplete: totalStars > 0 && achievedStars >= totalStars,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -745,12 +768,14 @@ class _FolderCoverGrid extends ConsumerWidget {
     }
     final isComplete = completedCount >= riddleCount;
     if (isComplete) {
-      final ratio = riddleCount > 0 ? achieved / (riddleCount * 3) : 0.0;
+      final ratio =
+          riddleCount > 0 ? achieved / (riddleCount * 3) : 0.0;
       if (ratio >= 0.9) return const Color(0xFFFFD700);
       if (ratio >= 0.5)
         return const Color(0xFFFFD700).withValues(alpha: 0.7);
       return const Color(0xFFFFD700).withValues(alpha: 0.5);
     }
+    // Started but not finished → teal
     return EnolaTheme.accent.withValues(alpha: 0.65);
   }
 
@@ -776,7 +801,8 @@ class _FolderCoverGrid extends ConsumerWidget {
             : GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: gridCols,
                   crossAxisSpacing: 5,
                   mainAxisSpacing: 5,
@@ -846,20 +872,22 @@ class _MapCard extends ConsumerWidget {
   }
 
   Future<void> _toggleTraining(BuildContext context) async {
-    final isActive = await TrainingService.instance.isTrainingActive(map.id);
+    final isActive =
+        await TrainingService.instance.isTrainingActive(map.id);
     if (isActive) {
       await TrainingService.instance.stopTraining(map.id);
       return;
     }
-    final riddles = await (DriftService.instance.db.select(
-      DriftService.instance.db.riddles,
-    )..where((t) => t.mapId.equals(map.id)))
+    final riddles = await (DriftService.instance.db
+            .select(DriftService.instance.db.riddles)
+          ..where((t) => t.mapId.equals(map.id)))
         .get();
     if (riddles.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Add riddles to this map before training.'),
+            content:
+                Text('Add riddles to this map before training.'),
           ),
         );
       }
@@ -874,8 +902,9 @@ class _MapCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final Uint8List? imageBytes =
-        map.imageBytes != null ? Uint8List.fromList(map.imageBytes!) : null;
+    final Uint8List? imageBytes = map.imageBytes != null
+        ? Uint8List.fromList(map.imageBytes!)
+        : null;
 
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final sessionAsync = ref.watch(latestSessionProvider(map.id));
@@ -891,7 +920,8 @@ class _MapCard extends ConsumerWidget {
       try {
         final list = jsonDecode(session.riddleStarsJson!) as List;
         completedRiddlesCount = list.length;
-        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+        achievedStars =
+            list.fold<int>(0, (sum, e) => sum + (e as int));
       } catch (_) {}
     }
 
@@ -945,13 +975,15 @@ class _MapCard extends ConsumerWidget {
                               alignment: Alignment.topCenter,
                               maxHeight: fromHeight - infoBarHeight,
                               child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8)),
+                                borderRadius:
+                                    const BorderRadius.vertical(
+                                        top: Radius.circular(8)),
                                 child: imageBytes != null
                                     ? Image.memory(imageBytes,
                                         fit: BoxFit.cover,
                                         width: double.infinity)
-                                    : Image.asset('assets/images/0.jpeg',
+                                    : Image.asset(
+                                        'assets/images/0.jpeg',
                                         fit: BoxFit.cover,
                                         width: double.infinity),
                               ),
@@ -989,9 +1021,8 @@ class _MapCard extends ConsumerWidget {
       tag: 'map-card-${map.id}',
       flightShuttleBuilder: flightShuttle,
       child: StreamBuilder<TrainingSession?>(
-        stream: (DriftService.instance.db.select(
-          DriftService.instance.db.trainingSessions,
-        )
+        stream: (DriftService.instance.db
+                .select(DriftService.instance.db.trainingSessions)
               ..where((t) => t.mapId.equals(map.id))
               ..where((t) => t.completedAt.isNull())
               ..orderBy([
@@ -1004,14 +1035,12 @@ class _MapCard extends ConsumerWidget {
           final isTrainingOn = rawSession != null &&
               DateTime.now().isBefore(rawSession.endsAt);
 
-          // Exact card dimensions matching the SliverGrid cell
           final cardW = _cardWidth(context);
           final cardH = cardW / kCardAspectRatio;
 
           return LongPressDraggable<RiddleMap>(
             data: map,
             delay: const Duration(milliseconds: 350),
-            // Feedback: exact same size, deeper shadow, cover slightly dimmed
             feedback: SizedBox(
               width: cardW,
               height: cardH,
@@ -1028,7 +1057,6 @@ class _MapCard extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // Wrap in a Stack to tint just the image area
                   child: _CardShellDragging(
                     imageBytes: imageBytes,
                     title: map.title,
@@ -1067,7 +1095,8 @@ class _MapCard extends ConsumerWidget {
                           : Icons.school_outlined,
                       iconColor: isTrainingOn
                           ? Colors.white
-                          : EnolaTheme.textSecond.withValues(alpha: 0.95),
+                          : EnolaTheme.textSecond
+                              .withValues(alpha: 0.95),
                       backgroundColor: isTrainingOn
                           ? EnolaTheme.secondary
                           : Colors.white,
@@ -1126,7 +1155,8 @@ class _CardShell extends StatelessWidget {
                   const BorderRadius.vertical(top: Radius.circular(8)),
               child: imageBytes != null
                   ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                  : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                  : Image.asset('assets/images/0.jpeg',
+                      fit: BoxFit.cover),
             ),
           ),
           _CardInfoBar(
@@ -1142,7 +1172,7 @@ class _CardShell extends StatelessWidget {
   }
 }
 
-// ── Card Shell Dragging — cover image slightly dimmed ─────────────────────────
+// ── Card Shell Dragging ───────────────────────────────────────────────────────
 
 class _CardShellDragging extends StatelessWidget {
   final Uint8List? imageBytes;
@@ -1182,10 +1212,7 @@ class _CardShellDragging extends StatelessWidget {
                       ? Image.memory(imageBytes!, fit: BoxFit.cover)
                       : Image.asset('assets/images/0.jpeg',
                           fit: BoxFit.cover),
-                  // Subtle dark overlay — signals "picked up"
-                  Container(
-                    color: Colors.black.withAlpha(55),
-                  ),
+                  Container(color: Colors.black.withAlpha(55)),
                 ],
               ),
             ),
@@ -1203,7 +1230,7 @@ class _CardShellDragging extends StatelessWidget {
   }
 }
 
-// ── Card Info Bar — shared by both map cards and folder cards ─────────────────
+// ── Card Info Bar ─────────────────────────────────────────────────────────────
 
 class _CardInfoBar extends StatelessWidget {
   final String title;
@@ -1233,13 +1260,14 @@ class _CardInfoBar extends StatelessWidget {
         children: [
           Container(
             height: 38,
-            padding:
-                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            padding: const EdgeInsets.symmetric(
+                vertical: 8, horizontal: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF9FAFB),
               border: Border(
                 top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+                bottom:
+                    BorderSide(color: Color(0xFFE5E7EB), width: 1),
               ),
             ),
             child: Text(
@@ -1345,7 +1373,7 @@ class _RankRibbonOverlay extends StatelessWidget {
             0.33, 0.33, 0.33, 0, 180,
             0.33, 0.33, 0.33, 0, 180,
             0.33, 0.33, 0.33, 0, 180,
-            0,    0,    0,    1, 0,
+            0, 0, 0, 1, 0,
           ]),
           child: Text(
             _rankEmoji(starRatio),
@@ -1383,8 +1411,8 @@ class _StarProgressBar extends StatelessWidget {
                 height: barHeight,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF9FAFB),
-                  border:
-                      Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                  border: Border.all(
+                      color: const Color(0xFFE5E7EB), width: 1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -1400,8 +1428,8 @@ class _StarProgressBar extends StatelessWidget {
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform:
-                      Matrix4.translationValues(-starSize / 2, -2.0, 0),
+                  transform: Matrix4.translationValues(
+                      -starSize / 2, -2.0, 0),
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
@@ -1548,6 +1576,88 @@ class _CreateFab extends StatelessWidget {
         'New Map',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
+    );
+  }
+}
+
+// ── Folder Back FAB — pill button + DragTarget to unfile ─────────────────────
+
+class _FolderBackFab extends StatefulWidget {
+  final VoidCallback onBack;
+  final Future<void> Function(String mapId) onUnfile;
+
+  const _FolderBackFab({
+    required this.onBack,
+    required this.onUnfile,
+  });
+
+  @override
+  State<_FolderBackFab> createState() => _FolderBackFabState();
+}
+
+class _FolderBackFabState extends State<_FolderBackFab> {
+  bool _isDraggingOver = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<RiddleMap>(
+      onWillAcceptWithDetails: (_) {
+        setState(() => _isDraggingOver = true);
+        return true;
+      },
+      onLeave: (_) => setState(() => _isDraggingOver = false),
+      onAcceptWithDetails: (details) {
+        setState(() => _isDraggingOver = false);
+        widget.onUnfile(details.data.id);
+      },
+      builder: (context, candidateData, _) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          decoration: BoxDecoration(
+            color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: _isDraggingOver
+                    ? EnolaTheme.accent.withValues(alpha: 0.35)
+                    : Colors.black.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: GestureDetector(
+            onTap: widget.onBack,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _isDraggingOver
+                      ? Icons.folder_off_outlined
+                      : Icons.chevron_left_rounded,
+                  size: 22,
+                  color: _isDraggingOver
+                      ? Colors.white
+                      : EnolaTheme.textPrimary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _isDraggingOver ? 'Drop to unfile' : 'My Folders',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: _isDraggingOver
+                        ? Colors.white
+                        : EnolaTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
