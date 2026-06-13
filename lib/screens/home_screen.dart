@@ -77,8 +77,7 @@ class HomeScreen extends ConsumerWidget {
                   _FolderBackFab(
                     onBack: () => Navigator.pop(context),
                     onUnfile: (mapId) async {
-                      await DriftService.instance
-                          .setMapFolder(mapId, null);
+                      await DriftService.instance.setMapFolder(mapId, null);
                       if (context.mounted) Navigator.pop(context);
                     },
                   ),
@@ -230,9 +229,10 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                 duration: const Duration(milliseconds: 150),
                 margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                 decoration: BoxDecoration(
+                  // FIX: transparent so page gradient shows through
                   color: _unfiledHovered
                       ? EnolaTheme.accent.withValues(alpha: 0.06)
-                      : const Color(0xFFF1F4F8),
+                      : Colors.transparent,
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20)),
                   border: _unfiledHovered
@@ -260,7 +260,8 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                           fontWeight: FontWeight.w600,
                           color: _unfiledHovered
                               ? EnolaTheme.accent
-                              : EnolaTheme.textSecond.withValues(alpha: 0.7),
+                              : EnolaTheme.textSecond
+                                  .withValues(alpha: 0.7),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -353,7 +354,6 @@ class _FolderScrollView extends ConsumerWidget {
             folderId: folderId,
           ),
         ),
-
         if (maps.isEmpty)
           SliverToBoxAdapter(
             child: _EmptyFolderState(onCreate: onCreate),
@@ -457,8 +457,7 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
     super.initState();
     _controller.addListener(() {
       final canCreate = _controller.text.trim().isNotEmpty;
-      if (canCreate != _canCreate)
-        setState(() => _canCreate = canCreate);
+      if (canCreate != _canCreate) setState(() => _canCreate = canCreate);
     });
   }
 
@@ -622,14 +621,17 @@ class _FolderHeader extends ConsumerWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color.lerp(const Color(0xFF39d2c0), Colors.transparent, t)!,
-                  Color.lerp(const Color(0xFF249689), Colors.transparent, t)!,
+                  Color.lerp(
+                      const Color(0xFF39d2c0), Colors.transparent, t)!,
+                  Color.lerp(
+                      const Color(0xFF249689), Colors.transparent, t)!,
                 ],
               ),
               borderRadius: BorderRadius.circular(8 * (1.0 - t)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha((25 * (1.0 - t)).round()),
+                  color:
+                      Colors.black.withAlpha((25 * (1.0 - t)).round()),
                   blurRadius: 16 * (1.0 - t),
                   offset: Offset(0, 4 * (1.0 - t)),
                 ),
@@ -694,7 +696,6 @@ class _FolderCard extends ConsumerWidget {
 
     final maps = mapsAsync.valueOrNull ?? [];
     final stats = statsAsync.valueOrNull;
-
     final achievedStars = stats?.achievedStars ?? 0;
 
     return GestureDetector(
@@ -710,12 +711,18 @@ class _FolderCard extends ConsumerWidget {
                 end: Alignment.bottomCenter,
                 colors: [Color(0xFF39d2c0), Color(0xFF249689)],
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF39d2c0).withAlpha(80),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: const Color(0xFF249689).withAlpha(100),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: Colors.black.withAlpha(30),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -725,7 +732,7 @@ class _FolderCard extends ConsumerWidget {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(8)),
+                        top: Radius.circular(12)),
                     child: _FolderCoverGrid(maps: maps),
                   ),
                 ),
@@ -743,7 +750,7 @@ class _FolderCard extends ConsumerWidget {
   }
 }
 
-// ── Folder Cover Grid ─────────────────────────────────────────────────────────
+// ── Folder Cover Grid — horizontal scrollable row of squares ─────────────────
 
 class _FolderCoverGrid extends StatelessWidget {
   final List<RiddleMap> maps;
@@ -751,11 +758,6 @@ class _FolderCoverGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const maxVisible = 4;
-    const gridCols = 2;
-    final displayMaps = maps.take(maxVisible).toList();
-    final overflow = maps.length - maxVisible;
-
     if (maps.isEmpty) {
       return Center(
         child: Icon(
@@ -766,61 +768,71 @@ class _FolderCoverGrid extends StatelessWidget {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: gridCols,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
-        ),
-        itemCount: displayMaps.length,
-        itemBuilder: (context, i) {
-          final map = displayMaps[i];
-          final isLast = i == displayMaps.length - 1 && overflow > 0;
-          final imageBytes = map.imageBytes != null
-              ? Uint8List.fromList(map.imageBytes!)
-              : null;
+    // Each square is sized so exactly 2.5 fit in the available width.
+    // We use LayoutBuilder to get the actual width at render time.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        // 2.5 visible squares + gaps: padding 10 each side, gap 6 between
+        // squareSize * 2.5 + 6 * 2 (gaps between first 3) + 20 (padding) = availableWidth
+        // Solving: squareSize = (availableWidth - 20 - 12) / 2.5
+        final squareSize = (availableWidth - 20 - 12) / 2.5;
+        final squareSizeClamped = squareSize.clamp(60.0, 120.0);
 
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white, width: 2),
-              color: Colors.white.withAlpha(40),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: isLast && overflow > 0
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (imageBytes != null)
-                          Image.memory(imageBytes, fit: BoxFit.cover)
-                        else
-                          Image.asset('assets/images/0.jpeg',
-                              fit: BoxFit.cover),
-                        Container(color: Colors.black.withAlpha(100)),
-                        Center(
-                          child: Text(
-                            '+$overflow',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : imageBytes != null
-                      ? Image.memory(imageBytes, fit: BoxFit.cover)
-                      : Image.asset('assets/images/0.jpeg',
-                          fit: BoxFit.cover),
-            ),
-          );
-        },
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+          child: Row(
+            children: [
+              for (int i = 0; i < maps.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                _FolderSquare(
+                  map: maps[i],
+                  size: squareSizeClamped,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Folder Square ─────────────────────────────────────────────────────────────
+
+class _FolderSquare extends StatelessWidget {
+  final RiddleMap map;
+  final double size;
+
+  const _FolderSquare({required this.map, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final imageBytes = map.imageBytes != null
+        ? Uint8List.fromList(map.imageBytes!)
+        : null;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white, width: 2),
+        color: Colors.white.withAlpha(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(30),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: imageBytes != null
+            ? Image.memory(imageBytes, fit: BoxFit.cover)
+            : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
       ),
     );
   }
@@ -842,26 +854,29 @@ class _FolderInfoBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Title — centered
           Text(
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
+          // Stars left, users right
           Row(
             children: [
-              const Icon(Icons.star_rounded, size: 16, color: Colors.white),
-              const SizedBox(width: 4),
+              const Icon(Icons.star_rounded, size: 15, color: Colors.white),
+              const SizedBox(width: 3),
               Text(
                 '$achievedStars',
                 style: const TextStyle(
@@ -870,9 +885,7 @@ class _FolderInfoBar extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 14),
-              const Icon(Icons.group_rounded, size: 16, color: Colors.white),
-              const SizedBox(width: 4),
+              const Spacer(),
               Text(
                 '$userCount',
                 style: const TextStyle(
@@ -881,6 +894,8 @@ class _FolderInfoBar extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
+              const SizedBox(width: 3),
+              const Icon(Icons.group_rounded, size: 15, color: Colors.white),
             ],
           ),
         ],
@@ -963,8 +978,7 @@ class _MapCard extends ConsumerWidget {
       try {
         final list = jsonDecode(session.riddleStarsJson!) as List;
         completedRiddlesCount = list.length;
-        achievedStars =
-            list.fold<int>(0, (sum, e) => sum + (e as int));
+        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
       } catch (_) {}
     }
 
@@ -989,9 +1003,8 @@ class _MapCard extends ConsumerWidget {
         animation: animation,
         builder: (context, _) {
           final t = animation.value;
-          final imageHeight =
-              ((fromHeight - infoBarHeight) * (1.0 - t))
-                  .clamp(0.0, double.infinity);
+          final imageHeight = ((fromHeight - infoBarHeight) * (1.0 - t))
+              .clamp(0.0, double.infinity);
 
           return Material(
             type: MaterialType.transparency,
@@ -1018,9 +1031,8 @@ class _MapCard extends ConsumerWidget {
                               alignment: Alignment.topCenter,
                               maxHeight: fromHeight - infoBarHeight,
                               child: ClipRRect(
-                                borderRadius:
-                                    const BorderRadius.vertical(
-                                        top: Radius.circular(8)),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(8)),
                                 child: imageBytes != null
                                     ? Image.memory(imageBytes,
                                         fit: BoxFit.cover,
@@ -1139,9 +1151,8 @@ class _MapCard extends ConsumerWidget {
                       iconColor: isTrainingOn
                           ? Colors.white
                           : EnolaTheme.textSecond.withValues(alpha: 0.95),
-                      backgroundColor: isTrainingOn
-                          ? EnolaTheme.secondary
-                          : Colors.white,
+                      backgroundColor:
+                          isTrainingOn ? EnolaTheme.secondary : Colors.white,
                       onTap: () => _toggleTraining(context),
                     ),
                   ),
@@ -1301,7 +1312,8 @@ class _CardInfoBar extends StatelessWidget {
         children: [
           Container(
             height: 38,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF9FAFB),
               border: Border(
@@ -1412,7 +1424,7 @@ class _RankRibbonOverlay extends StatelessWidget {
             0.33, 0.33, 0.33, 0, 180,
             0.33, 0.33, 0.33, 0, 180,
             0.33, 0.33, 0.33, 0, 180,
-            0, 0, 0, 1, 0,
+            0,    0,    0,    1, 0,
           ]),
           child: Text(
             _rankEmoji(starRatio),
@@ -1467,8 +1479,8 @@ class _StarProgressBar extends StatelessWidget {
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform: Matrix4.translationValues(
-                      -starSize / 2, -2.0, 0),
+                  transform:
+                      Matrix4.translationValues(-starSize / 2, -2.0, 0),
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
@@ -1652,8 +1664,7 @@ class _FolderBackFabState extends State<_FolderBackFab> {
       builder: (context, candidateData, _) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(
             color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
             borderRadius: BorderRadius.circular(30),
