@@ -750,7 +750,8 @@ class _FolderCard extends ConsumerWidget {
   }
 }
 
-// ── Folder Cover Grid — horizontal scrollable row of squares ─────────────────
+
+// ── Folder Cover Grid — 2×2.5 scrollable grid ────────────────────────────────
 
 class _FolderCoverGrid extends StatelessWidget {
   final List<RiddleMap> maps;
@@ -768,30 +769,56 @@ class _FolderCoverGrid extends StatelessWidget {
       );
     }
 
-    // Each square is sized so exactly 2.5 fit in the available width.
-    // We use LayoutBuilder to get the actual width at render time.
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
-        // 2.5 visible squares + gaps: padding 10 each side, gap 6 between
-        // squareSize * 2.5 + 6 * 2 (gaps between first 3) + 20 (padding) = availableWidth
-        // Solving: squareSize = (availableWidth - 20 - 12) / 2.5
-        final squareSize = (availableWidth - 20 - 12) / 2.5;
-        final squareSizeClamped = squareSize.clamp(60.0, 120.0);
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
-          child: Row(
-            children: [
-              for (int i = 0; i < maps.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                _FolderSquare(
-                  map: maps[i],
-                  size: squareSizeClamped,
-                ),
-              ],
-            ],
+        // Square size so 2.5 columns are visible:
+        // squareSize * 2.5 + gap * 2 + padding * 2 = availableWidth
+        // padding=8 each side, gap=6 between squares
+        final squareSize = (availableWidth - 16 - 12) / 2.5;
+
+        // Grid area height: exactly 2 rows + gaps + vertical padding
+        final gridHeight = squareSize * 2 + 6 + 16;
+
+        return SizedBox(
+          height: gridHeight,
+          // ClipRRect so the scroll content doesn't bleed to the card edge,
+          // but we keep 4px padding so squares aren't cut off mid-border
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(12),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              // 4px padding on left/right so the white border of each
+              // square is fully visible and not clipped by the card edge
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1 — even indices: 0, 2, 4, …
+                  Row(
+                    children: [
+                      for (int i = 0; i < maps.length; i += 2) ...[
+                        if (i > 0) const SizedBox(width: 6),
+                        _FolderSquare(map: maps[i], size: squareSize),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Row 2 — odd indices: 1, 3, 5, …
+                  Row(
+                    children: [
+                      for (int i = 1; i < maps.length; i += 2) ...[
+                        if (i > 1) const SizedBox(width: 6),
+                        _FolderSquare(map: maps[i], size: squareSize),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -817,19 +844,19 @@ class _FolderSquare extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(7),
         border: Border.all(color: Colors.white, width: 2),
         color: Colors.white.withAlpha(40),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(30),
+            color: Colors.black.withAlpha(25),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(5),
         child: imageBytes != null
             ? Image.memory(imageBytes, fit: BoxFit.cover)
             : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
@@ -837,6 +864,7 @@ class _FolderSquare extends StatelessWidget {
     );
   }
 }
+
 
 // ── Folder Info Bar ───────────────────────────────────────────────────────────
 
