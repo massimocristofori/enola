@@ -845,7 +845,7 @@ class _FolderSquare extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: Colors.white, width: 1),
         color: Colors.white.withAlpha(40),
         boxShadow: [
           BoxShadow(
