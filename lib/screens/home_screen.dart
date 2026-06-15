@@ -229,7 +229,6 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                 duration: const Duration(milliseconds: 150),
                 margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
                 decoration: BoxDecoration(
-                  // FIX: transparent so page gradient shows through
                   color: _unfiledHovered
                       ? EnolaTheme.accent.withValues(alpha: 0.06)
                       : Colors.transparent,
@@ -418,7 +417,7 @@ class _Header extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => _showCreateFolderSheet(context),
-            icon: const Icon(Icons.folder_outlined),
+            icon: const Icon(Icons.create_new_folder_outlined),
             color: EnolaTheme.textSecond,
             tooltip: 'New Folder',
           ),
@@ -711,7 +710,7 @@ class _FolderCard extends ConsumerWidget {
                 end: Alignment.bottomCenter,
                 colors: [Color(0xFF39d2c0), Color(0xFF249689)],
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),  // matches map card
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF249689).withAlpha(100),
@@ -732,7 +731,7 @@ class _FolderCard extends ConsumerWidget {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12)),
+                        top: Radius.circular(8)),  // matches map card
                     child: _FolderCoverGrid(maps: maps),
                   ),
                 ),
@@ -773,31 +772,21 @@ class _FolderCoverGrid extends StatelessWidget {
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
 
-        // Square size so 2.5 columns are visible:
-        // squareSize * 2.5 + gap * 2 + padding * 2 = availableWidth
-        // padding=8 each side, gap=6 between squares
         final squareSize = (availableWidth - 16 - 12) / 2.5;
-
-        // Grid area height: exactly 2 rows + gaps + vertical padding
         final gridHeight = squareSize * 2 + 6 + 16;
 
         return SizedBox(
           height: gridHeight,
-          // ClipRRect so the scroll content doesn't bleed to the card edge,
-          // but we keep 4px padding so squares aren't cut off mid-border
           child: ClipRRect(
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
+              top: Radius.circular(8),  // matches map card
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              // 4px padding on left/right so the white border of each
-              // square is fully visible and not clipped by the card edge
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Row 1 — even indices: 0, 2, 4, …
                   Row(
                     children: [
                       for (int i = 0; i < maps.length; i += 2) ...[
@@ -807,7 +796,6 @@ class _FolderCoverGrid extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  // Row 2 — odd indices: 1, 3, 5, …
                   Row(
                     children: [
                       for (int i = 1; i < maps.length; i += 2) ...[
@@ -887,7 +875,6 @@ class _FolderInfoBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Title — centered
           Text(
             title,
             maxLines: 1,
@@ -900,7 +887,6 @@ class _FolderInfoBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          // Stars left, users right
           Row(
             children: [
               const Icon(Icons.star_rounded, size: 15, color: Colors.white),
@@ -1338,17 +1324,10 @@ class _CardInfoBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Title row — plain white, no grey band
           Container(
-            height: 38,
-            padding:
-                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF9FAFB),
-              border: Border(
-                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-                bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
-              ),
-            ),
+            height: 30,
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
             child: Text(
               title,
               textAlign: TextAlign.center,
@@ -1363,8 +1342,11 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
+          // Thin divider between title and progress bar
+          const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+          // Progress bar row
           SizedBox(
-            height: 38,
+            height: 32,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
               child: Row(
@@ -1690,24 +1672,25 @@ class _FolderBackFabState extends State<_FolderBackFab> {
         widget.onUnfile(details.data.id);
       },
       builder: (context, candidateData, _) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          decoration: BoxDecoration(
-            color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: _isDraggingOver
-                    ? EnolaTheme.accent.withValues(alpha: 0.35)
-                    : Colors.black.withValues(alpha: 0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: GestureDetector(
-            onTap: widget.onBack,
+        return GestureDetector(
+          onTap: widget.onBack,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: _isDraggingOver
+                      ? EnolaTheme.accent.withValues(alpha: 0.35)
+                      : Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1720,12 +1703,12 @@ class _FolderBackFabState extends State<_FolderBackFab> {
                       ? Colors.white
                       : EnolaTheme.textPrimary,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 Text(
                   _isDraggingOver ? 'Drop to unfile' : 'My Folders',
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: _isDraggingOver
                         ? Colors.white
                         : EnolaTheme.textPrimary,
@@ -1741,13 +1724,6 @@ class _FolderBackFabState extends State<_FolderBackFab> {
 }
 
 // ── Training FAB ──────────────────────────────────────────────────────────────
-
-class _TrainingFab extends StatefulWidget {
-  const _TrainingFab();
-
-  @override
-  State<_TrainingFab> createState() => _TrainingFabState();
-}
 
 class _TrainingFabState extends State<_TrainingFab> {
   late Stream<List<TrainingRiddleItem>> _riddlesStream;
@@ -1816,4 +1792,11 @@ class _TrainingFabState extends State<_TrainingFab> {
       },
     );
   }
+}
+
+class _TrainingFab extends StatefulWidget {
+  const _TrainingFab();
+
+  @override
+  State<_TrainingFab> createState() => _TrainingFabState();
 }
