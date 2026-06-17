@@ -121,45 +121,70 @@ Future<void> _pushTrainingRiddle(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  try {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ));
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ));
 
-  GeminiService.instance.apiKey = const String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: '',
-  );
+    GeminiService.instance.apiKey = const String.fromEnvironment(
+      'GEMINI_API_KEY',
+      defaultValue: '',
+    );
 
-  // ── Supabase ──────────────────────────────────────────────────────────────
-  await SupabaseService.init(
-    url: const String.fromEnvironment('SUPABASE_URL', defaultValue: ''),
-    anonKey: const String.fromEnvironment(
-        'SUPABASE_ANON_KEY', defaultValue: ''),
-  );
-  // Sign in anonymously — silent, no UI, gives us a stable creator_id
-  await SupabaseService.instance.ensureSignedIn();
+    // ── Supabase ──────────────────────────────────────────────────────────
+    const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+    const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
 
-  await NotificationService.instance.init();
-  TrainingService.instance.init();
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+      throw Exception(
+        'Supabase env vars missing. URL empty: ${supabaseUrl.isEmpty}, '
+        'AnonKey empty: ${supabaseAnonKey.isEmpty}',
+      );
+    }
 
-  TrainingService.instance.onTrainingNotificationTap =
-      (String mapId, int riddleId) {
-    openTrainingRiddle(mapId, riddleId, fromNotification: true);
-  };
+    await SupabaseService.init(url: supabaseUrl, anonKey: supabaseAnonKey);
+    await SupabaseService.instance.ensureSignedIn();
 
-  runApp(const ProviderScope(child: EnolaApp()));
+    await NotificationService.instance.init();
+    TrainingService.instance.init();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+    TrainingService.instance.onTrainingNotificationTap =
+        (String mapId, int riddleId) {
+      openTrainingRiddle(mapId, riddleId, fromNotification: true);
+    };
+
+    runApp(const ProviderScope(child: EnolaApp()));
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.instance.drainPendingLaunchNotification();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        NotificationService.instance.drainPendingLaunchNotification();
+      });
     });
-  });
+  } catch (e, st) {
+    // ignore: avoid_print
+    print('STARTUP FAILED: $e\n$st');
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.red,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Startup failed:\n$e',
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
+
 
 class EnolaApp extends StatelessWidget {
   const EnolaApp({super.key});
