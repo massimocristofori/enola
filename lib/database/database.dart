@@ -5,7 +5,7 @@ import 'package:enola/database/schema_utils.dart';
 
 part 'database.g.dart';
 
-// ---
+// ── Tables ────────────────────────────────────────────────────────────────────
 
 class Folders extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -78,7 +78,111 @@ class TrainingAttempts extends Table {
   DateTimeColumn get answeredAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-// ---
+// ── NEW: Downloaded Packs ─────────────────────────────────────────────────────
+
+class DownloadedPacks extends Table {
+  TextColumn get id => text()();            // = supabase packs.id (uuid)
+  TextColumn get title => text()();
+  TextColumn get shareCode => text()();
+
+  /// The Supabase creator_id — null if this device created the pack
+  /// (in that case the device IS the creator, so no need to store it here).
+  /// Populated for packs downloaded from someone else.
+  TextColumn get creatorId => text().nullable()();
+
+  DateTimeColumn get downloadedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class DownloadedPackMaps extends Table {
+  TextColumn get id => text()();            // = supabase pack_maps.id (uuid)
+  TextColumn get packId => text().references(DownloadedPacks, #id, onDelete: KeyAction.cascade)();
+  TextColumn get localMapId => text()();    // = RiddleMaps.id inserted locally
+  DateTimeColumn get remoteUpdatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// ── Database ──────────────────────────────────────────────────────────────────
+
+@DriftDatabase(tables: [
+  Folders,
+  RiddleMaps,
+  Riddles,
+  PlaySessions,
+  TrainingSessions,
+  TrainingNotifiedRiddles,
+  TrainingAttempts,
+  DownloadedPacks,
+  DownloadedPackMaps,
+])
+class AppDatabase extends _$AppDatabase {
+  AppDatabase(super.e);
+
+  @override
+  int get schemaVersion => 10;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(riddles, riddles.payloadJson);
+      }
+      if (from < 3) {
+        await m.addColumn(riddleMaps, riddleMaps.imageBytes);
+      }
+      if (from < 4) {
+        await m.addColumn(playSessions, playSessions.riddleStarsJson);
+      }
+      if (from < 5) {
+        await m.addColumn(riddles, riddles.sourceExcerpt);
+      }
+      if (from < 6) {
+        await m.addColumn(riddleMaps, riddleMaps.riddlesVersion);
+        await m.addColumn(playSessions, playSessions.riddlesVersion);
+      }
+      if (from < 7) {
+        await m.createTable(trainingSessions);
+      }
+      if (from < 8) {
+        await m.createTable(trainingNotifiedRiddles);
+        await m.createTable(trainingAttempts);
+      }
+      if (from < 9) {
+        await m.createTable(folders);
+        await m.addColumn(riddleMaps, riddleMaps.folderId);
+      }
+      if (from < 10) {
+        await m.createTable(downloadedPacks);
+        await m.createTable(downloadedPackMaps);
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
+
+  // ── Convenience ───────────────────────────────────────────────────────────
+
+  Future<List<RiddleMap>> getAllMaps() => select(riddleMaps).get();
+  Future<void> insertMap(RiddleMapsCompanion entity) =>
+      into(riddleMaps).insertOnConflictUpdate(entity);
+
+  Future<List<Riddle>> getRiddlesForMap(String mapId) =>
+      (select(riddles)..where((t) => t.mapId.equals(mapId))).get();
+
+  Future<int> createSession(PlaySessionsCompanion entity) =>
+      into(playSessions).insert(entity);
+  Stream<PlaySession> watchSession(int id) =>
+      (select(playSessions)..where((t) => t.id.equals(id))).watchSingle();
+  Future<void> updateSession(PlaySession session) =>
+      update(playSessions).replace(session);
+}
+
+// ── RiddlePayload sealed class ────────────────────────────────────────────────
 
 sealed class RiddlePayload {
   const RiddlePayload();
@@ -135,77 +239,7 @@ class OrderingPayload extends RiddlePayload {
   Map<String, dynamic> toJson() => {'items': items};
 }
 
-// ---
-
-@DriftDatabase(tables: [
-  Folders,
-  RiddleMaps,
-  Riddles,
-  PlaySessions,
-  TrainingSessions,
-  TrainingNotifiedRiddles,
-  TrainingAttempts,
-])
-class AppDatabase extends _$AppDatabase {
-  AppDatabase(super.e);
-
-  @override
-  int get schemaVersion => 9;
-
-  @override
-  MigrationStrategy get migration => MigrationStrategy(
-    onUpgrade: (m, from, to) async {
-      if (from < 2) {
-        await m.addColumn(riddles, riddles.payloadJson);
-      }
-      if (from < 3) {
-        await m.addColumn(riddleMaps, riddleMaps.imageBytes);
-      }
-      if (from < 4) {
-        await m.addColumn(playSessions, playSessions.riddleStarsJson);
-      }
-      if (from < 5) {
-        await m.addColumn(riddles, riddles.sourceExcerpt);
-      }
-      if (from < 6) {
-        await m.addColumn(riddleMaps, riddleMaps.riddlesVersion);
-        await m.addColumn(playSessions, playSessions.riddlesVersion);
-      }
-      if (from < 7) {
-        await m.createTable(trainingSessions);
-      }
-      if (from < 8) {
-        await m.createTable(trainingNotifiedRiddles);
-        await m.createTable(trainingAttempts);
-      }
-      if (from < 9) {
-        await m.createTable(folders);
-        await m.addColumn(riddleMaps, riddleMaps.folderId);
-      }
-    },
-    beforeOpen: (details) async {
-      await customStatement('PRAGMA foreign_keys = ON');
-    },
-  );
-
-  // ---
-
-  Future<List<RiddleMap>> getAllMaps() => select(riddleMaps).get();
-  Future<void> insertMap(RiddleMapsCompanion entity) =>
-      into(riddleMaps).insertOnConflictUpdate(entity);
-
-  Future<List<Riddle>> getRiddlesForMap(String mapId) =>
-      (select(riddles)..where((t) => t.mapId.equals(mapId))).get();
-
-  Future<int> createSession(PlaySessionsCompanion entity) =>
-      into(playSessions).insert(entity);
-  Stream<PlaySession> watchSession(int id) =>
-      (select(playSessions)..where((t) => t.id.equals(id))).watchSingle();
-  Future<void> updateSession(PlaySession session) =>
-      update(playSessions).replace(session);
-}
-
-// ---
+// ── RiddleUtils extension ─────────────────────────────────────────────────────
 
 extension RiddleUtils on Riddle {
   RiddleType get type => RiddleType.values[typeIndex];
