@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/gemini_service.dart';
 import 'services/notification_service.dart';
 import 'services/training_service.dart';
+import 'services/supabase_service.dart';
 import 'theme/enola_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/riddle_screen.dart';
@@ -48,10 +49,6 @@ Future<void> _pushTrainingRiddle(
         .get();
     final int targetIndex = allRiddles.indexWhere((r) => r.id == riddleId);
 
-    // ── Mark as notified the moment the user opens the riddle ─────────────
-    // Covers both notification taps and dashboard taps on failed riddles.
-    // insertNotifiedRiddle is idempotent (insertOnConflictUpdate) so calling
-    // it again on a re-attempt is safe.
     final session = await TrainingService.instance.getActiveSession(mapId);
     if (session != null) {
       await DriftService.instance.insertNotifiedRiddle(
@@ -73,7 +70,8 @@ Future<void> _pushTrainingRiddle(
       if (fromNotification) {
         Navigator.pushReplacement(
           riddleContext,
-          MaterialPageRoute(builder: (_) => const TrainingDashboardScreen()),
+          MaterialPageRoute(
+              builder: (_) => const TrainingDashboardScreen()),
         );
       } else {
         Navigator.pop(riddleContext);
@@ -92,7 +90,8 @@ Future<void> _pushTrainingRiddle(
               readOnly: false,
               onDismiss: () => Navigator.pop(riddleContext),
               onSkip: () => onDone(riddleContext, 1),
-              onComplete: (int errorCount) => onDone(riddleContext, errorCount),
+              onComplete: (int errorCount) =>
+                  onDone(riddleContext, errorCount),
             ),
           ),
         ),
@@ -135,6 +134,15 @@ void main() async {
     'GEMINI_API_KEY',
     defaultValue: '',
   );
+
+  // ── Supabase ──────────────────────────────────────────────────────────────
+  await SupabaseService.init(
+    url: const String.fromEnvironment('SUPABASE_URL', defaultValue: ''),
+    anonKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY', defaultValue: ''),
+  );
+  // Sign in anonymously — silent, no UI, gives us a stable creator_id
+  await SupabaseService.instance.ensureSignedIn();
 
   await NotificationService.instance.init();
   TrainingService.instance.init();
