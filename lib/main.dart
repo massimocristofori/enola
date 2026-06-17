@@ -122,67 +122,76 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+  print('STEP 1: orientation');
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ));
+  print('STEP 2: overlay style');
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ));
 
-    GeminiService.instance.apiKey = const String.fromEnvironment(
-      'GEMINI_API_KEY',
-      defaultValue: '',
-    );
+  print('STEP 3: gemini key');
+  GeminiService.instance.apiKey = const String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: '',
+  );
 
-    // ── Supabase ──────────────────────────────────────────────────────────
-    const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-    const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+  print('STEP 4: env vars check');
+  const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
 
-    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-      throw Exception(
-        'Supabase env vars missing. URL empty: ${supabaseUrl.isEmpty}, '
-        'AnonKey empty: ${supabaseAnonKey.isEmpty}',
-      );
-    }
+  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+    throw Exception('Supabase env vars missing.');
+  }
 
-    await SupabaseService.init(url: supabaseUrl, anonKey: supabaseAnonKey);
-    await SupabaseService.instance.ensureSignedIn();
+  print('STEP 5: before Supabase.init');
+  await SupabaseService.init(url: supabaseUrl, anonKey: supabaseAnonKey);
+  print('STEP 6: after Supabase.init, before signIn');
 
-    await NotificationService.instance.init();
-    TrainingService.instance.init();
+  await SupabaseService.instance.ensureSignedIn();
+  print('STEP 7: after signIn');
 
-    TrainingService.instance.onTrainingNotificationTap =
-        (String mapId, int riddleId) {
-      openTrainingRiddle(mapId, riddleId, fromNotification: true);
-    };
+  await NotificationService.instance.init();
+  print('STEP 8: after notification init');
 
-    runApp(const ProviderScope(child: EnolaApp()));
+  TrainingService.instance.init();
+  print('STEP 9: after training init');
 
+  TrainingService.instance.onTrainingNotificationTap =
+      (String mapId, int riddleId) {
+    openTrainingRiddle(mapId, riddleId, fromNotification: true);
+  };
+  print('STEP 10: before runApp');
+
+  runApp(const ProviderScope(child: EnolaApp()));
+  print('STEP 11: runApp called');
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        NotificationService.instance.drainPendingLaunchNotification();
-      });
+      NotificationService.instance.drainPendingLaunchNotification();
     });
-  } catch (e, st) {
-    // ignore: avoid_print
-    print('STARTUP FAILED: $e\n$st');
-    runApp(MaterialApp(
-      home: Scaffold(
-        backgroundColor: Colors.red,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Text(
-              'Startup failed:\n$e',
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
+  });
+} catch (e, st) {
+  print('STARTUP FAILED: $e\n$st');
+  runApp(MaterialApp(
+    home: Scaffold(
+      backgroundColor: Colors.red,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            'Startup failed:\n$e',
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
         ),
       ),
-    ));
-  }
+    ),
+  ));
+}
+
 }
 
 
