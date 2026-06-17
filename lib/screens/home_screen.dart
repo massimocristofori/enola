@@ -13,7 +13,10 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/screens/play_screen.dart';
 import 'package:enola/screens/training_dashboard_screen.dart';
+import 'package:enola/screens/download_pack_screen.dart';
+import 'package:enola/screens/share_pack_screen.dart';
 import 'package:enola/services/drift_service.dart';
+import 'package:enola/services/supabase_service.dart';
 import 'package:enola/services/training_service.dart';
 
 import 'package:drift/drift.dart' as drift_orm;
@@ -122,6 +125,36 @@ class _RootScrollView extends ConsumerStatefulWidget {
 class _RootScrollViewState extends ConsumerState<_RootScrollView> {
   int? _hoveredFolderId;
   bool _unfiledHovered = false;
+  List<StaleMapInfo> _staleMaps = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    try {
+      final stale = await SupabaseService.instance.checkForUpdates();
+      if (stale.isNotEmpty && mounted) {
+        setState(() => _staleMaps = stale);
+      }
+    } catch (_) {
+      // Offline — silently ignore
+    }
+  }
+
+  Future<void> _applyUpdates() async {
+    for (final info in _staleMaps) {
+      await SupabaseService.instance.applyMapUpdate(info);
+    }
+    if (mounted) {
+      setState(() => _staleMaps = []);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All maps updated!')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +181,12 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
 
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: _Header()),
+        SliverToBoxAdapter(
+          child: _Header(
+            staleMaps: _staleMaps,
+            onApplyUpdates: _applyUpdates,
+          ),
+        ),
 
         // ── Folders section ──
         if (folders.isNotEmpty)
@@ -211,7 +249,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
             ),
           ),
 
-        // ── Section divider — DragTarget to unfile ──
+        // ── Section divider ──
         SliverToBoxAdapter(
           child: DragTarget<RiddleMap>(
             onWillAcceptWithDetails: (details) {
@@ -384,46 +422,118 @@ class _FolderScrollView extends ConsumerWidget {
 // ── Header (root) ─────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
+  final List<StaleMapInfo> staleMaps;
+  final VoidCallback onApplyUpdates;
+
+  const _Header({
+    required this.staleMaps,
+    required this.onApplyUpdates,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 12, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ready for a Riddle?',
-                  style:
-                      Theme.of(context).textTheme.titleLarge?.copyWith(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 28, 12, 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ready for a Riddle?',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
                             color: EnolaTheme.textPrimary,
                           ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap a map to explore or play',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: EnolaTheme.textSecond),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Tap a map to explore or play',
-                  style:
-                      Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: EnolaTheme.textSecond,
-                          ),
+              ),
+              // Download a Pack button
+              IconButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DownloadPackScreen(),
+                  ),
                 ),
-              ],
+                icon: const Icon(Icons.download_rounded),
+                color: EnolaTheme.textSecond,
+                tooltip: 'Download a Pack',
+              ),
+              IconButton(
+                onPressed: () => _showCreateFolderSheet(context),
+                icon: const Icon(Icons.create_new_folder_outlined),
+                color: EnolaTheme.textSecond,
+                tooltip: 'New Folder',
+              ),
+            ],
+          ),
+        ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.15, end: 0),
+
+        // ── Staleness banner ─────────────────────────────────────────────
+        if (staleMaps.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: EnolaTheme.accent.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: EnolaTheme.accent.withOpacity(0.25)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.update_rounded,
+                    size: 18, color: EnolaTheme.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${staleMaps.length} map${staleMaps.length > 1 ? 's have' : ' has'} updates available.',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: EnolaTheme.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onApplyUpdates,
+                  style: TextButton.styleFrom(
+                    foregroundColor: EnolaTheme.accent,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Update',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ]),
             ),
           ),
-          IconButton(
-            onPressed: () => _showCreateFolderSheet(context),
-            icon: const Icon(Icons.create_new_folder_outlined),
-            color: EnolaTheme.textSecond,
-            tooltip: 'New Folder',
-          ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.15, end: 0);
+      ],
+    );
   }
 
   void _showCreateFolderSheet(BuildContext context) {
@@ -536,7 +646,8 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
             ),
             child: const Text(
               'Create Folder',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              style:
+                  TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
           ),
         ],
@@ -629,8 +740,7 @@ class _FolderHeader extends ConsumerWidget {
               borderRadius: BorderRadius.circular(8 * (1.0 - t)),
               boxShadow: [
                 BoxShadow(
-                  color:
-                      Colors.black.withAlpha((25 * (1.0 - t)).round()),
+                  color: Colors.black.withAlpha((25 * (1.0 - t)).round()),
                   blurRadius: 16 * (1.0 - t),
                   offset: Offset(0, 4 * (1.0 - t)),
                 ),
@@ -688,6 +798,15 @@ class _FolderCard extends ConsumerWidget {
     );
   }
 
+  void _sharePack(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SharePackScreen(folder: folder),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mapsAsync = ref.watch(mapsInFolderProvider(folder.id));
@@ -699,6 +818,7 @@ class _FolderCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () => _openFolder(context),
+      onLongPress: () => _showFolderActions(context),
       child: Hero(
         tag: 'folder-${folder.id}',
         child: Material(
@@ -710,7 +830,7 @@ class _FolderCard extends ConsumerWidget {
                 end: Alignment.bottomCenter,
                 colors: [Color(0xFF39d2c0), Color(0xFF249689)],
               ),
-              borderRadius: BorderRadius.circular(8),  // matches map card
+              borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF249689).withAlpha(100),
@@ -731,7 +851,7 @@ class _FolderCard extends ConsumerWidget {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(8)),  // matches map card
+                        top: Radius.circular(8)),
                     child: _FolderCoverGrid(maps: maps),
                   ),
                 ),
@@ -747,10 +867,46 @@ class _FolderCard extends ConsumerWidget {
       ),
     );
   }
+
+  void _showFolderActions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: EnolaTheme.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.share_rounded,
+                  color: EnolaTheme.accent),
+              title: const Text('Share as Pack'),
+              subtitle: const Text('Upload so others can download & play'),
+              onTap: () {
+                Navigator.pop(context);
+                _sharePack(context);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-
-// ── Folder Cover Grid — 2×2.5 scrollable grid ────────────────────────────────
+// ── Folder Cover Grid ─────────────────────────────────────────────────────────
 
 class _FolderCoverGrid extends StatelessWidget {
   final List<RiddleMap> maps;
@@ -771,7 +927,6 @@ class _FolderCoverGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
-
         final squareSize = (availableWidth - 16 - 12) / 2.5;
         final gridHeight = squareSize * 2 + 6 + 16;
 
@@ -779,7 +934,7 @@ class _FolderCoverGrid extends StatelessWidget {
           height: gridHeight,
           child: ClipRRect(
             borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(8),  // matches map card
+              top: Radius.circular(8),
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -853,7 +1008,6 @@ class _FolderSquare extends StatelessWidget {
   }
 }
 
-
 // ── Folder Info Bar ───────────────────────────────────────────────────────────
 
 class _FolderInfoBar extends StatelessWidget {
@@ -889,7 +1043,8 @@ class _FolderInfoBar extends StatelessWidget {
           const SizedBox(height: 5),
           Row(
             children: [
-              const Icon(Icons.star_rounded, size: 15, color: Colors.white),
+              const Icon(Icons.star_rounded,
+                  size: 15, color: Colors.white),
               const SizedBox(width: 3),
               Text(
                 '$achievedStars',
@@ -909,7 +1064,8 @@ class _FolderInfoBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 3),
-              const Icon(Icons.group_rounded, size: 15, color: Colors.white),
+              const Icon(Icons.group_rounded,
+                  size: 15, color: Colors.white),
             ],
           ),
         ],
@@ -959,7 +1115,8 @@ class _MapCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Add riddles to this map before training.'),
+            content:
+                Text('Add riddles to this map before training.'),
           ),
         );
       }
@@ -992,14 +1149,16 @@ class _MapCard extends ConsumerWidget {
       try {
         final list = jsonDecode(session.riddleStarsJson!) as List;
         completedRiddlesCount = list.length;
-        achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+        achievedStars =
+            list.fold<int>(0, (sum, e) => sum + (e as int));
       } catch (_) {}
     }
 
     final hasBeenPlayed = session != null;
     final isComplete =
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
-    final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0;
+    final double starRatio =
+        maxStars > 0 ? achievedStars / maxStars : 0;
 
     Widget flightShuttle(
       BuildContext flightContext,
@@ -1017,8 +1176,9 @@ class _MapCard extends ConsumerWidget {
         animation: animation,
         builder: (context, _) {
           final t = animation.value;
-          final imageHeight = ((fromHeight - infoBarHeight) * (1.0 - t))
-              .clamp(0.0, double.infinity);
+          final imageHeight =
+              ((fromHeight - infoBarHeight) * (1.0 - t))
+                  .clamp(0.0, double.infinity);
 
           return Material(
             type: MaterialType.transparency,
@@ -1045,8 +1205,9 @@ class _MapCard extends ConsumerWidget {
                               alignment: Alignment.topCenter,
                               maxHeight: fromHeight - infoBarHeight,
                               child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8)),
+                                borderRadius:
+                                    const BorderRadius.vertical(
+                                        top: Radius.circular(8)),
                                 child: imageBytes != null
                                     ? Image.memory(imageBytes,
                                         fit: BoxFit.cover,
@@ -1164,9 +1325,11 @@ class _MapCard extends ConsumerWidget {
                           : Icons.school_outlined,
                       iconColor: isTrainingOn
                           ? Colors.white
-                          : EnolaTheme.textSecond.withValues(alpha: 0.95),
-                      backgroundColor:
-                          isTrainingOn ? EnolaTheme.secondary : Colors.white,
+                          : EnolaTheme.textSecond
+                              .withValues(alpha: 0.95),
+                      backgroundColor: isTrainingOn
+                          ? EnolaTheme.secondary
+                          : Colors.white,
                       onTap: () => _toggleTraining(context),
                     ),
                   ),
@@ -1222,7 +1385,8 @@ class _CardShell extends StatelessWidget {
                   const BorderRadius.vertical(top: Radius.circular(8)),
               child: imageBytes != null
                   ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                  : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                  : Image.asset('assets/images/0.jpeg',
+                      fit: BoxFit.cover),
             ),
           ),
           _CardInfoBar(
@@ -1318,16 +1482,17 @@ class _CardInfoBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
+        borderRadius:
+            BorderRadius.vertical(bottom: Radius.circular(8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Title row — plain white, no grey band
           Container(
             height: 30,
-            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
+            padding: const EdgeInsets.symmetric(
+                vertical: 5, horizontal: 12),
             child: Text(
               title,
               textAlign: TextAlign.center,
@@ -1342,9 +1507,8 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
-          // Thin divider between title and progress bar
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
-          // Progress bar row
+          const Divider(
+              height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
           SizedBox(
             height: 32,
             child: Padding(
@@ -1395,7 +1559,7 @@ String _rankEmoji(double starRatio) {
   return '📜';
 }
 
-// ── Floating Ribbon Overlay ───────────────────────────────────────────────────
+// ── Rank Ribbon Overlay ───────────────────────────────────────────────────────
 
 class _RankRibbonOverlay extends StatelessWidget {
   final double starRatio;
@@ -1447,7 +1611,7 @@ class _RankRibbonOverlay extends StatelessWidget {
   }
 }
 
-// ── Custom Progress Bar ───────────────────────────────────────────────────────
+// ── Star Progress Bar ─────────────────────────────────────────────────────────
 
 class _StarProgressBar extends StatelessWidget {
   final double progress;
@@ -1460,7 +1624,8 @@ class _StarProgressBar extends StatelessWidget {
         final double width = constraints.maxWidth;
         const double starSize = 26.0;
         const double barHeight = 8.0;
-        final double leftOffset = width * progress.clamp(0.0, 1.0);
+        final double leftOffset =
+            width * progress.clamp(0.0, 1.0);
 
         return SizedBox(
           height: starSize,
@@ -1489,8 +1654,8 @@ class _StarProgressBar extends StatelessWidget {
               Positioned(
                 left: leftOffset,
                 child: Container(
-                  transform:
-                      Matrix4.translationValues(-starSize / 2, -2.0, 0),
+                  transform: Matrix4.translationValues(
+                      -starSize / 2, -2.0, 0),
                   child: const Icon(
                     Icons.star_rounded,
                     size: starSize,
@@ -1679,7 +1844,8 @@ class _FolderBackFabState extends State<_FolderBackFab> {
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
+              color:
+                  _isDraggingOver ? EnolaTheme.accent : Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
@@ -1724,6 +1890,13 @@ class _FolderBackFabState extends State<_FolderBackFab> {
 }
 
 // ── Training FAB ──────────────────────────────────────────────────────────────
+
+class _TrainingFab extends StatefulWidget {
+  const _TrainingFab();
+
+  @override
+  State<_TrainingFab> createState() => _TrainingFabState();
+}
 
 class _TrainingFabState extends State<_TrainingFab> {
   late Stream<List<TrainingRiddleItem>> _riddlesStream;
@@ -1792,11 +1965,4 @@ class _TrainingFabState extends State<_TrainingFab> {
       },
     );
   }
-}
-
-class _TrainingFab extends StatefulWidget {
-  const _TrainingFab();
-
-  @override
-  State<_TrainingFab> createState() => _TrainingFabState();
 }
