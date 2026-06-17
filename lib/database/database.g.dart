@@ -966,6 +966,254 @@ return map;
 @override
 String toString() {return (StringBuffer('TrainingAttemptsCompanion(')..write('id: $id, ')..write('sessionId: $sessionId, ')..write('riddleId: $riddleId, ')..write('correct: $correct, ')..write('answeredAt: $answeredAt')..write(')')).toString();}
 }
+class $DownloadedPacksTable extends DownloadedPacks with TableInfo<$DownloadedPacksTable, DownloadedPack>{
+@override final GeneratedDatabase attachedDatabase;
+final String? _alias;
+$DownloadedPacksTable(this.attachedDatabase, [this._alias]);
+static const VerificationMeta _idMeta = const VerificationMeta('id');
+@override
+late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _titleMeta = const VerificationMeta('title');
+@override
+late final GeneratedColumn<String> title = GeneratedColumn<String>('title', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _shareCodeMeta = const VerificationMeta('shareCode');
+@override
+late final GeneratedColumn<String> shareCode = GeneratedColumn<String>('share_code', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _creatorIdMeta = const VerificationMeta('creatorId');
+@override
+late final GeneratedColumn<String> creatorId = GeneratedColumn<String>('creator_id', aliasedName, true, type: DriftSqlType.string, requiredDuringInsert: false);
+static const VerificationMeta _downloadedAtMeta = const VerificationMeta('downloadedAt');
+@override
+late final GeneratedColumn<DateTime> downloadedAt = GeneratedColumn<DateTime>('downloaded_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: false, defaultValue: currentDateAndTime);
+@override
+List<GeneratedColumn> get $columns => [id, title, shareCode, creatorId, downloadedAt];
+@override
+String get aliasedName => _alias ?? actualTableName;
+@override
+ String get actualTableName => $name;
+static const String $name = 'downloaded_packs';
+@override
+VerificationContext validateIntegrity(Insertable<DownloadedPack> instance, {bool isInserting = false}) {
+final context = VerificationContext();
+final data = instance.toColumns(true);
+if (data.containsKey('id')) {
+context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));} else if (isInserting) {
+context.missing(_idMeta);
+}
+if (data.containsKey('title')) {
+context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));} else if (isInserting) {
+context.missing(_titleMeta);
+}
+if (data.containsKey('share_code')) {
+context.handle(_shareCodeMeta, shareCode.isAcceptableOrUnknown(data['share_code']!, _shareCodeMeta));} else if (isInserting) {
+context.missing(_shareCodeMeta);
+}
+if (data.containsKey('creator_id')) {
+context.handle(_creatorIdMeta, creatorId.isAcceptableOrUnknown(data['creator_id']!, _creatorIdMeta));}if (data.containsKey('downloaded_at')) {
+context.handle(_downloadedAtMeta, downloadedAt.isAcceptableOrUnknown(data['downloaded_at']!, _downloadedAtMeta));}return context;
+}
+@override
+Set<GeneratedColumn> get $primaryKey => {id};
+@override DownloadedPack map(Map<String, dynamic> data, {String? tablePrefix})  {
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return DownloadedPack(id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!, title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!, shareCode: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}share_code'])!, creatorId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}creator_id']), downloadedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}downloaded_at'])!, );
+}
+@override
+$DownloadedPacksTable createAlias(String alias) {
+return $DownloadedPacksTable(attachedDatabase, alias);}}class DownloadedPack extends DataClass implements Insertable<DownloadedPack> 
+{
+final String id;
+final String title;
+final String shareCode;
+/// The Supabase creator_id — null if this device created the pack
+/// (in that case the device IS the creator, so no need to store it here).
+/// Populated for packs downloaded from someone else.
+final String? creatorId;
+final DateTime downloadedAt;
+const DownloadedPack({required this.id, required this.title, required this.shareCode, this.creatorId, required this.downloadedAt});@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};map['id'] = Variable<String>(id);
+map['title'] = Variable<String>(title);
+map['share_code'] = Variable<String>(shareCode);
+if (!nullToAbsent || creatorId != null){map['creator_id'] = Variable<String>(creatorId);
+}map['downloaded_at'] = Variable<DateTime>(downloadedAt);
+return map; 
+}
+DownloadedPacksCompanion toCompanion(bool nullToAbsent) {
+return DownloadedPacksCompanion(id: Value(id),title: Value(title),shareCode: Value(shareCode),creatorId: creatorId == null && nullToAbsent ? const Value.absent() : Value(creatorId),downloadedAt: Value(downloadedAt),);
+}
+factory DownloadedPack.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return DownloadedPack(id: serializer.fromJson<String>(json['id']),title: serializer.fromJson<String>(json['title']),shareCode: serializer.fromJson<String>(json['shareCode']),creatorId: serializer.fromJson<String?>(json['creatorId']),downloadedAt: serializer.fromJson<DateTime>(json['downloadedAt']),);}
+@override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return <String, dynamic>{
+'id': serializer.toJson<String>(id),'title': serializer.toJson<String>(title),'shareCode': serializer.toJson<String>(shareCode),'creatorId': serializer.toJson<String?>(creatorId),'downloadedAt': serializer.toJson<DateTime>(downloadedAt),};}DownloadedPack copyWith({String? id,String? title,String? shareCode,Value<String?> creatorId = const Value.absent(),DateTime? downloadedAt}) => DownloadedPack(id: id ?? this.id,title: title ?? this.title,shareCode: shareCode ?? this.shareCode,creatorId: creatorId.present ? creatorId.value : this.creatorId,downloadedAt: downloadedAt ?? this.downloadedAt,);DownloadedPack copyWithCompanion(DownloadedPacksCompanion data) {
+return DownloadedPack(
+id: data.id.present ? data.id.value : this.id,title: data.title.present ? data.title.value : this.title,shareCode: data.shareCode.present ? data.shareCode.value : this.shareCode,creatorId: data.creatorId.present ? data.creatorId.value : this.creatorId,downloadedAt: data.downloadedAt.present ? data.downloadedAt.value : this.downloadedAt,);
+}
+@override
+String toString() {return (StringBuffer('DownloadedPack(')..write('id: $id, ')..write('title: $title, ')..write('shareCode: $shareCode, ')..write('creatorId: $creatorId, ')..write('downloadedAt: $downloadedAt')..write(')')).toString();}
+@override
+ int get hashCode => Object.hash(id, title, shareCode, creatorId, downloadedAt);@override
+bool operator ==(Object other) => identical(this, other) || (other is DownloadedPack && other.id == this.id && other.title == this.title && other.shareCode == this.shareCode && other.creatorId == this.creatorId && other.downloadedAt == this.downloadedAt);
+}class DownloadedPacksCompanion extends UpdateCompanion<DownloadedPack> {
+final Value<String> id;
+final Value<String> title;
+final Value<String> shareCode;
+final Value<String?> creatorId;
+final Value<DateTime> downloadedAt;
+final Value<int> rowid;
+const DownloadedPacksCompanion({this.id = const Value.absent(),this.title = const Value.absent(),this.shareCode = const Value.absent(),this.creatorId = const Value.absent(),this.downloadedAt = const Value.absent(),this.rowid = const Value.absent(),});
+DownloadedPacksCompanion.insert({required String id,required String title,required String shareCode,this.creatorId = const Value.absent(),this.downloadedAt = const Value.absent(),this.rowid = const Value.absent(),}): id = Value(id), title = Value(title), shareCode = Value(shareCode);
+static Insertable<DownloadedPack> custom({Expression<String>? id, 
+Expression<String>? title, 
+Expression<String>? shareCode, 
+Expression<String>? creatorId, 
+Expression<DateTime>? downloadedAt, 
+Expression<int>? rowid, 
+}) {
+return RawValuesInsertable({if (id != null)'id': id,if (title != null)'title': title,if (shareCode != null)'share_code': shareCode,if (creatorId != null)'creator_id': creatorId,if (downloadedAt != null)'downloaded_at': downloadedAt,if (rowid != null)'rowid': rowid,});
+}DownloadedPacksCompanion copyWith({Value<String>? id, Value<String>? title, Value<String>? shareCode, Value<String?>? creatorId, Value<DateTime>? downloadedAt, Value<int>? rowid}) {
+return DownloadedPacksCompanion(id: id ?? this.id,title: title ?? this.title,shareCode: shareCode ?? this.shareCode,creatorId: creatorId ?? this.creatorId,downloadedAt: downloadedAt ?? this.downloadedAt,rowid: rowid ?? this.rowid,);
+}
+@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};if (id.present) {
+map['id'] = Variable<String>(id.value);}
+if (title.present) {
+map['title'] = Variable<String>(title.value);}
+if (shareCode.present) {
+map['share_code'] = Variable<String>(shareCode.value);}
+if (creatorId.present) {
+map['creator_id'] = Variable<String>(creatorId.value);}
+if (downloadedAt.present) {
+map['downloaded_at'] = Variable<DateTime>(downloadedAt.value);}
+if (rowid.present) {
+map['rowid'] = Variable<int>(rowid.value);}
+return map; 
+}
+@override
+String toString() {return (StringBuffer('DownloadedPacksCompanion(')..write('id: $id, ')..write('title: $title, ')..write('shareCode: $shareCode, ')..write('creatorId: $creatorId, ')..write('downloadedAt: $downloadedAt, ')..write('rowid: $rowid')..write(')')).toString();}
+}
+class $DownloadedPackMapsTable extends DownloadedPackMaps with TableInfo<$DownloadedPackMapsTable, DownloadedPackMap>{
+@override final GeneratedDatabase attachedDatabase;
+final String? _alias;
+$DownloadedPackMapsTable(this.attachedDatabase, [this._alias]);
+static const VerificationMeta _idMeta = const VerificationMeta('id');
+@override
+late final GeneratedColumn<String> id = GeneratedColumn<String>('id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+@override
+late final GeneratedColumn<String> packId = GeneratedColumn<String>('pack_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true, defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES downloaded_packs (id) ON DELETE CASCADE'));
+static const VerificationMeta _localMapIdMeta = const VerificationMeta('localMapId');
+@override
+late final GeneratedColumn<String> localMapId = GeneratedColumn<String>('local_map_id', aliasedName, false, type: DriftSqlType.string, requiredDuringInsert: true);
+static const VerificationMeta _remoteUpdatedAtMeta = const VerificationMeta('remoteUpdatedAt');
+@override
+late final GeneratedColumn<DateTime> remoteUpdatedAt = GeneratedColumn<DateTime>('remote_updated_at', aliasedName, false, type: DriftSqlType.dateTime, requiredDuringInsert: true);
+@override
+List<GeneratedColumn> get $columns => [id, packId, localMapId, remoteUpdatedAt];
+@override
+String get aliasedName => _alias ?? actualTableName;
+@override
+ String get actualTableName => $name;
+static const String $name = 'downloaded_pack_maps';
+@override
+VerificationContext validateIntegrity(Insertable<DownloadedPackMap> instance, {bool isInserting = false}) {
+final context = VerificationContext();
+final data = instance.toColumns(true);
+if (data.containsKey('id')) {
+context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));} else if (isInserting) {
+context.missing(_idMeta);
+}
+if (data.containsKey('pack_id')) {
+context.handle(_packIdMeta, packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta));} else if (isInserting) {
+context.missing(_packIdMeta);
+}
+if (data.containsKey('local_map_id')) {
+context.handle(_localMapIdMeta, localMapId.isAcceptableOrUnknown(data['local_map_id']!, _localMapIdMeta));} else if (isInserting) {
+context.missing(_localMapIdMeta);
+}
+if (data.containsKey('remote_updated_at')) {
+context.handle(_remoteUpdatedAtMeta, remoteUpdatedAt.isAcceptableOrUnknown(data['remote_updated_at']!, _remoteUpdatedAtMeta));} else if (isInserting) {
+context.missing(_remoteUpdatedAtMeta);
+}
+return context;
+}
+@override
+Set<GeneratedColumn> get $primaryKey => {id};
+@override DownloadedPackMap map(Map<String, dynamic> data, {String? tablePrefix})  {
+final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';return DownloadedPackMap(id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!, packId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}pack_id'])!, localMapId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}local_map_id'])!, remoteUpdatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}remote_updated_at'])!, );
+}
+@override
+$DownloadedPackMapsTable createAlias(String alias) {
+return $DownloadedPackMapsTable(attachedDatabase, alias);}}class DownloadedPackMap extends DataClass implements Insertable<DownloadedPackMap> 
+{
+final String id;
+final String packId;
+final String localMapId;
+final DateTime remoteUpdatedAt;
+const DownloadedPackMap({required this.id, required this.packId, required this.localMapId, required this.remoteUpdatedAt});@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};map['id'] = Variable<String>(id);
+map['pack_id'] = Variable<String>(packId);
+map['local_map_id'] = Variable<String>(localMapId);
+map['remote_updated_at'] = Variable<DateTime>(remoteUpdatedAt);
+return map; 
+}
+DownloadedPackMapsCompanion toCompanion(bool nullToAbsent) {
+return DownloadedPackMapsCompanion(id: Value(id),packId: Value(packId),localMapId: Value(localMapId),remoteUpdatedAt: Value(remoteUpdatedAt),);
+}
+factory DownloadedPackMap.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return DownloadedPackMap(id: serializer.fromJson<String>(json['id']),packId: serializer.fromJson<String>(json['packId']),localMapId: serializer.fromJson<String>(json['localMapId']),remoteUpdatedAt: serializer.fromJson<DateTime>(json['remoteUpdatedAt']),);}
+@override Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+serializer ??= driftRuntimeOptions.defaultSerializer;
+return <String, dynamic>{
+'id': serializer.toJson<String>(id),'packId': serializer.toJson<String>(packId),'localMapId': serializer.toJson<String>(localMapId),'remoteUpdatedAt': serializer.toJson<DateTime>(remoteUpdatedAt),};}DownloadedPackMap copyWith({String? id,String? packId,String? localMapId,DateTime? remoteUpdatedAt}) => DownloadedPackMap(id: id ?? this.id,packId: packId ?? this.packId,localMapId: localMapId ?? this.localMapId,remoteUpdatedAt: remoteUpdatedAt ?? this.remoteUpdatedAt,);DownloadedPackMap copyWithCompanion(DownloadedPackMapsCompanion data) {
+return DownloadedPackMap(
+id: data.id.present ? data.id.value : this.id,packId: data.packId.present ? data.packId.value : this.packId,localMapId: data.localMapId.present ? data.localMapId.value : this.localMapId,remoteUpdatedAt: data.remoteUpdatedAt.present ? data.remoteUpdatedAt.value : this.remoteUpdatedAt,);
+}
+@override
+String toString() {return (StringBuffer('DownloadedPackMap(')..write('id: $id, ')..write('packId: $packId, ')..write('localMapId: $localMapId, ')..write('remoteUpdatedAt: $remoteUpdatedAt')..write(')')).toString();}
+@override
+ int get hashCode => Object.hash(id, packId, localMapId, remoteUpdatedAt);@override
+bool operator ==(Object other) => identical(this, other) || (other is DownloadedPackMap && other.id == this.id && other.packId == this.packId && other.localMapId == this.localMapId && other.remoteUpdatedAt == this.remoteUpdatedAt);
+}class DownloadedPackMapsCompanion extends UpdateCompanion<DownloadedPackMap> {
+final Value<String> id;
+final Value<String> packId;
+final Value<String> localMapId;
+final Value<DateTime> remoteUpdatedAt;
+final Value<int> rowid;
+const DownloadedPackMapsCompanion({this.id = const Value.absent(),this.packId = const Value.absent(),this.localMapId = const Value.absent(),this.remoteUpdatedAt = const Value.absent(),this.rowid = const Value.absent(),});
+DownloadedPackMapsCompanion.insert({required String id,required String packId,required String localMapId,required DateTime remoteUpdatedAt,this.rowid = const Value.absent(),}): id = Value(id), packId = Value(packId), localMapId = Value(localMapId), remoteUpdatedAt = Value(remoteUpdatedAt);
+static Insertable<DownloadedPackMap> custom({Expression<String>? id, 
+Expression<String>? packId, 
+Expression<String>? localMapId, 
+Expression<DateTime>? remoteUpdatedAt, 
+Expression<int>? rowid, 
+}) {
+return RawValuesInsertable({if (id != null)'id': id,if (packId != null)'pack_id': packId,if (localMapId != null)'local_map_id': localMapId,if (remoteUpdatedAt != null)'remote_updated_at': remoteUpdatedAt,if (rowid != null)'rowid': rowid,});
+}DownloadedPackMapsCompanion copyWith({Value<String>? id, Value<String>? packId, Value<String>? localMapId, Value<DateTime>? remoteUpdatedAt, Value<int>? rowid}) {
+return DownloadedPackMapsCompanion(id: id ?? this.id,packId: packId ?? this.packId,localMapId: localMapId ?? this.localMapId,remoteUpdatedAt: remoteUpdatedAt ?? this.remoteUpdatedAt,rowid: rowid ?? this.rowid,);
+}
+@override
+Map<String, Expression> toColumns(bool nullToAbsent) {
+final map = <String, Expression> {};if (id.present) {
+map['id'] = Variable<String>(id.value);}
+if (packId.present) {
+map['pack_id'] = Variable<String>(packId.value);}
+if (localMapId.present) {
+map['local_map_id'] = Variable<String>(localMapId.value);}
+if (remoteUpdatedAt.present) {
+map['remote_updated_at'] = Variable<DateTime>(remoteUpdatedAt.value);}
+if (rowid.present) {
+map['rowid'] = Variable<int>(rowid.value);}
+return map; 
+}
+@override
+String toString() {return (StringBuffer('DownloadedPackMapsCompanion(')..write('id: $id, ')..write('packId: $packId, ')..write('localMapId: $localMapId, ')..write('remoteUpdatedAt: $remoteUpdatedAt, ')..write('rowid: $rowid')..write(')')).toString();}
+}
 abstract class _$AppDatabase extends GeneratedDatabase{
 _$AppDatabase(QueryExecutor e): super(e);
 $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -976,12 +1224,14 @@ late final $PlaySessionsTable playSessions = $PlaySessionsTable(this);
 late final $TrainingSessionsTable trainingSessions = $TrainingSessionsTable(this);
 late final $TrainingNotifiedRiddlesTable trainingNotifiedRiddles = $TrainingNotifiedRiddlesTable(this);
 late final $TrainingAttemptsTable trainingAttempts = $TrainingAttemptsTable(this);
+late final $DownloadedPacksTable downloadedPacks = $DownloadedPacksTable(this);
+late final $DownloadedPackMapsTable downloadedPackMaps = $DownloadedPackMapsTable(this);
 @override
 Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
 @override
-List<DatabaseSchemaEntity> get allSchemaEntities => [folders, riddleMaps, riddles, playSessions, trainingSessions, trainingNotifiedRiddles, trainingAttempts];
+List<DatabaseSchemaEntity> get allSchemaEntities => [folders, riddleMaps, riddles, playSessions, trainingSessions, trainingNotifiedRiddles, trainingAttempts, downloadedPacks, downloadedPackMaps];
 @override
-StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('folders' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddle_maps', kind: UpdateKind.update), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), ],);
+StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([WritePropagation(on: TableUpdateQuery.onTableName('folders' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddle_maps', kind: UpdateKind.update), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('play_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddle_maps' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_sessions', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_notified_riddles', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('training_sessions' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('riddles' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('training_attempts', kind: UpdateKind.delete), ],), WritePropagation(on: TableUpdateQuery.onTableName('downloaded_packs' , limitUpdateKind: UpdateKind.delete), result: [TableUpdate('downloaded_pack_maps', kind: UpdateKind.delete), ],), ],);
 }
 typedef $$FoldersTableCreateCompanionBuilder = FoldersCompanion Function({Value<int> id,required String title,Value<DateTime> createdAt,});
 typedef $$FoldersTableUpdateCompanionBuilder = FoldersCompanion Function({Value<int> id,Value<String> title,Value<DateTime> createdAt,});
@@ -3446,6 +3696,468 @@ GeneratedColumn<DateTime> get answeredAt => $composableBuilder(
     (TrainingAttempt,$$TrainingAttemptsTableReferences),
     TrainingAttempt,
     PrefetchHooks Function({bool sessionId,bool riddleId})
+    >;typedef $$DownloadedPacksTableCreateCompanionBuilder = DownloadedPacksCompanion Function({required String id,required String title,required String shareCode,Value<String?> creatorId,Value<DateTime> downloadedAt,Value<int> rowid,});
+typedef $$DownloadedPacksTableUpdateCompanionBuilder = DownloadedPacksCompanion Function({Value<String> id,Value<String> title,Value<String> shareCode,Value<String?> creatorId,Value<DateTime> downloadedAt,Value<int> rowid,});
+      final class $$DownloadedPacksTableReferences extends BaseReferences<
+        _$AppDatabase,
+        $DownloadedPacksTable,
+        DownloadedPack> {
+        $$DownloadedPacksTableReferences(super.$_db, super.$_table, super.$_typedResult);
+        
+                  
+                  static MultiTypedResultKey<
+          $DownloadedPackMapsTable,
+          List<DownloadedPackMap>
+        > _downloadedPackMapsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(
+          db.downloadedPackMaps, 
+          aliasName: $_aliasNameGenerator(
+            db.downloadedPacks.id,
+            db.downloadedPackMaps.packId)
+        );
+
+          $$DownloadedPackMapsTableProcessedTableManager get downloadedPackMapsRefs {
+        final manager = $$DownloadedPackMapsTableTableManager(
+            $_db, $_db.downloadedPackMaps
+            ).filter(
+              (f) => f.packId.id(
+              $_item.id
+            )
+          );
+
+          final cache = $_typedResult.readTableOrNull(_downloadedPackMapsRefsTable($_db));
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+
+
+        }
+        
+
+      }class $$DownloadedPacksTableFilterComposer extends Composer<
+        _$AppDatabase,
+        $DownloadedPacksTable> {
+        $$DownloadedPacksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get shareCode => $composableBuilder(
+      column: $table.shareCode,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get creatorId => $composableBuilder(
+      column: $table.creatorId,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get downloadedAt => $composableBuilder(
+      column: $table.downloadedAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+        Expression<bool> downloadedPackMapsRefs(
+          Expression<bool> Function( $$DownloadedPackMapsTableFilterComposer f) f
+        ) {
+                final $$DownloadedPackMapsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.downloadedPackMaps,
+      getReferencedColumn: (t) => t.packId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$DownloadedPackMapsTableFilterComposer(
+              $db: $db,
+              $table: $db.downloadedPackMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        }
+      class $$DownloadedPacksTableOrderingComposer extends Composer<
+        _$AppDatabase,
+        $DownloadedPacksTable> {
+        $$DownloadedPacksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get shareCode => $composableBuilder(
+      column: $table.shareCode,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get creatorId => $composableBuilder(
+      column: $table.creatorId,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get downloadedAt => $composableBuilder(
+      column: $table.downloadedAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+        }
+      class $$DownloadedPacksTableAnnotationComposer extends Composer<
+        _$AppDatabase,
+        $DownloadedPacksTable> {
+        $$DownloadedPacksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          GeneratedColumn<String> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get title => $composableBuilder(
+      column: $table.title,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get shareCode => $composableBuilder(
+      column: $table.shareCode,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get creatorId => $composableBuilder(
+      column: $table.creatorId,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get downloadedAt => $composableBuilder(
+      column: $table.downloadedAt,
+      builder: (column) => column);
+      
+        Expression<T> downloadedPackMapsRefs<T extends Object>(
+          Expression<T> Function( $$DownloadedPackMapsTableAnnotationComposer a) f
+        ) {
+                final $$DownloadedPackMapsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.downloadedPackMaps,
+      getReferencedColumn: (t) => t.packId,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$DownloadedPackMapsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.downloadedPackMaps,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return f(composer);
+        }
+
+        }
+      class $$DownloadedPacksTableTableManager extends RootTableManager    <_$AppDatabase,
+    $DownloadedPacksTable,
+    DownloadedPack,
+    $$DownloadedPacksTableFilterComposer,
+    $$DownloadedPacksTableOrderingComposer,
+    $$DownloadedPacksTableAnnotationComposer,
+    $$DownloadedPacksTableCreateCompanionBuilder,
+    $$DownloadedPacksTableUpdateCompanionBuilder,
+    (DownloadedPack,$$DownloadedPacksTableReferences),
+    DownloadedPack,
+    PrefetchHooks Function({bool downloadedPackMapsRefs})
+    > {
+    $$DownloadedPacksTableTableManager(_$AppDatabase db, $DownloadedPacksTable table) : super(
+      TableManagerState(
+        db: db,
+        table: table,
+        createFilteringComposer: () => $$DownloadedPacksTableFilterComposer($db: db,$table:table),
+        createOrderingComposer: () => $$DownloadedPacksTableOrderingComposer($db: db,$table:table),
+        createComputedFieldComposer: () => $$DownloadedPacksTableAnnotationComposer($db: db,$table:table),
+        updateCompanionCallback: ({Value<String> id = const Value.absent(),Value<String> title = const Value.absent(),Value<String> shareCode = const Value.absent(),Value<String?> creatorId = const Value.absent(),Value<DateTime> downloadedAt = const Value.absent(),Value<int> rowid = const Value.absent(),})=> DownloadedPacksCompanion(id: id,title: title,shareCode: shareCode,creatorId: creatorId,downloadedAt: downloadedAt,rowid: rowid,),
+        createCompanionCallback: ({required String id,required String title,required String shareCode,Value<String?> creatorId = const Value.absent(),Value<DateTime> downloadedAt = const Value.absent(),Value<int> rowid = const Value.absent(),})=> DownloadedPacksCompanion.insert(id: id,title: title,shareCode: shareCode,creatorId: creatorId,downloadedAt: downloadedAt,rowid: rowid,),
+        withReferenceMapper: (p0) => p0
+              .map(
+                  (e) =>
+                     (e.readTable(table), $$DownloadedPacksTableReferences(db, table, e))
+                  )
+              .toList(),
+        prefetchHooksCallback:         ({downloadedPackMapsRefs = false}){
+          return PrefetchHooks(
+            db: db,
+            explicitlyWatchedTables: [
+             if (downloadedPackMapsRefs) db.downloadedPackMaps
+            ],
+            addJoins: null,
+            getPrefetchedDataCallback: (items) async {
+            return [
+                      if (downloadedPackMapsRefs) await $_getPrefetchedData(
+                  currentTable: table,
+                  referencedTable:
+                      $$DownloadedPacksTableReferences._downloadedPackMapsRefsTable(db),
+                  managerFromTypedResult: (p0) =>
+                      $$DownloadedPacksTableReferences(db, table, p0).downloadedPackMapsRefs,
+                  referencedItemsForCurrentItem: (item, referencedItems) =>
+                      referencedItems.where((e) => e.packId == item.id),
+                  typedResults: items)
+            
+                ];
+              },
+          );
+        }
+,
+        ));
+        }
+    typedef $$DownloadedPacksTableProcessedTableManager = ProcessedTableManager    <_$AppDatabase,
+    $DownloadedPacksTable,
+    DownloadedPack,
+    $$DownloadedPacksTableFilterComposer,
+    $$DownloadedPacksTableOrderingComposer,
+    $$DownloadedPacksTableAnnotationComposer,
+    $$DownloadedPacksTableCreateCompanionBuilder,
+    $$DownloadedPacksTableUpdateCompanionBuilder,
+    (DownloadedPack,$$DownloadedPacksTableReferences),
+    DownloadedPack,
+    PrefetchHooks Function({bool downloadedPackMapsRefs})
+    >;typedef $$DownloadedPackMapsTableCreateCompanionBuilder = DownloadedPackMapsCompanion Function({required String id,required String packId,required String localMapId,required DateTime remoteUpdatedAt,Value<int> rowid,});
+typedef $$DownloadedPackMapsTableUpdateCompanionBuilder = DownloadedPackMapsCompanion Function({Value<String> id,Value<String> packId,Value<String> localMapId,Value<DateTime> remoteUpdatedAt,Value<int> rowid,});
+      final class $$DownloadedPackMapsTableReferences extends BaseReferences<
+        _$AppDatabase,
+        $DownloadedPackMapsTable,
+        DownloadedPackMap> {
+        $$DownloadedPackMapsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+        
+                          static $DownloadedPacksTable _packIdTable(_$AppDatabase db) => 
+            db.downloadedPacks.createAlias($_aliasNameGenerator(
+            db.downloadedPackMaps.packId,
+            db.downloadedPacks.id));
+          
+
+        $$DownloadedPacksTableProcessedTableManager? get packId {
+          if ($_item.packId == null) return null;
+          final manager = $$DownloadedPacksTableTableManager($_db, $_db.downloadedPacks).filter((f) => f.id($_item.packId!));
+          final item = $_typedResult.readTableOrNull(_packIdTable($_db));
+          if (item == null) return manager;
+          return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+        }
+
+
+      }class $$DownloadedPackMapsTableFilterComposer extends Composer<
+        _$AppDatabase,
+        $DownloadedPackMapsTable> {
+        $$DownloadedPackMapsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<String> get localMapId => $composableBuilder(
+      column: $table.localMapId,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+ColumnFilters<DateTime> get remoteUpdatedAt => $composableBuilder(
+      column: $table.remoteUpdatedAt,
+      builder: (column) => 
+      ColumnFilters(column));
+      
+        $$DownloadedPacksTableFilterComposer get packId {
+                final $$DownloadedPacksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packId,
+      referencedTable: $db.downloadedPacks,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$DownloadedPacksTableFilterComposer(
+              $db: $db,
+              $table: $db.downloadedPacks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$DownloadedPackMapsTableOrderingComposer extends Composer<
+        _$AppDatabase,
+        $DownloadedPackMapsTable> {
+        $$DownloadedPackMapsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<String> get localMapId => $composableBuilder(
+      column: $table.localMapId,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+ColumnOrderings<DateTime> get remoteUpdatedAt => $composableBuilder(
+      column: $table.remoteUpdatedAt,
+      builder: (column) => 
+      ColumnOrderings(column));
+      
+        $$DownloadedPacksTableOrderingComposer get packId {
+                final $$DownloadedPacksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packId,
+      referencedTable: $db.downloadedPacks,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$DownloadedPacksTableOrderingComposer(
+              $db: $db,
+              $table: $db.downloadedPacks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$DownloadedPackMapsTableAnnotationComposer extends Composer<
+        _$AppDatabase,
+        $DownloadedPackMapsTable> {
+        $$DownloadedPackMapsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+          GeneratedColumn<String> get id => $composableBuilder(
+      column: $table.id,
+      builder: (column) => column);
+      
+GeneratedColumn<String> get localMapId => $composableBuilder(
+      column: $table.localMapId,
+      builder: (column) => column);
+      
+GeneratedColumn<DateTime> get remoteUpdatedAt => $composableBuilder(
+      column: $table.remoteUpdatedAt,
+      builder: (column) => column);
+      
+        $$DownloadedPacksTableAnnotationComposer get packId {
+                final $$DownloadedPacksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.packId,
+      referencedTable: $db.downloadedPacks,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder,{$addJoinBuilderToRootComposer,$removeJoinBuilderFromRootComposer }) => 
+      $$DownloadedPacksTableAnnotationComposer(
+              $db: $db,
+              $table: $db.downloadedPacks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+        ));
+          return composer;
+        }
+        }
+      class $$DownloadedPackMapsTableTableManager extends RootTableManager    <_$AppDatabase,
+    $DownloadedPackMapsTable,
+    DownloadedPackMap,
+    $$DownloadedPackMapsTableFilterComposer,
+    $$DownloadedPackMapsTableOrderingComposer,
+    $$DownloadedPackMapsTableAnnotationComposer,
+    $$DownloadedPackMapsTableCreateCompanionBuilder,
+    $$DownloadedPackMapsTableUpdateCompanionBuilder,
+    (DownloadedPackMap,$$DownloadedPackMapsTableReferences),
+    DownloadedPackMap,
+    PrefetchHooks Function({bool packId})
+    > {
+    $$DownloadedPackMapsTableTableManager(_$AppDatabase db, $DownloadedPackMapsTable table) : super(
+      TableManagerState(
+        db: db,
+        table: table,
+        createFilteringComposer: () => $$DownloadedPackMapsTableFilterComposer($db: db,$table:table),
+        createOrderingComposer: () => $$DownloadedPackMapsTableOrderingComposer($db: db,$table:table),
+        createComputedFieldComposer: () => $$DownloadedPackMapsTableAnnotationComposer($db: db,$table:table),
+        updateCompanionCallback: ({Value<String> id = const Value.absent(),Value<String> packId = const Value.absent(),Value<String> localMapId = const Value.absent(),Value<DateTime> remoteUpdatedAt = const Value.absent(),Value<int> rowid = const Value.absent(),})=> DownloadedPackMapsCompanion(id: id,packId: packId,localMapId: localMapId,remoteUpdatedAt: remoteUpdatedAt,rowid: rowid,),
+        createCompanionCallback: ({required String id,required String packId,required String localMapId,required DateTime remoteUpdatedAt,Value<int> rowid = const Value.absent(),})=> DownloadedPackMapsCompanion.insert(id: id,packId: packId,localMapId: localMapId,remoteUpdatedAt: remoteUpdatedAt,rowid: rowid,),
+        withReferenceMapper: (p0) => p0
+              .map(
+                  (e) =>
+                     (e.readTable(table), $$DownloadedPackMapsTableReferences(db, table, e))
+                  )
+              .toList(),
+        prefetchHooksCallback:         ({packId = false}){
+          return PrefetchHooks(
+            db: db,
+            explicitlyWatchedTables: [
+             
+            ],
+            addJoins: <T extends TableManagerState<dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic,dynamic>>(state) {
+
+                                  if (packId){
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.packId,
+                    referencedTable:
+                        $$DownloadedPackMapsTableReferences._packIdTable(db),
+                    referencedColumn:
+                        $$DownloadedPackMapsTableReferences._packIdTable(db).id,
+                  ) as T;
+               }
+
+                return state;
+              }
+,
+            getPrefetchedDataCallback: (items) async {
+            return [
+            
+                ];
+              },
+          );
+        }
+,
+        ));
+        }
+    typedef $$DownloadedPackMapsTableProcessedTableManager = ProcessedTableManager    <_$AppDatabase,
+    $DownloadedPackMapsTable,
+    DownloadedPackMap,
+    $$DownloadedPackMapsTableFilterComposer,
+    $$DownloadedPackMapsTableOrderingComposer,
+    $$DownloadedPackMapsTableAnnotationComposer,
+    $$DownloadedPackMapsTableCreateCompanionBuilder,
+    $$DownloadedPackMapsTableUpdateCompanionBuilder,
+    (DownloadedPackMap,$$DownloadedPackMapsTableReferences),
+    DownloadedPackMap,
+    PrefetchHooks Function({bool packId})
     >;class $AppDatabaseManager {
 final _$AppDatabase _db;
 $AppDatabaseManager(this._db);
@@ -3456,4 +4168,6 @@ $$PlaySessionsTableTableManager get playSessions => $$PlaySessionsTableTableMana
 $$TrainingSessionsTableTableManager get trainingSessions => $$TrainingSessionsTableTableManager(_db, _db.trainingSessions);
 $$TrainingNotifiedRiddlesTableTableManager get trainingNotifiedRiddles => $$TrainingNotifiedRiddlesTableTableManager(_db, _db.trainingNotifiedRiddles);
 $$TrainingAttemptsTableTableManager get trainingAttempts => $$TrainingAttemptsTableTableManager(_db, _db.trainingAttempts);
+$$DownloadedPacksTableTableManager get downloadedPacks => $$DownloadedPacksTableTableManager(_db, _db.downloadedPacks);
+$$DownloadedPackMapsTableTableManager get downloadedPackMaps => $$DownloadedPackMapsTableTableManager(_db, _db.downloadedPackMaps);
 }
