@@ -60,11 +60,19 @@ class SupabaseService {
   // ── Init ──────────────────────────────────────────────────────────────────
 
   static Future<void> init({
-    required String url,
-    required String anonKey,
-  }) async {
-    await Supabase.initialize(url: url, anonKey: anonKey);
-  }
+  required String url,
+  required String anonKey,
+}) async {
+  await Supabase.initialize(
+    url: url,
+    anonKey: anonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.implicit,
+      detectSessionInUri: false,
+    ),
+  );
+}
+
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
