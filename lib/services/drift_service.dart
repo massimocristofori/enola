@@ -37,7 +37,6 @@ class DriftService {
   }
 
   Future<void> deleteFolder(int folderId) async {
-    // FK onDelete: setNull — maps in this folder become unfiled automatically
     await (db.delete(db.folders)..where((t) => t.id.equals(folderId))).go();
   }
 
@@ -58,8 +57,6 @@ class DriftService {
         .watch();
   }
 
-  /// Aggregates star counts across all maps in a folder.
-  /// Returns [FolderStats] with mapCount, totalStars, achievedStars.
   Future<FolderStats> getFolderStats(int folderId) async {
     final maps = await (db.select(db.riddleMaps)
           ..where((t) => t.folderId.equals(folderId)))
@@ -69,13 +66,11 @@ class DriftService {
     int achievedStars = 0;
 
     for (final map in maps) {
-      // Total possible stars = riddle count × 3
       final riddles = await (db.select(db.riddles)
             ..where((t) => t.mapId.equals(map.id)))
           .get();
       totalStars += riddles.length * 3;
 
-      // Achieved stars from most recent session
       final sessions = await (db.select(db.playSessions)
             ..where((t) => t.mapId.equals(map.id))
             ..orderBy([(t) => OrderingTerm.desc(t.startedAt)])
@@ -522,7 +517,8 @@ class DriftService {
 
       if (activeSessions.isEmpty) return [];
 
-      final alreadyNotifiedIds = latestNotified.map((p) => p.riddle.id).toSet();
+      final alreadyNotifiedIds =
+          latestNotified.map((p) => p.riddle.id).toSet();
 
       for (final session in activeSessions) {
         final slots = _parseSlotsJson(session.scheduledJson);
@@ -535,13 +531,13 @@ class DriftService {
               riddleId: slot.riddleId,
             );
             alreadyNotifiedIds.add(slot.riddleId);
-            latestNotified = await watchPendingNotifiedRiddles().first;
+            latestNotified =
+                await watchPendingNotifiedRiddles().first;
           }
         }
       }
 
       final items = <TrainingRiddleItem>[];
-
       final notifiedMap = {
         for (final p in latestNotified) p.riddle.id: p,
       };
@@ -594,7 +590,8 @@ class DriftService {
         TrainingRiddleStatus.notYetNotified: 2,
       };
       items.sort((a, b) {
-        final statusCmp = order[a.status]!.compareTo(order[b.status]!);
+        final statusCmp =
+            order[a.status]!.compareTo(order[b.status]!);
         if (statusCmp != 0) return statusCmp;
         if (a.notifiedAt != null && b.notifiedAt != null) {
           return a.notifiedAt!.compareTo(b.notifiedAt!);
@@ -632,6 +629,35 @@ class DriftService {
     );
 
     return controller.stream;
+  }
+
+  // ── DOWNLOADED PACKS ──────────────────────────────────────────────────────
+
+  Stream<List<DownloadedPack>> watchDownloadedPacks() {
+    return db.select(db.downloadedPacks).watch();
+  }
+
+  Future<bool> isPackDownloaded(String packId) async {
+    final row = await (db.select(db.downloadedPacks)
+          ..where((t) => t.id.equals(packId)))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  Future<List<DownloadedPackMap>> getDownloadedMapsForPack(
+      String packId) async {
+    return (db.select(db.downloadedPackMaps)
+          ..where((t) => t.packId.equals(packId)))
+        .get();
+  }
+
+  /// Returns the pack_maps.id (supabase) for a given local map id,
+  /// so the teacher can push updates.
+  Future<DownloadedPackMap?> getDownloadedPackMapByLocalId(
+      String localMapId) async {
+    return (db.select(db.downloadedPackMaps)
+          ..where((t) => t.localMapId.equals(localMapId)))
+        .getSingleOrNull();
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
