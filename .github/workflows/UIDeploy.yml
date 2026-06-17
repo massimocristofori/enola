@@ -51,7 +51,7 @@ jobs:
       - name: Build Web
         run: |
           # Build Flutter web targeting canvas kit / html cleanly
-          flutter build web --release --no-wasm-dry-run --base-href "/${{ github.event.repository.name }}/"
+          flutter build web --release --no-wasm-dry-run --base-href "/${{ github.event.repository.name }}/" --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
           # Force the bootstrap script to ignore WASM
           if [ -f build/web/flutter_bootstrap.js ]; then
