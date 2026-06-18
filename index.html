@@ -18,7 +18,7 @@
     Loading...
   </div>
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-	<script>eruda.init();</script>
+  <script>eruda.init();</script>
   <script>
     document.getElementById('debug-status').innerText = 'HTML loaded, waiting for bootstrap...';
     window.addEventListener('error', function(e) {
@@ -28,6 +28,8 @@
       document.getElementById('debug-status').innerText = 'PROMISE REJECTED: ' + e.reason;
     });
   </script>
+
+  <script type="application/javascript" src="https://github.com/corbado/flutter-passkeys/releases/download/2.4.0/bundle.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 
 </body>
