@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       debug_mode:
-        description: 'Enable Profile Mode & Source Maps (For iPad Debugging)'
+        description: 'Enable Debug Mode (Includes Eruda & Source Maps)'
         required: true
         type: boolean
         default: false
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Fetches all history so git push doesn't complain about shallow clones
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -41,10 +41,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Only stage if the file exists to prevent pathspec errors
           if [ -f lib/database/database.g.dart ]; then
             git add lib/database/database.g.dart
           fi
           
+          # Commit and push only if there are actual changes
           if ! git diff --staged --quiet; then
             git commit -m "chore: update generated drift files [skip ci]"
             git push origin HEAD:${{ github.ref_name }}
@@ -54,16 +56,25 @@ jobs:
 
       - name: Build Web
         run: |
-          # Default to standard release options
-          BUILD_FLAGS="--release"
-          
-          # If the user ticked the debug checkbox, switch to profile mode with source maps
+          # ── 1. Configure Flags Based on the Single Debug Toggle ──────────────
           if [ "${{ github.event.inputs.debug_mode }}" = "true" ]; then
-            echo "🔧 Building in PROFILE mode with SOURCE MAPS enabled..."
+            echo "🔧 Debug mode active: Compiling with Profile mode & Source Maps..."
             BUILD_FLAGS="--profile --source-maps"
+          else
+            echo "🚀 Production mode active: Compiling with Release mode..."
+            BUILD_FLAGS="--release"
           fi
 
+          # Build Flutter web targeting canvas kit / html cleanly
           flutter build web $BUILD_FLAGS --no-wasm-dry-run --base-href "/${{ github.event.repository.name }}/" --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+
+          # ── 2. Handle Eruda Scrubbing for Production ──────────────────────────
+          if [ "${{ github.event.inputs.debug_mode }}" != "true" ]; then
+            echo "🧼 Production build: Removing Eruda dev tools from index.html..."
+            if [ -f build/web/index.html ]; then
+              sed -i '/eruda/d' build/web/index.html
+            fi
+          fi
 
           # Force the bootstrap script to ignore WASM
           if [ -f build/web/flutter_bootstrap.js ]; then
