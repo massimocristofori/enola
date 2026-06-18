@@ -14,18 +14,15 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <div id="debug-status" style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:10px;font-size:14px;z-index:99999;font-family:monospace;">
-    Loading...
-  </div>
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
   <script>
-    document.getElementById('debug-status').innerText = 'HTML loaded, waiting for bootstrap...';
+    console.log('HTML loaded, waiting for bootstrap...');
     window.addEventListener('error', function(e) {
-      document.getElementById('debug-status').innerText = 'JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+      console.error('JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
     });
     window.addEventListener('unhandledrejection', function(e) {
-      document.getElementById('debug-status').innerText = 'PROMISE REJECTED: ' + e.reason;
+      console.error('PROMISE REJECTED: ' + e.reason);
     });
   </script>
 
