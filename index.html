@@ -17,8 +17,6 @@
   <div id="debug-status" style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:10px;font-size:14px;z-index:99999;font-family:monospace;">
     Loading...
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
   <script>
     document.getElementById('debug-status').innerText = 'HTML loaded, waiting for bootstrap...';
     window.addEventListener('error', function(e) {
