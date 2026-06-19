@@ -24,16 +24,16 @@ import 'package:drift/drift.dart' as drift_orm;
 const double kCardAspectRatio = 0.84;
 
 class HomeScreen extends ConsumerWidget {
-  final int? folderId;
-  final String? folderName;
+  final int? packId;
+  final String? packName;
 
   const HomeScreen({
     super.key,
-    this.folderId,
-    this.folderName,
+    this.packId,
+    this.packName,
   });
 
-  bool get _isRoot => folderId == null;
+  bool get _isRoot => packId == null;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,10 +54,10 @@ class HomeScreen extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 600),
               child: _isRoot
-                  ? _RootScrollView(onCreate: () => _openCreate(context))
-                  : _FolderScrollView(
-                      folderId: folderId!,
-                      folderName: folderName!,
+                  ? _RootScrollView(onCreateMap: () => _openCreate(context))
+                  : _PackScrollView(
+                      packId: packId!,
+                      packName: packName!,
                       onCreate: () => _openCreate(context),
                     ),
             ),
@@ -66,18 +66,11 @@ class HomeScreen extends ConsumerWidget {
         floatingActionButtonLocation:
             FloatingActionButtonLocation.centerFloat,
         floatingActionButton: _isRoot
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const _TrainingFab(),
-                  const SizedBox(width: 12),
-                  _CreateFab(onTap: () => _openCreate(context)),
-                ],
-              )
+            ? const _TrainingFab()
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _FolderBackFab(
+                  _PackBackFab(
                     onBack: () => Navigator.pop(context),
                     onUnfile: (mapId) async {
                       await DriftService.instance.setMapFolder(mapId, null);
@@ -96,7 +89,7 @@ class HomeScreen extends ConsumerWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CreateMapScreen(initialFolderId: folderId),
+        builder: (_) => CreateMapScreen(initialFolderId: packId),
       ),
     );
   }
@@ -115,15 +108,15 @@ double _cardWidth(BuildContext context) {
 // ── Root scroll view ──────────────────────────────────────────────────────────
 
 class _RootScrollView extends ConsumerStatefulWidget {
-  final VoidCallback onCreate;
-  const _RootScrollView({required this.onCreate});
+  final VoidCallback onCreateMap;
+  const _RootScrollView({required this.onCreateMap});
 
   @override
   ConsumerState<_RootScrollView> createState() => _RootScrollViewState();
 }
 
 class _RootScrollViewState extends ConsumerState<_RootScrollView> {
-  int? _hoveredFolderId;
+  int? _hoveredPackId;
   bool _unfiledHovered = false;
   List<StaleMapInfo> _staleMaps = [];
 
@@ -151,32 +144,46 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
     if (mounted) {
       setState(() => _staleMaps = []);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All maps updated!')),
+        const SnackBar(content: Text('All packs updated!')),
       );
     }
   }
 
+  void _openCreatePack(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => const _CreatePackSheet(),
+    );
+  }
+
+  void _openGetPack(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DownloadPackScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final foldersAsync = ref.watch(allFoldersProvider);
+    final packsAsync = ref.watch(allFoldersProvider);
     final unfiledAsync = ref.watch(unfiledMapsProvider);
     final width = MediaQuery.of(context).size.width;
     final cols = _crossAxisCount(width);
 
-    final folders = foldersAsync.valueOrNull ?? [];
+    final packs = packsAsync.valueOrNull ?? [];
     final unfiled = unfiledAsync.valueOrNull ?? [];
 
-    if (foldersAsync.isLoading || unfiledAsync.isLoading) {
+    if (packsAsync.isLoading || unfiledAsync.isLoading) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(40),
           child: CircularProgressIndicator(color: EnolaTheme.accent),
         ),
       );
-    }
-
-    if (folders.isEmpty && unfiled.isEmpty) {
-      return _EmptyState(onCreate: widget.onCreate);
     }
 
     return CustomScrollView(
@@ -188,66 +195,73 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
           ),
         ),
 
-        // ── Folders section ──
-        if (folders.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 14,
-                childAspectRatio: kCardAspectRatio,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) {
-                  final folder = folders[i];
-                  final isHovered = _hoveredFolderId == folder.id;
-                  return DragTarget<RiddleMap>(
-                    onWillAcceptWithDetails: (details) {
-                      setState(() => _hoveredFolderId = folder.id);
-                      return true;
-                    },
-                    onLeave: (_) =>
-                        setState(() => _hoveredFolderId = null),
-                    onAcceptWithDetails: (details) {
-                      setState(() => _hoveredFolderId = null);
-                      DriftService.instance
-                          .setMapFolder(details.data.id, folder.id);
-                    },
-                    builder: (context, candidateData, rejectedData) {
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: isHovered
-                              ? Border.all(
-                                  color: EnolaTheme.accent, width: 2.5)
-                              : Border.all(
-                                  color: Colors.transparent, width: 2.5),
-                          boxShadow: isHovered
-                              ? [
-                                  BoxShadow(
-                                    color: EnolaTheme.accent
-                                        .withValues(alpha: 0.25),
-                                    blurRadius: 16,
-                                    spreadRadius: 2,
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: _FolderCard(folder: folder)
-                            .animate(delay: (i * 60).ms)
-                            .fadeIn(duration: 350.ms)
-                            .scale(begin: const Offset(0.95, 0.95)),
+        // ── Packs section (always has at least the Add Pack card) ──
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: cols,
+              crossAxisSpacing: 24,
+              mainAxisSpacing: 14,
+              childAspectRatio: kCardAspectRatio,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                if (i == 0) {
+                  return _AddPackCard(
+                    onCreatePack: () => _openCreatePack(context),
+                    onGetPack: () => _openGetPack(context),
+                  ).animate().fadeIn(duration: 350.ms).scale(
+                        begin: const Offset(0.95, 0.95),
                       );
-                    },
-                  );
-                },
-                childCount: folders.length,
-              ),
+                }
+
+                final pack = packs[i - 1];
+                final isHovered = _hoveredPackId == pack.id;
+                return DragTarget<RiddleMap>(
+                  onWillAcceptWithDetails: (details) {
+                    setState(() => _hoveredPackId = pack.id);
+                    return true;
+                  },
+                  onLeave: (_) => setState(() => _hoveredPackId = null),
+                  onAcceptWithDetails: (details) {
+                    setState(() => _hoveredPackId = null);
+                    DriftService.instance
+                        .setMapFolder(details.data.id, pack.id);
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: isHovered
+                            ? Border.all(
+                                color: EnolaTheme.accent, width: 2.5)
+                            : Border.all(
+                                color: Colors.transparent, width: 2.5),
+                        boxShadow: isHovered
+                            ? [
+                                BoxShadow(
+                                  color: EnolaTheme.accent
+                                      .withValues(alpha: 0.25),
+                                  blurRadius: 16,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: _PackCard(pack: pack)
+                          .animate(delay: (i * 60).ms)
+                          .fadeIn(duration: 350.ms)
+                          .scale(begin: const Offset(0.95, 0.95)),
+                    );
+                  },
+                );
+              },
+              childCount: packs.length + 1,
             ),
           ),
+        ),
 
         // ── Section divider ──
         SliverToBoxAdapter(
@@ -321,12 +335,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         // ── Unfiled maps ──
         if (unfiled.isNotEmpty)
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              40,
-              folders.isEmpty ? 4 : 8,
-              40,
-              100,
-            ),
+            padding: const EdgeInsets.fromLTRB(40, 8, 40, 100),
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: cols,
@@ -336,9 +345,8 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
-                  final offset = folders.length;
                   return _MapCard(map: unfiled[i])
-                      .animate(delay: ((offset + i) * 60).ms)
+                      .animate(delay: (i * 60).ms)
                       .fadeIn(duration: 350.ms)
                       .scale(begin: const Offset(0.95, 0.95));
                 },
@@ -354,22 +362,22 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
   }
 }
 
-// ── Folder scroll view ────────────────────────────────────────────────────────
+// ── Pack scroll view (inside a pack) ─────────────────────────────────────────
 
-class _FolderScrollView extends ConsumerWidget {
-  final int folderId;
-  final String folderName;
+class _PackScrollView extends ConsumerWidget {
+  final int packId;
+  final String packName;
   final VoidCallback onCreate;
 
-  const _FolderScrollView({
-    required this.folderId,
-    required this.folderName,
+  const _PackScrollView({
+    required this.packId,
+    required this.packName,
     required this.onCreate,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mapsAsync = ref.watch(mapsInFolderProvider(folderId));
+    final mapsAsync = ref.watch(mapsInFolderProvider(packId));
     final width = MediaQuery.of(context).size.width;
     final cols = _crossAxisCount(width);
     final maps = mapsAsync.valueOrNull ?? [];
@@ -386,14 +394,14 @@ class _FolderScrollView extends ConsumerWidget {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: _FolderHeader(
-            folderName: folderName,
-            folderId: folderId,
+          child: _PackHeader(
+            packName: packName,
+            packId: packId,
           ),
         ),
         if (maps.isEmpty)
           SliverToBoxAdapter(
-            child: _EmptyFolderState(onCreate: onCreate),
+            child: _EmptyPackState(onCreate: onCreate),
           )
         else
           SliverPadding(
@@ -436,53 +444,24 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 28, 12, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ready for a Riddle?',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: EnolaTheme.textPrimary,
-                          ),
+              Text(
+                'Ready for a Riddle?',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: EnolaTheme.textPrimary,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Tap a map to explore or play',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: EnolaTheme.textSecond),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Tap a pack to explore or play',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: EnolaTheme.textSecond,
                     ),
-                  ],
-                ),
-              ),
-              // Download a Pack button
-              IconButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DownloadPackScreen(),
-                  ),
-                ),
-                icon: const Icon(Icons.download_rounded),
-                color: EnolaTheme.textSecond,
-                tooltip: 'Download a Pack',
-              ),
-              IconButton(
-                onPressed: () => _showCreateFolderSheet(context),
-                icon: const Icon(Icons.create_new_folder_outlined),
-                color: EnolaTheme.textSecond,
-                tooltip: 'New Folder',
               ),
             ],
           ),
@@ -535,29 +514,18 @@ class _Header extends StatelessWidget {
       ],
     );
   }
-
-  void _showCreateFolderSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => const _CreateFolderSheet(),
-    );
-  }
 }
 
-// ── Create Folder Sheet ───────────────────────────────────────────────────────
+// ── Create Pack Sheet ─────────────────────────────────────────────────────────
 
-class _CreateFolderSheet extends StatefulWidget {
-  const _CreateFolderSheet();
+class _CreatePackSheet extends StatefulWidget {
+  const _CreatePackSheet();
 
   @override
-  State<_CreateFolderSheet> createState() => _CreateFolderSheetState();
+  State<_CreatePackSheet> createState() => _CreatePackSheetState();
 }
 
-class _CreateFolderSheetState extends State<_CreateFolderSheet> {
+class _CreatePackSheetState extends State<_CreatePackSheet> {
   final _controller = TextEditingController();
   bool _canCreate = false;
 
@@ -604,7 +572,7 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
           ),
           const SizedBox(height: 20),
           Text(
-            'New Folder',
+            'New Pack',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: EnolaTheme.textPrimary,
@@ -645,9 +613,8 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
               elevation: 0,
             ),
             child: const Text(
-              'Create Folder',
-              style:
-                  TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              'Create Pack',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
           ),
         ],
@@ -656,24 +623,175 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
   }
 }
 
-// ── Header (folder) ───────────────────────────────────────────────────────────
+// ── Add Pack Card (dashed, root grid first item) ──────────────────────────────
 
-class _FolderHeader extends ConsumerWidget {
-  final String folderName;
-  final int folderId;
+class _AddPackCard extends StatelessWidget {
+  final VoidCallback onCreatePack;
+  final VoidCallback onGetPack;
 
-  const _FolderHeader({
-    required this.folderName,
-    required this.folderId,
+  const _AddPackCard({
+    required this.onCreatePack,
+    required this.onGetPack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withValues(alpha: 0.4),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(
+          color: const Color(0xFFC7CCD4),
+          radius: 8,
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _AddPackZone(
+                icon: Icons.add_rounded,
+                label: 'Create Pack',
+                onTap: onCreatePack,
+              ),
+            ),
+            Container(height: 1, color: const Color(0xFFE5E7EB)),
+            Expanded(
+              child: _AddPackZone(
+                icon: Icons.download_rounded,
+                label: 'Get a Pack',
+                onTap: onGetPack,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddPackZone extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _AddPackZone({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 26, color: EnolaTheme.textSecond),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: EnolaTheme.textSecond,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  final double dashWidth;
+  final double dashGap;
+  final double strokeWidth;
+
+  _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+    this.dashWidth = 6,
+    this.dashGap = 4,
+    this.strokeWidth = 1.5,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        strokeWidth / 2,
+        strokeWidth / 2,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
+      Radius.circular(radius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final dashedPath = _dashPath(path, dashWidth: dashWidth, dashGap: dashGap);
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  Path _dashPath(Path source, {required double dashWidth, required double dashGap}) {
+    final dest = Path();
+    for (final metric in source.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = distance + dashWidth;
+        dest.addPath(
+          metric.extractPath(distance, math.min(next, metric.length)),
+          Offset.zero,
+        );
+        distance = next + dashGap;
+      }
+    }
+    return dest;
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.radius != radius ||
+        oldDelegate.dashWidth != dashWidth ||
+        oldDelegate.dashGap != dashGap ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
+// ── Header (inside a pack) ────────────────────────────────────────────────────
+
+class _PackHeader extends ConsumerWidget {
+  final String packName;
+  final int packId;
+
+  const _PackHeader({
+    required this.packName,
+    required this.packId,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(folderStatsProvider(folderId));
+    final statsAsync = ref.watch(folderStatsProvider(packId));
     final stats = statsAsync.valueOrNull;
 
     return Hero(
-      tag: 'folder-$folderId',
+      tag: 'pack-$packId',
       flightShuttleBuilder: _shuttle,
       child: Material(
         type: MaterialType.transparency,
@@ -683,7 +801,7 @@ class _FolderHeader extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                folderName,
+                packName,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
@@ -754,7 +872,7 @@ class _FolderHeader extends ConsumerWidget {
             child: Opacity(
               opacity: t,
               child: Text(
-                folderName,
+                packName,
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
@@ -771,21 +889,21 @@ class _FolderHeader extends ConsumerWidget {
   }
 }
 
-// ── Folder Card ───────────────────────────────────────────────────────────────
+// ── Pack Card ──────────────────────────────────────────────────────────────────
 
-class _FolderCard extends ConsumerWidget {
-  final Folder folder;
-  const _FolderCard({required this.folder});
+class _PackCard extends ConsumerWidget {
+  final Folder pack;
+  const _PackCard({required this.pack});
 
-  void _openFolder(BuildContext context) {
+  void _openPack(BuildContext context) {
     Navigator.push(
       context,
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 450),
         reverseTransitionDuration: const Duration(milliseconds: 350),
         pageBuilder: (_, __, ___) => HomeScreen(
-          folderId: folder.id,
-          folderName: folder.title,
+          packId: pack.id,
+          packName: pack.title,
         ),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
           opacity: CurvedAnimation(
@@ -802,115 +920,92 @@ class _FolderCard extends ConsumerWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SharePackScreen(folder: folder),
+        builder: (_) => SharePackScreen(folder: pack),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mapsAsync = ref.watch(mapsInFolderProvider(folder.id));
-    final statsAsync = ref.watch(folderStatsProvider(folder.id));
+    final mapsAsync = ref.watch(mapsInFolderProvider(pack.id));
+    final statsAsync = ref.watch(folderStatsProvider(pack.id));
 
     final maps = mapsAsync.valueOrNull ?? [];
     final stats = statsAsync.valueOrNull;
     final achievedStars = stats?.achievedStars ?? 0;
 
     return GestureDetector(
-      onTap: () => _openFolder(context),
-      onLongPress: () => _showFolderActions(context),
-      child: Hero(
-        tag: 'folder-${folder.id}',
-        child: Material(
-          type: MaterialType.transparency,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF39d2c0), Color(0xFF249689)],
-              ),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF249689).withAlpha(100),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: Colors.black.withAlpha(30),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(8)),
-                    child: _FolderCoverGrid(maps: maps),
+      onTap: () => _openPack(context),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Hero(
+            tag: 'pack-${pack.id}',
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF39d2c0), Color(0xFF249689)],
                   ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF249689).withAlpha(100),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 6),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withAlpha(30),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                _FolderInfoBar(
-                  title: folder.title,
-                  achievedStars: achievedStars,
-                  userCount: 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(8)),
+                        child: _PackCoverGrid(maps: maps),
+                      ),
+                    ),
+                    _PackInfoBar(
+                      title: pack.title,
+                      achievedStars: achievedStars,
+                      userCount: 1,
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showFolderActions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: EnolaTheme.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
+          Positioned(
+            top: -8,
+            right: -8,
+            child: _EarButton(
+              icon: Icons.share_rounded,
+              iconColor: EnolaTheme.textSecond.withValues(alpha: 0.95),
+              backgroundColor: Colors.white,
+              onTap: () => _sharePack(context),
             ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.share_rounded,
-                  color: EnolaTheme.accent),
-              title: const Text('Share as Pack'),
-              subtitle: const Text('Upload so others can download & play'),
-              onTap: () {
-                Navigator.pop(context);
-                _sharePack(context);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Folder Cover Grid ─────────────────────────────────────────────────────────
+// ── Pack Cover Grid ────────────────────────────────────────────────────────────
 
-class _FolderCoverGrid extends StatelessWidget {
+class _PackCoverGrid extends StatelessWidget {
   final List<RiddleMap> maps;
-  const _FolderCoverGrid({required this.maps});
+  const _PackCoverGrid({required this.maps});
 
   @override
   Widget build(BuildContext context) {
@@ -946,7 +1041,7 @@ class _FolderCoverGrid extends StatelessWidget {
                     children: [
                       for (int i = 0; i < maps.length; i += 2) ...[
                         if (i > 0) const SizedBox(width: 6),
-                        _FolderSquare(map: maps[i], size: squareSize),
+                        _PackSquare(map: maps[i], size: squareSize),
                       ],
                     ],
                   ),
@@ -955,7 +1050,7 @@ class _FolderCoverGrid extends StatelessWidget {
                     children: [
                       for (int i = 1; i < maps.length; i += 2) ...[
                         if (i > 1) const SizedBox(width: 6),
-                        _FolderSquare(map: maps[i], size: squareSize),
+                        _PackSquare(map: maps[i], size: squareSize),
                       ],
                     ],
                   ),
@@ -969,13 +1064,13 @@ class _FolderCoverGrid extends StatelessWidget {
   }
 }
 
-// ── Folder Square ─────────────────────────────────────────────────────────────
+// ── Pack Square ────────────────────────────────────────────────────────────────
 
-class _FolderSquare extends StatelessWidget {
+class _PackSquare extends StatelessWidget {
   final RiddleMap map;
   final double size;
 
-  const _FolderSquare({required this.map, required this.size});
+  const _PackSquare({required this.map, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -1008,14 +1103,14 @@ class _FolderSquare extends StatelessWidget {
   }
 }
 
-// ── Folder Info Bar ───────────────────────────────────────────────────────────
+// ── Pack Info Bar ─────────────────────────────────────────────────────────────
 
-class _FolderInfoBar extends StatelessWidget {
+class _PackInfoBar extends StatelessWidget {
   final String title;
   final int achievedStars;
   final int userCount;
 
-  const _FolderInfoBar({
+  const _PackInfoBar({
     required this.title,
     required this.achievedStars,
     required this.userCount,
@@ -1567,7 +1662,6 @@ String _rankImage(double starRatio) {
   return 'assets/images/ranking/3.jpg';
 }
 
-
 // ── Rank Ribbon Overlay ───────────────────────────────────────────────────────
 
 class _RankRibbonOverlay extends StatelessWidget {
@@ -1600,7 +1694,6 @@ class _RankRibbonOverlay extends StatelessWidget {
     );
   }
 }
-
 
 // ── Star Progress Bar ─────────────────────────────────────────────────────────
 
@@ -1693,11 +1786,11 @@ class _EarButton extends StatelessWidget {
   }
 }
 
-// ── Empty States ──────────────────────────────────────────────────────────────
+// ── Empty Pack State ───────────────────────────────────────────────────────────
 
-class _EmptyState extends StatelessWidget {
+class _EmptyPackState extends StatelessWidget {
   final VoidCallback onCreate;
-  const _EmptyState({required this.onCreate});
+  const _EmptyPackState({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
@@ -1709,54 +1802,14 @@ class _EmptyState extends StatelessWidget {
           children: [
             const SizedBox(height: 24),
             Text(
-              'No quest maps yet',
+              'No maps in this pack',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: EnolaTheme.accent,
                   ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Create your first map of riddles\nand begin the adventure.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: onCreate,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Create Quest Map'),
-            ),
-          ],
-        ),
-      ).animate().fadeIn(duration: 700.ms).scale(
-            begin: const Offset(0.9, 0.9),
-          ),
-    );
-  }
-}
-
-class _EmptyFolderState extends StatelessWidget {
-  final VoidCallback onCreate;
-  const _EmptyFolderState({required this.onCreate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 24),
-            Text(
-              'No maps in this folder',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: EnolaTheme.accent,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Create a map or drag existing maps\ninto this folder.',
+              'Create a map or drag existing maps\ninto this pack.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -1797,22 +1850,22 @@ class _CreateFab extends StatelessWidget {
   }
 }
 
-// ── Folder Back FAB ───────────────────────────────────────────────────────────
+// ── Pack Back FAB ──────────────────────────────────────────────────────────────
 
-class _FolderBackFab extends StatefulWidget {
+class _PackBackFab extends StatefulWidget {
   final VoidCallback onBack;
   final Future<void> Function(String mapId) onUnfile;
 
-  const _FolderBackFab({
+  const _PackBackFab({
     required this.onBack,
     required this.onUnfile,
   });
 
   @override
-  State<_FolderBackFab> createState() => _FolderBackFabState();
+  State<_PackBackFab> createState() => _PackBackFabState();
 }
 
-class _FolderBackFabState extends State<_FolderBackFab> {
+class _PackBackFabState extends State<_PackBackFab> {
   bool _isDraggingOver = false;
 
   @override
@@ -1862,7 +1915,7 @@ class _FolderBackFabState extends State<_FolderBackFab> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  _isDraggingOver ? 'Drop to unfile' : 'My Folders',
+                  _isDraggingOver ? 'Drop to unfile' : 'My Packs',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
