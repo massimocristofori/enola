@@ -609,9 +609,18 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                             error: (e, _) =>
                                 Center(child: Text('$e')),
                             data: (riddles) {
-                              return AnimatedSwitcher(
+                                                            return AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
-                                alignment: Alignment.topCenter, // <--- Fix 1: Align transition to top
+                                // <--- Fix 1: Override layoutBuilder to align the Stack to the top
+                                layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                                  return Stack(
+                                    alignment: Alignment.topCenter,
+                                    children: <Widget>[
+                                      ...previousChildren,
+                                      if (currentChild != null) currentChild,
+                                    ],
+                                  );
+                                },
                                 child: riddleActive
                                     ? RiddleScreen(
                                         key: ValueKey(
@@ -650,6 +659,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                             _onToggleTraining(riddles),
                                       ),
                               );
+
                             },
                           ),
                         ),
