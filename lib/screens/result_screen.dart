@@ -39,6 +39,15 @@ class ResultScreen extends StatelessWidget {
     return '📜';
   }
 
+String get _rankImage {
+  final score = (_starRatio * 10).round();
+  if (score < 5) return 'assets/images/ranking/0.jpg';
+  if (score <= 6) return 'assets/images/ranking/1.jpg';
+  if (score <= 9) return 'assets/images/ranking/2.jpg';
+  return 'assets/images/ranking/3.jpg';
+}
+
+
   String get _message {
     if (_starRatio >= 0.9) return 'The oracle bows before your wisdom.';
     if (_starRatio >= 0.7) return 'A worthy scholar walks these halls.';
@@ -97,57 +106,74 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCrest() {
-    return Column(
-      children: [
-        Text(
-          _rankEmoji,
-          style: const TextStyle(fontSize: 72),
-        ).animate().scale(
-              begin: const Offset(0, 0),
-              end: const Offset(1, 1),
-              duration: 600.ms,
-              curve: Curves.elasticOut,
+Widget _buildCrest() {
+  return Column(
+    children: [
+      Container(
+        width: 100,
+        height: 100,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEE8B60), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
-        const SizedBox(height: 16),
-        const Text(
-          'Quest Complete',
-          style: TextStyle(
-            fontSize: 13,
-            color: EnolaTheme.textSecond,
-            letterSpacing: 3,
-            fontWeight: FontWeight.w600,
+          ],
+        ),
+        child: Image.asset(
+          _rankImage,
+          fit: BoxFit.cover,
+        ),
+      ).animate().scale(
+            begin: const Offset(0, 0),
+            end: const Offset(1, 1),
+            duration: 600.ms,
+            curve: Curves.elasticOut,
           ),
-        ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
-        const SizedBox(height: 8),
-        Text(
-          _rank,
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.w900,
-            color: _scoreColor,
-            letterSpacing: 1,
-            shadows: [
-              Shadow(
-                color: _scoreColor.withValues(alpha: 0.4), 
-                blurRadius: 25,
-              ),
-            ],
-          ),
-        ).animate().fadeIn(delay: 400.ms, duration: 500.ms).slideY(begin: 0.3, end: 0),
-        const SizedBox(height: 12),
-        Text(
-          _message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: EnolaTheme.textSecond,
-            fontSize: 15,
-            height: 1.5,
-          ),
-        ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
-      ],
-    );
-  }
+      const SizedBox(height: 16),
+      const Text(
+        'Quest Complete',
+        style: TextStyle(
+          fontSize: 13,
+          color: EnolaTheme.textSecond,
+          letterSpacing: 3,
+          fontWeight: FontWeight.w600,
+        ),
+      ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
+      const SizedBox(height: 8),
+      Text(
+        _rank,
+        style: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.w900,
+          color: _scoreColor,
+          letterSpacing: 1,
+          shadows: [
+            Shadow(
+              color: _scoreColor.withValues(alpha: 0.4),
+              blurRadius: 25,
+            ),
+          ],
+        ),
+      ).animate().fadeIn(delay: 400.ms, duration: 500.ms).slideY(begin: 0.3, end: 0),
+      const SizedBox(height: 12),
+      Text(
+        _message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: EnolaTheme.textSecond,
+          fontSize: 15,
+          height: 1.5,
+        ),
+      ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
+    ],
+  );
+}
+
 
   Widget _buildStats() {
     return Row(
