@@ -610,8 +610,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                 Center(child: Text('$e')),
                             data: (riddles) {
                               return AnimatedSwitcher(
-                                duration:
-                                    const Duration(milliseconds: 300),
+                                duration: const Duration(milliseconds: 300),
+                                alignment: Alignment.topCenter, // <--- Fix 1: Align transition to top
                                 child: riddleActive
                                     ? RiddleScreen(
                                         key: ValueKey(
@@ -797,219 +797,222 @@ class _MapViewState extends State<_MapView> {
     const double rankingBarHeight = 72.0;
     const double stickyHeight = rankingBarHeight;
 
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          controller: _scrollController,
-          padding:
-              EdgeInsets.fromLTRB(24, stickyHeight + 16, 24, 100),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: TreasureMapPath(
-                riddles: widget.riddles,
-                mapId: widget.mapId,
-                lastCompletedIndex:
-                    widget.playState.lastCompletedIndex,
-                riddleStars: widget.playState.riddleStars,
-                imageBytes: widget.imageBytes,
-                nodeKeys: widget.nodeKeys,
-                immediateActivation:
-                    widget.playState.lastCompletedIndex == -1,
-                onCurrentNodeTap: widget.isCompleted
-                    ? null
-                    : widget.playState.lastCompletedIndex <
-                            widget.riddles.length - 1
-                        ? () => widget.onNodeTap(
-                            widget.playState.lastCompletedIndex + 1)
-                        : null,
-                onCompletedNodeTap: widget.onCompletedNodeTap,
+    // Fix 2: Wrap with SizedBox.expand so it claims the full available height
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          SingleChildScrollView(
+            controller: _scrollController,
+            padding:
+                EdgeInsets.fromLTRB(24, stickyHeight + 16, 24, 100),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: TreasureMapPath(
+                  riddles: widget.riddles,
+                  mapId: widget.mapId,
+                  lastCompletedIndex:
+                      widget.playState.lastCompletedIndex,
+                  riddleStars: widget.playState.riddleStars,
+                  imageBytes: widget.imageBytes,
+                  nodeKeys: widget.nodeKeys,
+                  immediateActivation:
+                      widget.playState.lastCompletedIndex == -1,
+                  onCurrentNodeTap: widget.isCompleted
+                      ? null
+                      : widget.playState.lastCompletedIndex <
+                              widget.riddles.length - 1
+                          ? () => widget.onNodeTap(
+                              widget.playState.lastCompletedIndex + 1)
+                          : null,
+                  onCompletedNodeTap: widget.onCompletedNodeTap,
+                ),
               ),
             ),
           ),
-        ),
 
-        // Fixed Top Progress/Milestone Panel
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ── NEW: Dynamic Ranking Milestone Progress Row ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: EnolaTheme.border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(4, (index) {
-                      final bool isActive = index == activeMilestoneIndex;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isActive ? EnolaTheme.accent : Colors.transparent,
-                            width: 2.5,
-                          ),
-                          boxShadow: isActive
-                              ? [
-                                  BoxShadow(
-                                    color: EnolaTheme.accent.withValues(alpha: 0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
-                              : null,
+          // Fixed Top Progress/Milestone Panel
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── NEW: Dynamic Ranking Milestone Progress Row ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: EnolaTheme.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Opacity(
-                          opacity: isActive ? 1.0 : 0.35,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(23),
-                            child: Image.asset(
-                              'assets/images/ranking/$index.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[100],
-                                  child: Icon(
-                                    Icons.star_rounded,
-                                    color: isActive ? Colors.amber : Colors.grey[400],
-                                    size: 20,
-                                  ),
-                                );
-                              },
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(4, (index) {
+                        final bool isActive = index == activeMilestoneIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeInOut,
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isActive ? EnolaTheme.accent : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: isActive
+                                ? [
+                                    BoxShadow(
+                                      color: EnolaTheme.accent.withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Opacity(
+                            opacity: isActive ? 1.0 : 0.35,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(23),
+                              child: Image.asset(
+                                'assets/images/ranking/$index.jpg',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[100],
+                                    child: Icon(
+                                      Icons.star_rounded,
+                                      color: isActive ? Colors.amber : Colors.grey[400],
+                                      size: 20,
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
+                    ),
                   ),
                 ),
-              ),
 
-              // ── HIDDEN (NOT REMOVED): Original Training panel & Hint texts ──
-              Visibility(
-                visible: false,
-                maintainState: true,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-                      child: GestureDetector(
-                        onTap: widget.onToggleTraining,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: widget.trainingActive
-                                ? EnolaTheme.secondary.withAlpha(20)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
+                // ── HIDDEN (NOT REMOVED): Original Training panel & Hint texts ──
+                Visibility(
+                  visible: false,
+                  maintainState: true,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                        child: GestureDetector(
+                          onTap: widget.onToggleTraining,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
                               color: widget.trainingActive
-                                  ? EnolaTheme.secondary
-                                  : EnolaTheme.border,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                widget.trainingActive
-                                    ? Icons.school_rounded
-                                    : Icons.school_outlined,
-                                size: 18,
+                                  ? EnolaTheme.secondary.withAlpha(20)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
                                 color: widget.trainingActive
                                     ? EnolaTheme.secondary
-                                    : EnolaTheme.textSecond,
+                                    : EnolaTheme.border,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
                                   widget.trainingActive
-                                      ? 'Training mode is ON'
-                                      : 'Training mode is OFF',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                                      ? Icons.school_rounded
+                                      : Icons.school_outlined,
+                                  size: 18,
+                                  color: widget.trainingActive
+                                      ? EnolaTheme.secondary
+                                      : EnolaTheme.textSecond,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    widget.trainingActive
+                                        ? 'Training mode is ON'
+                                        : 'Training mode is OFF',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: widget.trainingActive
+                                          ? EnolaTheme.secondary
+                                          : EnolaTheme.textSecond,
+                                    ),
+                                  ),
+                                ),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(
+                                    key: ValueKey(widget.trainingActive),
+                                    widget.trainingActive
+                                        ? Icons.toggle_on_rounded
+                                        : Icons.toggle_off_rounded,
+                                    size: 32,
                                     color: widget.trainingActive
                                         ? EnolaTheme.secondary
                                         : EnolaTheme.textSecond,
                                   ),
                                 ),
-                              ),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                child: Icon(
-                                  key: ValueKey(widget.trainingActive),
-                                  widget.trainingActive
-                                      ? Icons.toggle_on_rounded
-                                      : Icons.toggle_off_rounded,
-                                  size: 32,
-                                  color: widget.trainingActive
-                                      ? EnolaTheme.secondary
-                                      : EnolaTheme.textSecond,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    if (widget.isCompleted)
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(top: 8, bottom: 4),
-                        child: Text(
-                          'Quest complete! All riddles solved.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                            color: EnolaTheme.accent.withAlpha(200),
-                          ),
-                        ).animate().fadeIn(delay: 400.ms),
-                      )
-                    else if (widget.playState.lastCompletedIndex <
-                        widget.riddles.length - 1)
-                      Padding(
-                        padding:
-                            const EdgeInsets.only(top: 8, bottom: 4),
-                        child: Text(
-                          'Tap the glowing node to answer the next riddle',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                            color: EnolaTheme.textSecond.withAlpha(180),
-                          ),
-                        ).animate().fadeIn(delay: 400.ms),
-                      ),
-                  ],
+                      if (widget.isCompleted)
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(top: 8, bottom: 4),
+                          child: Text(
+                            'Quest complete! All riddles solved.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: EnolaTheme.accent.withAlpha(200),
+                            ),
+                          ).animate().fadeIn(delay: 400.ms),
+                        )
+                      else if (widget.playState.lastCompletedIndex <
+                          widget.riddles.length - 1)
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(top: 8, bottom: 4),
+                          child: Text(
+                            'Tap the glowing node to answer the next riddle',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: EnolaTheme.textSecond.withAlpha(180),
+                            ),
+                          ).animate().fadeIn(delay: 400.ms),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
