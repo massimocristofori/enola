@@ -1559,6 +1559,15 @@ String _rankEmoji(double starRatio) {
   return '📜';
 }
 
+String _rankImage(double starRatio) {
+  final score = (starRatio * 10).round();
+  if (score < 5) return 'assets/images/ranking/0.jpg';
+  if (score <= 6) return 'assets/images/ranking/1.jpg';
+  if (score <= 9) return 'assets/images/ranking/2.jpg';
+  return 'assets/images/ranking/3.jpg';
+}
+
+
 // ── Rank Ribbon Overlay ───────────────────────────────────────────────────────
 
 class _RankRibbonOverlay extends StatelessWidget {
@@ -1569,47 +1578,29 @@ class _RankRibbonOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 5),
+        width: 100,
+        height: 100,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFF9CF58).withValues(alpha: 0.9),
-              const Color(0xFFF6B700).withValues(alpha: 0.9),
-            ],
-          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEE8B60), width: 2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(28),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
-            BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 3,
-              offset: const Offset(0, -1),
-            ),
           ],
         ),
-        child: ColorFiltered(
-          colorFilter: const ColorFilter.matrix(<double>[
-            0.33, 0.33, 0.33, 0, 180,
-            0.33, 0.33, 0.33, 0, 180,
-            0.33, 0.33, 0.33, 0, 180,
-            0,    0,    0,    1, 0,
-          ]),
-          child: Text(
-            _rankEmoji(starRatio),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 42),
-          ),
+        child: Image.asset(
+          _rankImage(starRatio),
+          fit: BoxFit.cover,
         ),
       ),
     );
   }
 }
+
 
 // ── Star Progress Bar ─────────────────────────────────────────────────────────
 
