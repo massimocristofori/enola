@@ -1255,7 +1255,7 @@ class _MapCard extends ConsumerWidget {
     final double starRatio =
         maxStars > 0 ? achievedStars / maxStars : 0;
 
-    Widget flightShuttle(
+        Widget flightShuttle(
       BuildContext flightContext,
       Animation<double> animation,
       HeroFlightDirection flightDirection,
@@ -1299,18 +1299,23 @@ class _MapCard extends ConsumerWidget {
                             child: OverflowBox(
                               alignment: Alignment.topCenter,
                               maxHeight: fromHeight - infoBarHeight,
-                              child: ClipRRect(
-                                borderRadius:
-                                    const BorderRadius.vertical(
-                                        top: Radius.circular(8)),
-                                child: imageBytes != null
-                                    ? Image.memory(imageBytes,
-                                        fit: BoxFit.cover,
-                                        width: double.infinity)
-                                    : Image.asset(
-                                        'assets/images/0.jpg',
-                                        fit: BoxFit.cover,
-                                        width: double.infinity),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  border: Border.all(color: Colors.white, width: 4),
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(4)),
+                                  child: imageBytes != null
+                                      ? Image.memory(imageBytes,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity)
+                                      : Image.asset(
+                                          'assets/images/0.jpg',
+                                          fit: BoxFit.cover,
+                                          width: double.infinity),
+                                ),
                               ),
                             ),
                           )
@@ -1332,6 +1337,7 @@ class _MapCard extends ConsumerWidget {
         },
       );
     }
+
 
     final cardShell = _CardShell(
       imageBytes: imageBytes,
@@ -1438,6 +1444,7 @@ class _MapCard extends ConsumerWidget {
   }
 }
 
+
 // ── Card Shell ────────────────────────────────────────────────────────────────
 
 class _CardShell extends StatelessWidget {
@@ -1475,13 +1482,18 @@ class _CardShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
-              child: imageBytes != null
-                  ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                  : Image.asset('assets/images/0.jpg',
-                      fit: BoxFit.cover),
+            child: Container(
+              decoration: const BoxDecoration(
+                border: Border.all(color: Colors.white, width: 4),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                child: imageBytes != null
+                    ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                    : Image.asset('assets/images/0.jpg',
+                        fit: BoxFit.cover),
+              ),
             ),
           ),
           _CardInfoBar(
@@ -1496,6 +1508,7 @@ class _CardShell extends StatelessWidget {
     );
   }
 }
+
 
 // ── Card Shell Dragging ───────────────────────────────────────────────────────
 
@@ -1527,18 +1540,23 @@ class _CardShellDragging extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  imageBytes != null
-                      ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                      : Image.asset('assets/images/0.jpg',
-                          fit: BoxFit.cover),
-                  Container(color: Colors.black.withAlpha(55)),
-                ],
+            child: Container(
+              decoration: const BoxDecoration(
+                border: Border.all(color: Colors.white, width: 4),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    imageBytes != null
+                        ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                        : Image.asset('assets/images/0.jpg',
+                            fit: BoxFit.cover),
+                    Container(color: Colors.black.withAlpha(55)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1554,6 +1572,7 @@ class _CardShellDragging extends StatelessWidget {
     );
   }
 }
+
 
 // ── Card Info Bar ─────────────────────────────────────────────────────────────
 
@@ -1602,10 +1621,8 @@ class _CardInfoBar extends StatelessWidget {
               ),
             ),
           ),
-          const Divider(
-              height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
           SizedBox(
-            height: 32,
+            height: 30,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
               child: Row(
