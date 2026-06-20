@@ -79,6 +79,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   _CreateFab(onTap: () => _openCreate(context)),
+                  const SizedBox(width: 12),
+                  _SharePackFab(packId: packId!),
                 ],
               ),
       ),
@@ -785,6 +787,34 @@ class _PackHeader extends ConsumerWidget {
     required this.packId,
   });
 
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete pack?'),
+        content: Text(
+          'This will delete "$packName". Maps inside it will be unfiled, not deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DriftService.instance.deleteFolder(packId);
+      if (context.mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(folderStatsProvider(packId));
@@ -797,29 +827,35 @@ class _PackHeader extends ConsumerWidget {
         type: MaterialType.transparency,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                packName,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: EnolaTheme.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _EditablePackTitle(
+                      packId: packId,
+                      initialName: packName,
                     ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (stats != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '${stats.mapCount} maps · '
-                  '${stats.achievedStars} / ${stats.totalStars} ★',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: EnolaTheme.textSecond,
+                    if (stats != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${stats.mapCount} maps · '
+                        '${stats.achievedStars} / ${stats.totalStars} ★',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: EnolaTheme.textSecond,
+                            ),
                       ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
+              IconButton(
+                onPressed: () => _confirmDelete(context),
+                icon: const Icon(Icons.delete_outline_rounded),
+                color: EnolaTheme.textSecond,
+              ),
             ],
           ),
         ),
@@ -850,9 +886,9 @@ class _PackHeader extends ConsumerWidget {
                 end: Alignment.bottomCenter,
                 colors: [
                   Color.lerp(
-                      const Color(0xFF39d2c0), Colors.transparent, t)!,
+                      const Color(0xa1ee8b60), Colors.transparent, t)!,
                   Color.lerp(
-                      const Color(0xFF249689), Colors.transparent, t)!,
+                      const Color(0xffff4c00), Colors.transparent, t)!,
                 ],
               ),
               borderRadius: BorderRadius.circular(8 * (1.0 - t)),
@@ -889,7 +925,98 @@ class _PackHeader extends ConsumerWidget {
   }
 }
 
+// ── Editable pack title ───────────────────────────────────────────────────────
 
+class _EditablePackTitle extends StatefulWidget {
+  final int packId;
+  final String initialName;
+
+  const _EditablePackTitle({
+    required this.packId,
+    required this.initialName,
+  });
+
+  @override
+  State<_EditablePackTitle> createState() => _EditablePackTitleState();
+}
+
+class _EditablePackTitleState extends State<_EditablePackTitle> {
+  bool _isEditing = false;
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _isEditing) _commit();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _startEditing() {
+    setState(() => _isEditing = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+    });
+  }
+
+  Future<void> _commit() async {
+    final newName = _controller.text.trim();
+    setState(() => _isEditing = false);
+    if (newName.isEmpty || newName == widget.initialName) {
+      _controller.text = widget.initialName;
+      return;
+    }
+    await DriftService.instance.renameFolder(widget.packId, newName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.titleLarge?.copyWith(
+          fontSize: 26,
+          fontWeight: FontWeight.w900,
+          color: EnolaTheme.textPrimary,
+        );
+
+    if (_isEditing) {
+      return TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        autofocus: true,
+        style: style,
+        decoration: const InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          border: InputBorder.none,
+        ),
+        onSubmitted: (_) => _commit(),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _startEditing,
+      child: Text(
+        _controller.text,
+        style: style,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
 
 // ── Pack Card ──────────────────────────────────────────────────────────────────
 
@@ -918,15 +1045,6 @@ class _PackCard extends ConsumerWidget {
     );
   }
 
-  void _sharePack(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SharePackScreen(folder: pack),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mapsAsync = ref.watch(mapsInFolderProvider(pack.id));
@@ -934,58 +1052,43 @@ class _PackCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () => _openPack(context),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Hero(
-            tag: 'pack-${pack.id}',
-            child: Material(
-              type: MaterialType.transparency,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xa1ee8b60), Color(0xffff4c00)],
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xffff4c00).withAlpha(70),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 6),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withAlpha(30),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _PackRankGrid(maps: maps),
-                    ),
-                    _PackInfoBar(title: pack.title),
-                  ],
-                ),
+      child: Hero(
+        tag: 'pack-${pack.id}',
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xa1ee8b60), Color(0xffff4c00)],
               ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xffff4c00).withAlpha(70),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: Colors.black.withAlpha(30),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _PackRankGrid(maps: maps),
+                ),
+                _PackInfoBar(title: pack.title),
+              ],
             ),
           ),
-          Positioned(
-            top: -8,
-            right: -8,
-            child: _EarButton(
-              icon: Icons.share_rounded,
-              iconColor: EnolaTheme.textSecond.withValues(alpha: 0.95),
-              backgroundColor: Colors.white,
-              onTap: () => _sharePack(context),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -993,8 +1096,8 @@ class _PackCard extends ConsumerWidget {
 
 // ── Pack Rank Grid ─────────────────────────────────────────────────────────────
 
-/// Shows a 3-column grid of rank icons (assets/images/0.jpg .. 4.jpg) with the
-/// count of maps in this pack currently sitting at each rank.
+/// Shows a 3-column grid of rank icons (assets/images/4.jpg down to 0.jpg)
+/// with the count of maps in this pack currently sitting at each rank.
 class _PackRankGrid extends ConsumerWidget {
   final List<RiddleMap> maps;
   const _PackRankGrid({required this.maps});
@@ -1011,7 +1114,6 @@ class _PackRankGrid extends ConsumerWidget {
       );
     }
 
-    // Watch each map's session + riddle count to determine its current rank.
     final rankCounts = <int, int>{0: 0, 1: 0, 2: 0, 3: 0, 4: 0};
 
     for (final map in maps) {
@@ -1047,7 +1149,8 @@ class _PackRankGrid extends ConsumerWidget {
             spacing: spacing,
             runSpacing: spacing,
             children: [
-              for (int rank = 0; rank <= 4; rank++)
+              // Highest rank (4) first, down to 0
+              for (int rank = 4; rank >= 0; rank--)
                 _RankTile(
                   rank: rank,
                   count: rankCounts[rank] ?? 0,
@@ -1083,8 +1186,8 @@ class _RankTile extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(220),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white, width: 1),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withAlpha(25),
@@ -1094,20 +1197,27 @@ class _RankTile extends StatelessWidget {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(9),
               child: Image.asset(
                 'assets/images/$rank.jpg',
                 fit: BoxFit.cover,
               ),
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            '$count',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF6B3A1F),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0x8714181b),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -1138,10 +1248,10 @@ class _PackInfoBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         decoration: BoxDecoration(
           color: const Color(0x44ffffff),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           title,
@@ -1158,7 +1268,6 @@ class _PackInfoBar extends StatelessWidget {
     );
   }
 }
-
 
 // ── Map Card ──────────────────────────────────────────────────────────────────
 
@@ -1828,6 +1937,35 @@ class _CreateFab extends StatelessWidget {
         'New Map',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
+    );
+  }
+}
+
+// ── Share Pack FAB ────────────────────────────────────────────────────────────
+
+class _SharePackFab extends ConsumerWidget {
+  final int packId;
+  const _SharePackFab({required this.packId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final packsAsync = ref.watch(allFoldersProvider);
+    final matches = packsAsync.valueOrNull?.where((f) => f.id == packId) ?? [];
+    final pack = matches.isNotEmpty ? matches.first : null;
+
+    if (pack == null) return const SizedBox.shrink();
+
+    return FloatingActionButton(
+      heroTag: 'share_pack_fab',
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => SharePackScreen(folder: pack)),
+        );
+      },
+      backgroundColor: Colors.white,
+      foregroundColor: EnolaTheme.textSecond,
+      child: const Icon(Icons.share_rounded),
     );
   }
 }
