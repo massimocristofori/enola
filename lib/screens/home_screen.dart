@@ -2016,8 +2016,8 @@ class _PackBackFabState extends State<_PackBackFab> {
           onTap: widget.onBack,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            width: 48,
-            height: 48,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
               shape: BoxShape.circle,
@@ -2035,7 +2035,7 @@ class _PackBackFabState extends State<_PackBackFab> {
               _isDraggingOver
                   ? Icons.folder_off_outlined
                   : Icons.home_rounded,
-              size: 22,
+              size: 24,
               color: _isDraggingOver
                   ? Colors.white
                   : EnolaTheme.textPrimary,
@@ -2046,6 +2046,7 @@ class _PackBackFabState extends State<_PackBackFab> {
     );
   }
 }
+
 
 // ── Training FAB ──────────────────────────────────────────────────────────────
 
