@@ -1647,19 +1647,13 @@ class _CardInfoBar extends StatelessWidget {
 
 // ── Rank helpers ──────────────────────────────────────────────────────────────
 
-String _rankEmoji(double starRatio) {
-  if (starRatio >= 0.9) return '👑';
-  if (starRatio >= 0.7) return '🏆';
-  if (starRatio >= 0.5) return '⚔';
-  return '📜';
-}
-
 String _rankImage(double starRatio) {
   final score = (starRatio * 10).round();
-  if (score < 5) return 'assets/images/ranking/0.jpg';
-  if (score <= 6) return 'assets/images/ranking/1.jpg';
-  if (score <= 9) return 'assets/images/ranking/2.jpg';
-  return 'assets/images/ranking/3.jpg';
+  if (score == 0) return 'assets/images/ranking/0.jpg';
+  if (score < 5) return 'assets/images/ranking/1.jpg';
+  if (score <= 6) return 'assets/images/ranking/2.jpg';
+  if (score <= 9) return 'assets/images/ranking/3.jpg';
+  return 'assets/images/ranking/4.jpg';
 }
 
 // ── Rank Ribbon Overlay ───────────────────────────────────────────────────────
