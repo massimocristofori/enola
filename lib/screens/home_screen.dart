@@ -889,6 +889,8 @@ class _PackHeader extends ConsumerWidget {
   }
 }
 
+
+
 // ── Pack Card ──────────────────────────────────────────────────────────────────
 
 class _PackCard extends ConsumerWidget {
@@ -928,11 +930,7 @@ class _PackCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mapsAsync = ref.watch(mapsInFolderProvider(pack.id));
-    final statsAsync = ref.watch(folderStatsProvider(pack.id));
-
     final maps = mapsAsync.valueOrNull ?? [];
-    final stats = statsAsync.valueOrNull;
-    final achievedStars = stats?.achievedStars ?? 0;
 
     return GestureDetector(
       onTap: () => _openPack(context),
@@ -948,12 +946,12 @@ class _PackCard extends ConsumerWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFF39d2c0), Color(0xFF249689)],
+                    colors: [Color(0xa1ee8b60), Color(0xffff4c00)],
                   ),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF249689).withAlpha(100),
+                      color: const Color(0xffff4c00).withAlpha(70),
                       blurRadius: 20,
                       spreadRadius: 2,
                       offset: const Offset(0, 6),
@@ -969,17 +967,9 @@ class _PackCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(8)),
-                        child: _PackCoverGrid(maps: maps),
-                      ),
+                      child: _PackRankGrid(maps: maps),
                     ),
-                    _PackInfoBar(
-                      title: pack.title,
-                      achievedStars: achievedStars,
-                      userCount: 1,
-                    ),
+                    _PackInfoBar(title: pack.title),
                   ],
                 ),
               ),
@@ -1001,14 +991,16 @@ class _PackCard extends ConsumerWidget {
   }
 }
 
-// ── Pack Cover Grid ────────────────────────────────────────────────────────────
+// ── Pack Rank Grid ─────────────────────────────────────────────────────────────
 
-class _PackCoverGrid extends StatelessWidget {
+/// Shows a 3-column grid of rank icons (assets/images/0.jpg .. 4.jpg) with the
+/// count of maps in this pack currently sitting at each rank.
+class _PackRankGrid extends ConsumerWidget {
   final List<RiddleMap> maps;
-  const _PackCoverGrid({required this.maps});
+  const _PackRankGrid({required this.maps});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (maps.isEmpty) {
       return Center(
         child: Icon(
@@ -1019,155 +1011,154 @@ class _PackCoverGrid extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final squareSize = (availableWidth - 16 - 12) / 2.5;
-        final gridHeight = squareSize * 2 + 6 + 16;
+    // Watch each map's session + riddle count to determine its current rank.
+    final rankCounts = <int, int>{0: 0, 1: 0, 2: 0, 3: 0, 4: 0};
 
-        return SizedBox(
-          height: gridHeight,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(8),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      for (int i = 0; i < maps.length; i += 2) ...[
-                        if (i > 0) const SizedBox(width: 6),
-                        _PackSquare(map: maps[i], size: squareSize),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      for (int i = 1; i < maps.length; i += 2) ...[
-                        if (i > 1) const SizedBox(width: 6),
-                        _PackSquare(map: maps[i], size: squareSize),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    for (final map in maps) {
+      final countAsync = ref.watch(riddleCountProvider(map.id));
+      final sessionAsync = ref.watch(latestSessionProvider(map.id));
+
+      final count = countAsync.valueOrNull ?? 0;
+      final session = sessionAsync.valueOrNull;
+
+      int achievedStars = 0;
+      if (session != null && session.riddleStarsJson != null) {
+        try {
+          final list = jsonDecode(session.riddleStarsJson!) as List;
+          achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+        } catch (_) {}
+      }
+
+      final maxStars = count * 3;
+      final starRatio = maxStars > 0 ? achievedStars / maxStars : 0.0;
+      final rank = _rankIndex(starRatio);
+      rankCounts[rank] = (rankCounts[rank] ?? 0) + 1;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const cols = 3;
+          const spacing = 8.0;
+          final tileSize = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              for (int rank = 0; rank <= 4; rank++)
+                _RankTile(
+                  rank: rank,
+                  count: rankCounts[rank] ?? 0,
+                  size: tileSize,
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
 
-// ── Pack Square ────────────────────────────────────────────────────────────────
-
-class _PackSquare extends StatelessWidget {
-  final RiddleMap map;
+class _RankTile extends StatelessWidget {
+  final int rank;
+  final int count;
   final double size;
 
-  const _PackSquare({required this.map, required this.size});
+  const _RankTile({
+    required this.rank,
+    required this.count,
+    required this.size,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final imageBytes = map.imageBytes != null
-        ? Uint8List.fromList(map.imageBytes!)
-        : null;
-
-    return Container(
+    return SizedBox(
       width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Colors.white, width: 1),
-        color: Colors.white.withAlpha(40),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(25),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(220),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(25),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/images/$rank.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF6B3A1F),
+            ),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
-        child: imageBytes != null
-            ? Image.memory(imageBytes, fit: BoxFit.cover)
-            : Image.asset('assets/images/0.jpg', fit: BoxFit.cover),
-      ),
     );
   }
+}
+
+/// Same buckets as _rankImage, but returns the index (0..4) instead of asset path.
+int _rankIndex(double starRatio) {
+  final score = (starRatio * 10).round();
+  if (score == 0) return 0;
+  if (score < 5) return 1;
+  if (score <= 6) return 2;
+  if (score <= 9) return 3;
+  return 4;
 }
 
 // ── Pack Info Bar ─────────────────────────────────────────────────────────────
 
 class _PackInfoBar extends StatelessWidget {
   final String title;
-  final int achievedStars;
-  final int userCount;
-
-  const _PackInfoBar({
-    required this.title,
-    required this.achievedStars,
-    required this.userCount,
-  });
+  const _PackInfoBar({required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0x44ffffff),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              const Icon(Icons.star_rounded,
-                  size: 15, color: Colors.white),
-              const SizedBox(width: 3),
-              Text(
-                '$achievedStars',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$userCount',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 3),
-              const Icon(Icons.group_rounded,
-                  size: 15, color: Colors.white),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 }
+
 
 // ── Map Card ──────────────────────────────────────────────────────────────────
 
