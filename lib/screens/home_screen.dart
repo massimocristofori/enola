@@ -810,9 +810,16 @@ class _PackHeader extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await DriftService.instance.deleteFolder(packId);
-      if (context.mounted) Navigator.pop(context);
-    }
+  final maps = await (DriftService.instance.db.select(DriftService.instance.db.riddleMaps)
+        ..where((t) => t.folderId.equals(packId)))
+      .get();
+  for (final map in maps) {
+    await DriftService.instance.setMapFolder(map.id, null);
+  }
+  await DriftService.instance.deleteFolder(packId);
+  if (context.mounted) Navigator.pop(context);
+}
+
   }
 
   @override
@@ -974,14 +981,15 @@ class _EditablePackTitleState extends State<_EditablePackTitle> {
   }
 
   Future<void> _commit() async {
-    final newName = _controller.text.trim();
-    setState(() => _isEditing = false);
-    if (newName.isEmpty || newName == widget.initialName) {
-      _controller.text = widget.initialName;
-      return;
-    }
-    await DriftService.instance.renameFolder(widget.packId, newName);
+  final newName = _controller.text.trim();
+  setState(() => _isEditing = false);
+  if (newName.isEmpty || newName == widget.initialName) {
+    _controller.text = widget.initialName;
+    return;
   }
+  await DriftService.instance.updateFolderTitle(widget.packId, newName);
+}
+
 
   @override
   Widget build(BuildContext context) {
