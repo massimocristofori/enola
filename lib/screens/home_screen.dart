@@ -1300,7 +1300,7 @@ class _MapCard extends ConsumerWidget {
                               alignment: Alignment.topCenter,
                               maxHeight: fromHeight - infoBarHeight,
                               child: Container(
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   border: Border.all(color: Colors.white, width: 4),
                                   borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
                                 ),
@@ -1483,7 +1483,7 @@ class _CardShell extends StatelessWidget {
         children: [
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border.all(color: Colors.white, width: 4),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
               ),
@@ -1541,7 +1541,7 @@ class _CardShellDragging extends StatelessWidget {
         children: [
           Expanded(
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border.all(color: Colors.white, width: 4),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
               ),
