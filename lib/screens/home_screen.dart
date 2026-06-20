@@ -1226,10 +1226,6 @@ class _MapCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final Uint8List? imageBytes = map.imageBytes != null
-        ? Uint8List.fromList(map.imageBytes!)
-        : null;
-
     final countAsync = ref.watch(riddleCountProvider(map.id));
     final sessionAsync = ref.watch(latestSessionProvider(map.id));
 
@@ -1254,6 +1250,10 @@ class _MapCard extends ConsumerWidget {
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
     final double starRatio =
         maxStars > 0 ? achievedStars / maxStars : 0;
+
+    // The map's cover image is now always the rank image, reflecting
+    // current star progress (rank 0 if not started).
+    final String coverAsset = _rankImage(starRatio);
 
         Widget flightShuttle(
       BuildContext flightContext,
@@ -1307,14 +1307,9 @@ class _MapCard extends ConsumerWidget {
                                 child: ClipRRect(
                                   borderRadius: const BorderRadius.vertical(
                                       top: Radius.circular(4)),
-                                  child: imageBytes != null
-                                      ? Image.memory(imageBytes,
-                                          fit: BoxFit.cover,
-                                          width: double.infinity)
-                                      : Image.asset(
-                                          'assets/images/0.jpg',
-                                          fit: BoxFit.cover,
-                                          width: double.infinity),
+                                  child: Image.asset(coverAsset,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity),
                                 ),
                               ),
                             ),
@@ -1340,7 +1335,7 @@ class _MapCard extends ConsumerWidget {
 
 
     final cardShell = _CardShell(
-      imageBytes: imageBytes,
+      coverAsset: coverAsset,
       title: map.title,
       achievedStars: achievedStars,
       maxStars: maxStars,
@@ -1389,7 +1384,7 @@ class _MapCard extends ConsumerWidget {
                     ],
                   ),
                   child: _CardShellDragging(
-                    imageBytes: imageBytes,
+                    coverAsset: coverAsset,
                     title: map.title,
                     achievedStars: achievedStars,
                     maxStars: maxStars,
@@ -1409,14 +1404,6 @@ class _MapCard extends ConsumerWidget {
                 clipBehavior: Clip.none,
                 children: [
                   cardShell,
-                  if (isComplete)
-                    Positioned(
-                      left: -4,
-                      right: -4,
-                      top: 0,
-                      bottom: 20,
-                      child: _RankRibbonOverlay(starRatio: starRatio),
-                    ),
                   Positioned(
                     top: -8,
                     right: -8,
@@ -1445,10 +1432,11 @@ class _MapCard extends ConsumerWidget {
 }
 
 
+
 // ── Card Shell ────────────────────────────────────────────────────────────────
 
 class _CardShell extends StatelessWidget {
-  final Uint8List? imageBytes;
+  final String coverAsset;
   final String title;
   final int achievedStars;
   final int maxStars;
@@ -1456,7 +1444,7 @@ class _CardShell extends StatelessWidget {
   final bool isComplete;
 
   const _CardShell({
-    required this.imageBytes,
+    required this.coverAsset,
     required this.title,
     required this.achievedStars,
     required this.maxStars,
@@ -1489,10 +1477,7 @@ class _CardShell extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                child: imageBytes != null
-                    ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                    : Image.asset('assets/images/0.jpg',
-                        fit: BoxFit.cover),
+                child: Image.asset(coverAsset, fit: BoxFit.cover),
               ),
             ),
           ),
@@ -1509,11 +1494,8 @@ class _CardShell extends StatelessWidget {
   }
 }
 
-
-// ── Card Shell Dragging ───────────────────────────────────────────────────────
-
 class _CardShellDragging extends StatelessWidget {
-  final Uint8List? imageBytes;
+  final String coverAsset;
   final String title;
   final int achievedStars;
   final int maxStars;
@@ -1521,7 +1503,7 @@ class _CardShellDragging extends StatelessWidget {
   final bool isComplete;
 
   const _CardShellDragging({
-    required this.imageBytes,
+    required this.coverAsset,
     required this.title,
     required this.achievedStars,
     required this.maxStars,
@@ -1550,10 +1532,7 @@ class _CardShellDragging extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    imageBytes != null
-                        ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                        : Image.asset('assets/images/0.jpg',
-                            fit: BoxFit.cover),
+                    Image.asset(coverAsset, fit: BoxFit.cover),
                     Container(color: Colors.black.withAlpha(55)),
                   ],
                 ),
@@ -1572,6 +1551,7 @@ class _CardShellDragging extends StatelessWidget {
     );
   }
 }
+
 
 
 // ── Card Info Bar ─────────────────────────────────────────────────────────────
