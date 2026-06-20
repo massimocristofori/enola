@@ -1097,7 +1097,7 @@ class _PackSquare extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
         child: imageBytes != null
             ? Image.memory(imageBytes, fit: BoxFit.cover)
-            : Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+            : Image.asset('assets/images/0.jpg', fit: BoxFit.cover),
       ),
     );
   }
@@ -1308,7 +1308,7 @@ class _MapCard extends ConsumerWidget {
                                         fit: BoxFit.cover,
                                         width: double.infinity)
                                     : Image.asset(
-                                        'assets/images/0.jpeg',
+                                        'assets/images/0.jpg',
                                         fit: BoxFit.cover,
                                         width: double.infinity),
                               ),
@@ -1480,7 +1480,7 @@ class _CardShell extends StatelessWidget {
                   const BorderRadius.vertical(top: Radius.circular(8)),
               child: imageBytes != null
                   ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                  : Image.asset('assets/images/0.jpeg',
+                  : Image.asset('assets/images/0.jpg',
                       fit: BoxFit.cover),
             ),
           ),
@@ -1535,7 +1535,7 @@ class _CardShellDragging extends StatelessWidget {
                 children: [
                   imageBytes != null
                       ? Image.memory(imageBytes!, fit: BoxFit.cover)
-                      : Image.asset('assets/images/0.jpeg',
+                      : Image.asset('assets/images/0.jpg',
                           fit: BoxFit.cover),
                   Container(color: Colors.black.withAlpha(55)),
                 ],
@@ -1649,11 +1649,11 @@ class _CardInfoBar extends StatelessWidget {
 
 String _rankImage(double starRatio) {
   final score = (starRatio * 10).round();
-  if (score == 0) return 'assets/images/ranking/0.jpg';
-  if (score < 5) return 'assets/images/ranking/1.jpg';
-  if (score <= 6) return 'assets/images/ranking/2.jpg';
-  if (score <= 9) return 'assets/images/ranking/3.jpg';
-  return 'assets/images/ranking/4.jpg';
+  if (score == 0) return 'assets/images/0.jpg';
+  if (score < 5) return 'assets/images/1.jpg';
+  if (score <= 6) return 'assets/images/2.jpg';
+  if (score <= 9) return 'assets/images/3.jpg';
+  return 'assets/images/4.jpg';
 }
 
 // ── Rank Ribbon Overlay ───────────────────────────────────────────────────────
