@@ -1217,54 +1217,60 @@ class _RankTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(25),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
+    final isEmpty = count == 0;
+
+    return Opacity(
+      opacity: isEmpty ? 0.4 : 1.0,
+      child: SizedBox(
+        width: size,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(25),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.asset(
+                  'assets/images/$rank.jpg',
+                  fit: BoxFit.cover,
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: Image.asset(
-                'assets/images/$rank.jpg',
-                fit: BoxFit.cover,
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0x8714181b),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '$count',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0x8714181b),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
 
 /// Same buckets as _rankImage, but returns the index (0..4) instead of asset path.
 int _rankIndex(double starRatio) {
@@ -1598,6 +1604,9 @@ class _CardShell extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
+        border: isComplete
+            ? Border.all(color: const Color(0xFFEE8B60), width: 2)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(25),
@@ -1617,7 +1626,10 @@ class _CardShell extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                child: Image.asset(coverAsset, fit: BoxFit.cover),
+                child: Opacity(
+                  opacity: hasBeenPlayed ? 1.0 : 0.45,
+                  child: Image.asset(coverAsset, fit: BoxFit.cover),
+                ),
               ),
             ),
           ),
@@ -1633,6 +1645,7 @@ class _CardShell extends StatelessWidget {
     );
   }
 }
+
 
 class _CardShellDragging extends StatelessWidget {
   final String coverAsset;
