@@ -22,8 +22,6 @@ import 'package:enola/services/training_service.dart';
 import 'package:drift/drift.dart' as drift_orm;
 
 const double kCardAspectRatio = 0.84;
-const double kPackCardAspectRatio = 0.68; // taller, to fit 2 rows + info bar
-
 
 class HomeScreen extends ConsumerWidget {
   final int? packId;
@@ -199,76 +197,46 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
           ),
         ),
 
-        // ── Packs section (always has at least the two Add Pack cards) ──
+        // ── Packs section ──
+        // Uses a Wrap (not a SliverGrid) so each Pack Card can size itself
+        // to its own content height instead of being forced into a fixed
+        // aspect-ratio cell. Cards are pinned to the same per-column width
+        // as before via _cardWidth(context).
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: cols,
-              crossAxisSpacing: 24,
-              mainAxisSpacing: 14,
-              childAspectRatio: kPackCardAspectRatio,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, i) {
-                if (i == 0) {
-                  return _CreatePackCard(
+          sliver: SliverToBoxAdapter(
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 14,
+              children: [
+                SizedBox(
+                  width: _cardWidth(context),
+                  child: _CreatePackCard(
                     onTap: () => _openCreatePack(context),
                   ).animate().fadeIn(duration: 350.ms).scale(
                         begin: const Offset(0.95, 0.95),
-                      );
-                }
-                if (i == 1) {
-                  return _GetPackCard(
+                      ),
+                ),
+                SizedBox(
+                  width: _cardWidth(context),
+                  child: _GetPackCard(
                     onTap: () => _openGetPack(context),
                   ).animate().fadeIn(duration: 350.ms).scale(
                         begin: const Offset(0.95, 0.95),
-                      );
-                }
-
-                final pack = packs[i - 2];
-                final isHovered = _hoveredPackId == pack.id;
-                return DragTarget<RiddleMap>(
-                  onWillAcceptWithDetails: (details) {
-                    setState(() => _hoveredPackId = pack.id);
-                    return true;
-                  },
-                  onLeave: (_) => setState(() => _hoveredPackId = null),
-                  onAcceptWithDetails: (details) {
-                    setState(() => _hoveredPackId = null);
-                    DriftService.instance
-                        .setMapFolder(details.data.id, pack.id);
-                  },
-                  builder: (context, candidateData, rejectedData) {
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: isHovered
-                            ? Border.all(
-                                color: EnolaTheme.accent, width: 2.5)
-                            : Border.all(
-                                color: Colors.transparent, width: 2.5),
-                        boxShadow: isHovered
-                            ? [
-                                BoxShadow(
-                                  color: EnolaTheme.accent
-                                      .withValues(alpha: 0.25),
-                                  blurRadius: 16,
-                                  spreadRadius: 2,
-                                ),
-                              ]
-                            : [],
                       ),
-                      child: _PackCard(pack: pack)
-                          .animate(delay: (i * 60).ms)
-                          .fadeIn(duration: 350.ms)
-                          .scale(begin: const Offset(0.95, 0.95)),
-                    );
-                  },
-                );
-              },
-              childCount: packs.length + 2,
+                ),
+                for (int i = 0; i < packs.length; i++)
+                  SizedBox(
+                    width: _cardWidth(context),
+                    child: _PackGridItem(
+                      pack: packs[i],
+                      index: i,
+                      isHovered: _hoveredPackId == packs[i].id,
+                      onHoverChanged: (hovered) => setState(
+                          () => _hoveredPackId = hovered ? packs[i].id : null),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -368,6 +336,64 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         if (unfiled.isEmpty)
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
+    );
+  }
+}
+
+// ── Pack grid item (drag target wrapper around a Pack Card) ──────────────────
+
+/// Extracted from the old SliverGrid itemBuilder so it can be reused inside
+/// the Wrap-based layout. Behavior (drag-to-file highlight, animation) is
+/// unchanged from before.
+class _PackGridItem extends StatelessWidget {
+  final Folder pack;
+  final int index;
+  final bool isHovered;
+  final ValueChanged<bool> onHoverChanged;
+
+  const _PackGridItem({
+    required this.pack,
+    required this.index,
+    required this.isHovered,
+    required this.onHoverChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<RiddleMap>(
+      onWillAcceptWithDetails: (details) {
+        onHoverChanged(true);
+        return true;
+      },
+      onLeave: (_) => onHoverChanged(false),
+      onAcceptWithDetails: (details) {
+        onHoverChanged(false);
+        DriftService.instance.setMapFolder(details.data.id, pack.id);
+      },
+      builder: (context, candidateData, rejectedData) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: isHovered
+                ? Border.all(color: EnolaTheme.accent, width: 2.5)
+                : Border.all(color: Colors.transparent, width: 2.5),
+            boxShadow: isHovered
+                ? [
+                    BoxShadow(
+                      color: EnolaTheme.accent.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : [],
+          ),
+          child: _PackCard(pack: pack)
+              .animate(delay: (index * 60).ms)
+              .fadeIn(duration: 350.ms)
+              .scale(begin: const Offset(0.95, 0.95)),
+        );
+      },
     );
   }
 }
@@ -641,38 +667,41 @@ class _CreatePackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white.withValues(alpha: 0.4),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: const Color(0xFFC7CCD4),
-          radius: 8,
+    return AspectRatio(
+      aspectRatio: kCardAspectRatio,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.white.withValues(alpha: 0.4),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add_rounded,
-                      size: 26, color: EnolaTheme.textSecond),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Create Pack',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: EnolaTheme.textSecond,
+        clipBehavior: Clip.antiAlias,
+        child: CustomPaint(
+          painter: _DashedBorderPainter(
+            color: const Color(0xFFC7CCD4),
+            radius: 8,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_rounded,
+                        size: 26, color: EnolaTheme.textSecond),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Create Pack',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: EnolaTheme.textSecond,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -690,38 +719,41 @@ class _GetPackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white.withValues(alpha: 0.4),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: const Color(0xFFC7CCD4),
-          radius: 8,
+    return AspectRatio(
+      aspectRatio: kCardAspectRatio,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.white.withValues(alpha: 0.4),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.download_rounded,
-                      size: 26, color: EnolaTheme.textSecond),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Get a Pack',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: EnolaTheme.textSecond,
+        clipBehavior: Clip.antiAlias,
+        child: CustomPaint(
+          painter: _DashedBorderPainter(
+            color: const Color(0xFFC7CCD4),
+            radius: 8,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.download_rounded,
+                        size: 26, color: EnolaTheme.textSecond),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Get a Pack',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: EnolaTheme.textSecond,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1120,16 +1152,17 @@ class _PackCard extends ConsumerWidget {
                 ),
               ],
             ),
+            // Content-sized: the card grows to fit the rank grid + info bar
+            // exactly, instead of being forced into a fixed aspect ratio.
             child: Column(
-  crossAxisAlignment: CrossAxisAlignment.stretch,
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    _PackRankGrid(maps: maps),
-    const SizedBox(height: 4),
-    _PackInfoBar(title: pack.title),
-  ],
-),
-
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _PackRankGrid(maps: maps),
+                const SizedBox(height: 4),
+                _PackInfoBar(title: pack.title),
+              ],
+            ),
           ),
         ),
       ),
@@ -1141,7 +1174,6 @@ class _PackCard extends ConsumerWidget {
 
 /// Shows a 3-column grid of rank icons (assets/images/4.jpg down to 0.jpg)
 /// with the count of maps in this pack currently sitting at each rank.
-
 class _PackRankGrid extends ConsumerWidget {
   final List<RiddleMap> maps;
   const _PackRankGrid({required this.maps});
@@ -1196,6 +1228,7 @@ class _PackRankGrid extends ConsumerWidget {
             spacing: spacing,
             runSpacing: spacing,
             children: [
+              // Highest rank (4) first, down to 0
               for (int rank = 4; rank >= 0; rank--)
                 _RankTile(
                   rank: rank,
@@ -1209,8 +1242,6 @@ class _PackRankGrid extends ConsumerWidget {
     );
   }
 }
-
-
 
 class _RankTile extends StatelessWidget {
   final int rank;
