@@ -203,43 +203,37 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         // aspect-ratio cell. Cards are pinned to the same per-column width
         // as before via _cardWidth(context).
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
-          sliver: SliverToBoxAdapter(
-            child: Wrap(
-              spacing: 24,
-              runSpacing: 14,
-              children: [
-                SizedBox(
-                  width: _cardWidth(context),
-                  child: _CreatePackCard(
-                    onTap: () => _openCreatePack(context),
-                  ).animate().fadeIn(duration: 350.ms).scale(
-                        begin: const Offset(0.95, 0.95),
-                      ),
-                ),
-                SizedBox(
-                  width: _cardWidth(context),
-                  child: _GetPackCard(
-                    onTap: () => _openGetPack(context),
-                  ).animate().fadeIn(duration: 350.ms).scale(
-                        begin: const Offset(0.95, 0.95),
-                      ),
-                ),
-                for (int i = 0; i < packs.length; i++)
-                  SizedBox(
-                    width: _cardWidth(context),
-                    child: _PackGridItem(
-                      pack: packs[i],
-                      index: i,
-                      isHovered: _hoveredPackId == packs[i].id,
-                      onHoverChanged: (hovered) => setState(
-                          () => _hoveredPackId = hovered ? packs[i].id : null),
-                    ),
-                  ),
-              ],
+  padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
+  sliver: SliverToBoxAdapter(
+    child: Wrap(
+      spacing: 24,
+      runSpacing: 14,
+      children: [
+        for (int i = 0; i < packs.length; i++)
+          SizedBox(
+            width: _cardWidth(context),
+            child: _PackGridItem(
+              pack: packs[i],
+              index: i,
+              isHovered: _hoveredPackId == packs[i].id,
+              onHoverChanged: (hovered) => setState(
+                  () => _hoveredPackId = hovered ? packs[i].id : null),
             ),
           ),
+        SizedBox(
+          width: _cardWidth(context),
+          child: _CreateOrGetPackCard(
+            onCreate: () => _openCreatePack(context),
+            onGet: () => _openGetPack(context),
+          ).animate().fadeIn(duration: 350.ms).scale(
+                begin: const Offset(0.95, 0.95),
+              ),
         ),
+      ],
+    ),
+  ),
+),
+
 
         // ── Section divider ──
         SliverToBoxAdapter(
@@ -659,49 +653,89 @@ class _CreatePackSheetState extends State<_CreatePackSheet> {
   }
 }
 
-// ── Create Pack Card (dashed, root grid) ────────────────────────────────────────
+// ── Create or Get Pack Card (combined, last position in grid) ────────────────
 
-class _CreatePackCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _CreatePackCard({required this.onTap});
+class _CreateOrGetPackCard extends StatelessWidget {
+  final VoidCallback onCreate;
+  final VoidCallback onGet;
+
+  const _CreateOrGetPackCard({
+    required this.onCreate,
+    required this.onGet,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: kCardAspectRatio,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: Colors.white.withValues(alpha: 0.4),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: CustomPaint(
-          painter: _DashedBorderPainter(
-            color: const Color(0xFFC7CCD4),
-            radius: 8,
+      child: Column(
+        children: [
+          Expanded(
+            child: _DashedActionTile(
+              icon: Icons.add_rounded,
+              label: 'Create Pack',
+              onTap: onCreate,
+            ),
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_rounded,
-                        size: 26, color: EnolaTheme.textSecond),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Create Pack',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: EnolaTheme.textSecond,
-                      ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: _DashedActionTile(
+              icon: Icons.download_rounded,
+              label: 'Get a Pack',
+              onTap: onGet,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashedActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _DashedActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withValues(alpha: 0.4),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(
+          color: const Color(0xFFC7CCD4),
+          radius: 8,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 22, color: EnolaTheme.textSecond),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: EnolaTheme.textSecond,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -711,57 +745,6 @@ class _CreatePackCard extends StatelessWidget {
   }
 }
 
-// ── Get a Pack Card (dashed, root grid) ─────────────────────────────────────────
-
-class _GetPackCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _GetPackCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: kCardAspectRatio,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: Colors.white.withValues(alpha: 0.4),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: CustomPaint(
-          painter: _DashedBorderPainter(
-            color: const Color(0xFFC7CCD4),
-            radius: 8,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.download_rounded,
-                        size: 26, color: EnolaTheme.textSecond),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Get a Pack',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: EnolaTheme.textSecond,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _DashedBorderPainter extends CustomPainter {
   final Color color;
