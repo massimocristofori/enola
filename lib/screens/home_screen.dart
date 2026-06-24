@@ -1138,6 +1138,7 @@ class _PackCard extends ConsumerWidget {
 
 /// Shows a 3-column grid of rank icons (assets/images/4.jpg down to 0.jpg)
 /// with the count of maps in this pack currently sitting at each rank.
+
 class _PackRankGrid extends ConsumerWidget {
   final List<RiddleMap> maps;
   const _PackRankGrid({required this.maps});
@@ -1177,13 +1178,25 @@ class _PackRankGrid extends ConsumerWidget {
       rankCounts[rank] = (rankCounts[rank] ?? 0) + 1;
     }
 
+    const cols = 3;
+    const rows = 2; // ranks 4,3,2 / 1,0 -> but laid out as 3+2, fits a 2-row budget
+    const spacing = 8.0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          const cols = 3;
-          const spacing = 8.0;
-          final tileSize = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+          final tileSizeFromWidth =
+              (constraints.maxWidth - spacing * (cols - 1)) / cols;
+
+          // Reserve space for the count label under each tile (~24px) plus
+          // the run spacing between the two rows.
+          const labelHeight = 24.0;
+          final tileSizeFromHeight =
+              (constraints.maxHeight - spacing - labelHeight * rows) / rows;
+
+          final tileSize = math.min(tileSizeFromWidth, tileSizeFromHeight)
+              .clamp(0.0, double.infinity);
 
           return Wrap(
             spacing: spacing,
@@ -1203,6 +1216,7 @@ class _PackRankGrid extends ConsumerWidget {
     );
   }
 }
+
 
 class _RankTile extends StatelessWidget {
   final int rank;
