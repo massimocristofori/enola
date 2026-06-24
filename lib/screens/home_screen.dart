@@ -1119,14 +1119,15 @@ class _PackCard extends ConsumerWidget {
               ],
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _PackRankGrid(maps: maps),
-                ),
-                _PackInfoBar(title: pack.title),
-              ],
-            ),
+  crossAxisAlignment: CrossAxisAlignment.stretch,
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    _PackRankGrid(maps: maps),
+    const SizedBox(height: 4),
+    _PackInfoBar(title: pack.title),
+  ],
+),
+
           ),
         ),
       ),
@@ -1146,11 +1147,14 @@ class _PackRankGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (maps.isEmpty) {
-      return Center(
-        child: Icon(
-          Icons.folder_open_rounded,
-          size: 48,
-          color: Colors.white.withAlpha(140),
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(
+          child: Icon(
+            Icons.folder_open_rounded,
+            size: 48,
+            color: Color(0x8Cffffff),
+          ),
         ),
       );
     }
@@ -1178,31 +1182,18 @@ class _PackRankGrid extends ConsumerWidget {
       rankCounts[rank] = (rankCounts[rank] ?? 0) + 1;
     }
 
-    const cols = 3;
-    const rows = 2; // ranks 4,3,2 / 1,0 -> but laid out as 3+2, fits a 2-row budget
-    const spacing = 8.0;
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final tileSizeFromWidth =
-              (constraints.maxWidth - spacing * (cols - 1)) / cols;
-
-          // Reserve space for the count label under each tile (~24px) plus
-          // the run spacing between the two rows.
-          const labelHeight = 24.0;
-          final tileSizeFromHeight =
-              (constraints.maxHeight - spacing - labelHeight * rows) / rows;
-
-          final tileSize = math.min(tileSizeFromWidth, tileSizeFromHeight)
-              .clamp(0.0, double.infinity);
+          const cols = 3;
+          const spacing = 8.0;
+          final tileSize = (constraints.maxWidth - spacing * (cols - 1)) / cols;
 
           return Wrap(
             spacing: spacing,
             runSpacing: spacing,
             children: [
-              // Highest rank (4) first, down to 0
               for (int rank = 4; rank >= 0; rank--)
                 _RankTile(
                   rank: rank,
@@ -1216,6 +1207,7 @@ class _PackRankGrid extends ConsumerWidget {
     );
   }
 }
+
 
 
 class _RankTile extends StatelessWidget {
