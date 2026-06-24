@@ -22,6 +22,8 @@ import 'package:enola/services/training_service.dart';
 import 'package:drift/drift.dart' as drift_orm;
 
 const double kCardAspectRatio = 0.84;
+const double kPackCardAspectRatio = 0.68; // taller, to fit 2 rows + info bar
+
 
 class HomeScreen extends ConsumerWidget {
   final int? packId;
@@ -205,7 +207,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
               crossAxisCount: cols,
               crossAxisSpacing: 24,
               mainAxisSpacing: 14,
-              childAspectRatio: kCardAspectRatio,
+              childAspectRatio: kPackCardAspectRatio,
             ),
             delegate: SliverChildBuilderDelegate(
               (context, i) {
