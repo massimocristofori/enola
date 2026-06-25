@@ -905,15 +905,13 @@ class _PackHeader extends ConsumerWidget {
               IconButton(
                 onPressed:
                     pack == null ? null : () => _sharePack(context, pack),
-                icon: const Icon(Icons.ios_share),
+                icon: const Icon(Icons.ios_share, size: 28),
                 color: EnolaTheme.textSecond,
-								size: 28,
               ),
               IconButton(
                 onPressed: () => _confirmDelete(context),
-                icon: const Icon(Icons.delete_outline_rounded),
+                icon: const Icon(Icons.delete_outline_rounded, size: 28),
                 color: EnolaTheme.textSecond,
-								size: 28,
               ),
             ],
           ),
