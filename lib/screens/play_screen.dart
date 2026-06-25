@@ -1092,6 +1092,8 @@ class _StarProgressBar extends StatelessWidget {
 
 // ── Play Header ───────────────────────────────────────────────────────────────
 
+// ── Play Header ───────────────────────────────────────────────────────────────
+
 class _PlayHeader extends StatelessWidget {
   final String mapId;
   final String title;
@@ -1153,7 +1155,7 @@ class _PlayHeader extends StatelessWidget {
                       height: 38,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF9FAFB),
+                        color: Colors.white, // Changed to completely white
                         border: Border(
                           top: BorderSide(
                               color: Color(0xFFE5E7EB), width: 1),
@@ -1168,13 +1170,10 @@ class _PlayHeader extends StatelessWidget {
                             onTap: onEdit,
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                'Edit',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: EnolaTheme.textPrimary,
-                                ),
+                              child: Icon(
+                                Icons.edit_rounded,
+                                size: 20,
+                                color: EnolaTheme.textPrimary,
                               ),
                             ),
                           ),
@@ -1199,13 +1198,10 @@ class _PlayHeader extends StatelessWidget {
                             onTap: onDelete,
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                'Delete',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.red,
-                                ),
+                              child: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 20,
+                                color: Colors.red,
                               ),
                             ),
                           ),
@@ -1260,6 +1256,7 @@ class _PlayHeader extends StatelessWidget {
     );
   }
 }
+
 
 // ── Flying stars overlay ──────────────────────────────────────────────────────
 
