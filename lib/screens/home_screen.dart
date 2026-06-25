@@ -1945,8 +1945,15 @@ class _EarButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           shape: BoxShape.circle,
+					boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
-        child: Icon(icon, size: 26, color: iconColor),
+        child: Icon(icon, size: 28, color: iconColor),
       ),
     );
   }
