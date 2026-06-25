@@ -1090,7 +1090,6 @@ class _StarProgressBar extends StatelessWidget {
   }
 }
 
-// ── Play Header ───────────────────────────────────────────────────────────────
 
 // ── Play Header ───────────────────────────────────────────────────────────────
 
@@ -1155,33 +1154,21 @@ class _PlayHeader extends StatelessWidget {
                       height: 38,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: const BoxDecoration(
-                        color: Colors.white, // Changed to completely white
+                        color: Colors.white,
                         border: Border(
                           top: BorderSide(
                               color: Color(0xFFE5E7EB), width: 1),
-                          bottom: BorderSide(
-                              color: Color(0xFFE5E7EB), width: 1),
+                          // Bottom border removed to clear the middle line
                         ),
                       ),
                       child: Row(
                         children: [
-                          // ── Edit Button ──
-                          GestureDetector(
-                            onTap: onEdit,
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              child: Icon(
-                                Icons.edit_rounded,
-                                size: 20,
-                                color: EnolaTheme.textPrimary,
-                              ),
-                            ),
-                          ),
+                          const SizedBox(width: 12),
                           // ── Title ──
                           Expanded(
                             child: Text(
                               title,
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.left,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -1193,11 +1180,23 @@ class _PlayHeader extends StatelessWidget {
                               ),
                             ),
                           ),
+                          // ── Edit Button ──
+                          GestureDetector(
+                            onTap: onEdit,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10),
+                              child: Icon(
+                                Icons.edit_rounded,
+                                size: 20,
+                                color: EnolaTheme.textPrimary,
+                              ),
+                            ),
+                          ),
                           // ── Delete Button ──
                           GestureDetector(
                             onTap: onDelete,
                             child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              padding: EdgeInsets.only(left: 10, right: 12),
                               child: Icon(
                                 Icons.delete_outline_rounded,
                                 size: 20,
@@ -1256,6 +1255,7 @@ class _PlayHeader extends StatelessWidget {
     );
   }
 }
+
 
 
 // ── Flying stars overlay ──────────────────────────────────────────────────────
