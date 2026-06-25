@@ -907,11 +907,13 @@ class _PackHeader extends ConsumerWidget {
                     pack == null ? null : () => _sharePack(context, pack),
                 icon: const Icon(Icons.ios_share),
                 color: EnolaTheme.textSecond,
+								size: 28,
               ),
               IconButton(
                 onPressed: () => _confirmDelete(context),
                 icon: const Icon(Icons.delete_outline_rounded),
                 color: EnolaTheme.textSecond,
+								size: 28,
               ),
             ],
           ),
