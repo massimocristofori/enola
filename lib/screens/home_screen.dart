@@ -70,13 +70,7 @@ class HomeScreen extends ConsumerWidget {
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _PackBackFab(
-                    onBack: () => Navigator.pop(context),
-                    onUnfile: (mapId) async {
-                      await DriftService.instance.setMapFolder(mapId, null);
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                  ),
+                  _PackBackFab(onBack: () => Navigator.pop(context)),
                   const SizedBox(width: 12),
                   _CreateFab(onTap: () => _openCreate(context)),
                   const SizedBox(width: 12),
@@ -118,8 +112,6 @@ class _RootScrollView extends ConsumerStatefulWidget {
 }
 
 class _RootScrollViewState extends ConsumerState<_RootScrollView> {
-  int? _hoveredPackId;
-  bool _unfiledHovered = false;
   List<StaleMapInfo> _staleMaps = [];
 
   @override
@@ -203,104 +195,59 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         // aspect-ratio cell. Cards are pinned to the same per-column width
         // as before via _cardWidth(context).
         SliverPadding(
-  padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
-  sliver: SliverToBoxAdapter(
-    child: Wrap(
-      spacing: 24,
-      runSpacing: 14,
-      children: [
-        for (int i = 0; i < packs.length; i++)
-          SizedBox(
-            width: _cardWidth(context),
-            child: _PackGridItem(
-              pack: packs[i],
-              index: i,
-              isHovered: _hoveredPackId == packs[i].id,
-              onHoverChanged: (hovered) => setState(
-                  () => _hoveredPackId = hovered ? packs[i].id : null),
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
+          sliver: SliverToBoxAdapter(
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 14,
+              children: [
+                for (int i = 0; i < packs.length; i++)
+                  SizedBox(
+                    width: _cardWidth(context),
+                    child: _PackGridItem(
+                      pack: packs[i],
+                      index: i,
+                    ),
+                  ),
+                SizedBox(
+                  width: _cardWidth(context),
+                  child: _CreateOrGetPackCard(
+                    onCreate: () => _openCreatePack(context),
+                    onGet: () => _openGetPack(context),
+                  ).animate().fadeIn(duration: 350.ms).scale(
+                        begin: const Offset(0.95, 0.95),
+                      ),
+                ),
+              ],
             ),
           ),
-        SizedBox(
-          width: _cardWidth(context),
-          child: _CreateOrGetPackCard(
-            onCreate: () => _openCreatePack(context),
-            onGet: () => _openGetPack(context),
-          ).animate().fadeIn(duration: 350.ms).scale(
-                begin: const Offset(0.95, 0.95),
-              ),
         ),
-      ],
-    ),
-  ),
-),
-
 
         // ── Section divider ──
         SliverToBoxAdapter(
-          child: DragTarget<RiddleMap>(
-            onWillAcceptWithDetails: (details) {
-              if (details.data.folderId == null) return false;
-              setState(() => _unfiledHovered = true);
-              return true;
-            },
-            onLeave: (_) => setState(() => _unfiledHovered = false),
-            onAcceptWithDetails: (details) {
-              setState(() => _unfiledHovered = false);
-              DriftService.instance.setMapFolder(details.data.id, null);
-            },
-            builder: (context, candidateData, rejectedData) {
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                margin: const EdgeInsets.fromLTRB(0, 20, 0, 0),
-                decoration: BoxDecoration(
-                  color: _unfiledHovered
-                      ? EnolaTheme.accent.withValues(alpha: 0.06)
-                      : Colors.transparent,
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20)),
-                  border: _unfiledHovered
-                      ? Border.all(
-                          color: EnolaTheme.accent.withValues(alpha: 0.3),
-                          width: 1.5)
-                      : null,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(40, 20, 40, 4),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Divider(color: Color(0xFFE5E7EB)),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(40, 16, 40, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: _unfiledHovered
-                              ? EnolaTheme.accent.withValues(alpha: 0.4)
-                              : const Color(0xFFE5E7EB),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _unfiledHovered ? 'Drop to unfile' : 'Maps',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _unfiledHovered
-                              ? EnolaTheme.accent
-                              : EnolaTheme.textSecond
-                                  .withValues(alpha: 0.7),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Divider(
-                          color: _unfiledHovered
-                              ? EnolaTheme.accent.withValues(alpha: 0.4)
-                              : const Color(0xFFE5E7EB),
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 12),
+                Text(
+                  'Maps',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: EnolaTheme.textSecond.withValues(alpha: 0.7),
+                    letterSpacing: 0.5,
                   ),
                 ),
-              );
-            },
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Divider(color: Color(0xFFE5E7EB)),
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -308,21 +255,10 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         if (unfiled.isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(40, 8, 40, 100),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            sliver: SliverToBoxAdapter(
+              child: _ReorderableMapGrid(
+                maps: unfiled,
                 crossAxisCount: cols,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 14,
-                childAspectRatio: kCardAspectRatio,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) {
-                  return _MapCard(map: unfiled[i])
-                      .animate(delay: (i * 60).ms)
-                      .fadeIn(duration: 350.ms)
-                      .scale(begin: const Offset(0.95, 0.95));
-                },
-                childCount: unfiled.length,
               ),
             ),
           ),
@@ -334,61 +270,26 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
   }
 }
 
-// ── Pack grid item (drag target wrapper around a Pack Card) ──────────────────
+// ── Pack grid item ─────────────────────────────────────────────────────────────
 
-/// Extracted from the old SliverGrid itemBuilder so it can be reused inside
-/// the Wrap-based layout. Behavior (drag-to-file highlight, animation) is
-/// unchanged from before.
+/// Plain wrapper around a Pack Card. No longer a DragTarget — packs can no
+/// longer receive maps via drag; map order is purely user-controlled via
+/// in-list reordering (see _ReorderableMapGrid).
 class _PackGridItem extends StatelessWidget {
   final Folder pack;
   final int index;
-  final bool isHovered;
-  final ValueChanged<bool> onHoverChanged;
 
   const _PackGridItem({
     required this.pack,
     required this.index,
-    required this.isHovered,
-    required this.onHoverChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<RiddleMap>(
-      onWillAcceptWithDetails: (details) {
-        onHoverChanged(true);
-        return true;
-      },
-      onLeave: (_) => onHoverChanged(false),
-      onAcceptWithDetails: (details) {
-        onHoverChanged(false);
-        DriftService.instance.setMapFolder(details.data.id, pack.id);
-      },
-      builder: (context, candidateData, rejectedData) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: isHovered
-                ? Border.all(color: EnolaTheme.accent, width: 2.5)
-                : Border.all(color: Colors.transparent, width: 2.5),
-            boxShadow: isHovered
-                ? [
-                    BoxShadow(
-                      color: EnolaTheme.accent.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : [],
-          ),
-          child: _PackCard(pack: pack)
-              .animate(delay: (index * 60).ms)
-              .fadeIn(duration: 350.ms)
-              .scale(begin: const Offset(0.95, 0.95)),
-        );
-      },
-    );
+    return _PackCard(pack: pack)
+        .animate(delay: (index * 60).ms)
+        .fadeIn(duration: 350.ms)
+        .scale(begin: const Offset(0.95, 0.95));
   }
 }
 
@@ -436,19 +337,10 @@ class _PackScrollView extends ConsumerWidget {
         else
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(40, 4, 40, 100),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            sliver: SliverToBoxAdapter(
+              child: _ReorderableMapGrid(
+                maps: maps,
                 crossAxisCount: cols,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 14,
-                childAspectRatio: kCardAspectRatio,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, i) => _MapCard(map: maps[i])
-                    .animate(delay: (i * 60).ms)
-                    .fadeIn(duration: 350.ms)
-                    .scale(begin: const Offset(0.95, 0.95)),
-                childCount: maps.length,
               ),
             ),
           ),
@@ -905,12 +797,12 @@ class _PackHeader extends ConsumerWidget {
               IconButton(
                 onPressed:
                     pack == null ? null : () => _sharePack(context, pack),
-                icon: const Icon(Icons.ios_share, size: 28),
+                icon: const Icon(Icons.ios_share),
                 color: EnolaTheme.textSecond,
               ),
               IconButton(
                 onPressed: () => _confirmDelete(context),
-                icon: const Icon(Icons.delete_outline_rounded, size: 28),
+                icon: const Icon(Icons.delete_outline_rounded),
                 color: EnolaTheme.textSecond,
               ),
             ],
@@ -1337,11 +1229,120 @@ class _PackInfoBar extends StatelessWidget {
   }
 }
 
+// ── Reorderable Map Grid ──────────────────────────────────────────────────────
+
+/// Renders maps in the existing fixed-aspect-ratio grid, but supports
+/// dragging a card to reorder it among its siblings ONLY — order is purely
+/// user-driven (persisted via RiddleMap.sortOrder). Dragging never moves a
+/// map in/out of a pack anymore; there is no cross-list drop target.
+class _ReorderableMapGrid extends StatefulWidget {
+  final List<RiddleMap> maps;
+  final int crossAxisCount;
+
+  const _ReorderableMapGrid({
+    required this.maps,
+    required this.crossAxisCount,
+  });
+
+  @override
+  State<_ReorderableMapGrid> createState() => _ReorderableMapGridState();
+}
+
+class _ReorderableMapGridState extends State<_ReorderableMapGrid> {
+  late List<RiddleMap> _order;
+  int? _draggingIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = List.of(widget.maps);
+  }
+
+  @override
+  void didUpdateWidget(_ReorderableMapGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only resync from the incoming stream snapshot when not actively
+    // dragging, and only if the set/order of ids actually changed — this
+    // avoids fighting the live reorder while a drag is in progress, while
+    // still picking up external changes (new map created, map deleted).
+    if (_draggingIndex == null) {
+      final incomingIds = widget.maps.map((m) => m.id).toList();
+      final currentIds = _order.map((m) => m.id).toList();
+      if (!_listEquals(incomingIds, currentIds)) {
+        _order = List.of(widget.maps);
+      }
+    }
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  void _onHoverAt(int targetIndex) {
+    if (_draggingIndex == null || _draggingIndex == targetIndex) return;
+    setState(() {
+      final item = _order.removeAt(_draggingIndex!);
+      _order.insert(targetIndex, item);
+      _draggingIndex = targetIndex;
+    });
+  }
+
+  Future<void> _commitOrder() async {
+    await DriftService.instance.reorderMaps(_order);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 24,
+      runSpacing: 14,
+      children: [
+        for (int i = 0; i < _order.length; i++)
+          SizedBox(
+            width: _cardWidth(context),
+            child: DragTarget<String>(
+              onWillAcceptWithDetails: (details) {
+                _onHoverAt(i);
+                return true;
+              },
+              builder: (context, candidateData, rejectedData) {
+                return _MapCard(
+                  key: ValueKey(_order[i].id),
+                  map: _order[i],
+                  onDragStarted: () => setState(() => _draggingIndex = i),
+                  onDragEnd: () {
+                    setState(() => _draggingIndex = null);
+                    _commitOrder();
+                  },
+                )
+                    .animate(delay: (i * 60).ms)
+                    .fadeIn(duration: 350.ms)
+                    .scale(begin: const Offset(0.95, 0.95));
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 // ── Map Card ──────────────────────────────────────────────────────────────────
 
 class _MapCard extends ConsumerWidget {
   final RiddleMap map;
-  const _MapCard({required this.map});
+  final VoidCallback? onDragStarted;
+  final VoidCallback? onDragEnd;
+
+  const _MapCard({
+    super.key,
+    required this.map,
+    this.onDragStarted,
+    this.onDragEnd,
+  });
 
   void _openPlay(BuildContext context) {
     Navigator.push(
@@ -1532,9 +1533,11 @@ class _MapCard extends ConsumerWidget {
           final cardW = _cardWidth(context);
           final cardH = cardW / kCardAspectRatio;
 
-          return LongPressDraggable<RiddleMap>(
-            data: map,
+          return LongPressDraggable<String>(
+            data: map.id,
             delay: const Duration(milliseconds: 350),
+            onDragStarted: onDragStarted,
+            onDragEnd: (_) => onDragEnd?.call(),
             feedback: SizedBox(
               width: cardW,
               height: cardH,
@@ -1945,15 +1948,8 @@ class _EarButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           shape: BoxShape.circle,
-					boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
         ),
-        child: Icon(icon, size: 28, color: iconColor),
+        child: Icon(icon, size: 26, color: iconColor),
       ),
     );
   }
@@ -1982,7 +1978,7 @@ class _EmptyPackState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Create a map or drag existing maps\ninto this pack.',
+              'Create a map to get started.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -2025,66 +2021,36 @@ class _CreateFab extends StatelessWidget {
 
 // ── Pack Back FAB ──────────────────────────────────────────────────────────────
 
-class _PackBackFab extends StatefulWidget {
+/// Plain back button — dragging a map onto this no longer unfiles it.
+class _PackBackFab extends StatelessWidget {
   final VoidCallback onBack;
-  final Future<void> Function(String mapId) onUnfile;
 
-  const _PackBackFab({
-    required this.onBack,
-    required this.onUnfile,
-  });
-
-  @override
-  State<_PackBackFab> createState() => _PackBackFabState();
-}
-
-class _PackBackFabState extends State<_PackBackFab> {
-  bool _isDraggingOver = false;
+  const _PackBackFab({required this.onBack});
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<RiddleMap>(
-      onWillAcceptWithDetails: (_) {
-        setState(() => _isDraggingOver = true);
-        return true;
-      },
-      onLeave: (_) => setState(() => _isDraggingOver = false),
-      onAcceptWithDetails: (details) {
-        setState(() => _isDraggingOver = false);
-        widget.onUnfile(details.data.id);
-      },
-      builder: (context, candidateData, _) {
-        return GestureDetector(
-          onTap: widget.onBack,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: _isDraggingOver ? EnolaTheme.accent : Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: _isDraggingOver
-                      ? EnolaTheme.accent.withValues(alpha: 0.35)
-                      : Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+    return GestureDetector(
+      onTap: onBack,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              _isDraggingOver
-                  ? Icons.folder_off_outlined
-                  : Icons.home_rounded,
-              size: 24,
-              color: _isDraggingOver
-                  ? Colors.white
-                  : EnolaTheme.textPrimary,
-            ),
-          ),
-        );
-      },
+          ],
+        ),
+        child: const Icon(
+          Icons.home_rounded,
+          size: 24,
+          color: EnolaTheme.textPrimary,
+        ),
+      ),
     );
   }
 }
