@@ -22,6 +22,7 @@ class RiddleMaps extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   IntColumn get riddlesVersion => integer().withDefault(const Constant(0))();
   IntColumn get folderId => integer().nullable().references(Folders, #id, onDelete: KeyAction.setNull)();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -123,7 +124,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -159,11 +160,38 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(downloadedPacks);
         await m.createTable(downloadedPackMaps);
       }
+      if (from < 11) {
+        await m.addColumn(riddleMaps, riddleMaps.sortOrder);
+        await _backfillSortOrder(m);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  /// Backfills sortOrder for existing rows so upgrading doesn't shuffle
+  /// anyone's map order. Groups maps by their folder bucket (including the
+  /// "unfiled" bucket, keyed by null) and assigns 0..n-1 within each bucket
+  /// based on the existing row order (createdAt), preserving what the user
+  /// already sees today.
+  Future<void> _backfillSortOrder(Migrator m) async {
+    final allMaps = await (select(riddleMaps)
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .get();
+
+    final byFolder = <int?, List<RiddleMap>>{};
+    for (final map in allMaps) {
+      byFolder.putIfAbsent(map.folderId, () => []).add(map);
+    }
+
+    for (final group in byFolder.values) {
+      for (var i = 0; i < group.length; i++) {
+        await (update(riddleMaps)..where((t) => t.id.equals(group[i].id)))
+            .write(RiddleMapsCompanion(sortOrder: Value(i)));
+      }
+    }
+  }
 
   // ── Convenience ───────────────────────────────────────────────────────────
 
