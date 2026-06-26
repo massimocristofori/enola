@@ -702,6 +702,34 @@ class DriftService {
         .getSingleOrNull();
   }
 
+	  /// Finds the DownloadedPacks row associated with [folderId], if this
+  /// folder has ever been involved in pack sharing — either because this
+  /// device uploaded it (creatorId is null in that case, see uploadFolder)
+  /// or because this device downloaded it from someone else (creatorId is
+  /// set to the original creator's uid).
+  ///
+  /// Returns null if this folder has never been shared or downloaded.
+  Future<DownloadedPack?> findPackRecordForFolder(int folderId) async {
+    final maps = await (db.select(db.riddleMaps)
+          ..where((t) => t.folderId.equals(folderId)))
+        .get();
+    if (maps.isEmpty) return null;
+
+    final mapIds = maps.map((m) => m.id).toList();
+
+    final packMapRows = await (db.select(db.downloadedPackMaps)
+          ..where((t) => t.localMapId.isIn(mapIds)))
+        .get();
+    if (packMapRows.isEmpty) return null;
+
+    final packId = packMapRows.first.packId;
+
+    return (db.select(db.downloadedPacks)
+          ..where((t) => t.id.equals(packId)))
+        .getSingleOrNull();
+  }
+
+
   // ── Private helpers ───────────────────────────────────────────────────────
 
   List<int> _parsePoolJson(String json) {
