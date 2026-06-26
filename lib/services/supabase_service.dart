@@ -49,6 +49,22 @@ class StaleMapInfo {
   });
 }
 
+/// Result of checking whether a local folder is already a shared pack,
+/// and whether this device is the creator (can push updates) or just
+/// holds a downloaded copy (read-only access to the share code).
+class OwnedPackLookup {
+  final String packId;
+  final String shareCode;
+  final bool isOwner;
+
+  const OwnedPackLookup({
+    required this.packId,
+    required this.shareCode,
+    required this.isOwner,
+  });
+}
+
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 class SupabaseService {
@@ -97,6 +113,27 @@ class SupabaseService {
 
   /// True if this device owns (created) the given pack.
   bool isPackOwner(String creatorId) => currentUserId == creatorId;
+
+  /// Looks up whether [folderId] has already been uploaded or downloaded
+  /// as a pack, using the local Drift record (no network call). Returns
+  /// null if this folder has never been involved in pack sharing.
+  ///
+  /// creatorId == null in DownloadedPacks means "this device is the
+  /// creator" (see uploadFolder, which inserts creatorId: Value(null)
+  /// for the uploading device). A non-null creatorId means this device
+  /// downloaded someone else's pack.
+  Future<OwnedPackLookup?> lookupPackForFolder(int folderId) async {
+    final local =
+        await DriftService.instance.findPackRecordForFolder(folderId);
+    if (local == null) return null;
+
+    return OwnedPackLookup(
+      packId: local.id,
+      shareCode: local.shareCode,
+      isOwner: local.creatorId == null,
+    );
+  }
+
 
   // ── Upload ────────────────────────────────────────────────────────────────
 
@@ -189,6 +226,137 @@ class SupabaseService {
 
     return shareCode;
   }
+
+  // ── Update (creator-only re-sync) ────────────────────────────────────────
+
+  /// Re-syncs an already-shared folder that THIS device created. Updates
+  /// the pack's title, upserts each local map (update if already linked
+  /// remotely, insert if new), and removes remote pack_maps/pack_riddles
+  /// for maps that existed before but were deleted locally — so the
+  /// remote pack mirrors the local folder.
+  ///
+  /// Callers must only invoke this for owners (check via
+  /// lookupPackForFolder first). RLS also enforces this server-side:
+  /// non-owners' update/delete calls will fail silently (Supabase RLS
+  /// makes affected rows simply not match, so the call succeeds but
+  /// updates zero rows) rather than throwing — so the owner check is
+  /// what actually protects against confusing no-op behavior here.
+  Future<String> updatePack({
+    required String packId,
+    required String shareCode,
+    required Folder folder,
+    required List<RiddleMap> maps,
+    required Map<String, List<Riddle>> riddlesByMapId,
+    void Function(double progress)? onProgress,
+  }) async {
+    await ensureSignedIn();
+    final db = DriftService.instance.db;
+
+    await _client.from('packs').update({
+      'title': folder.title,
+    }).eq('id', packId);
+
+    final existingLinks = await (db.select(db.downloadedPackMaps)
+          ..where((t) => t.packId.equals(packId)))
+        .get();
+    final linkedByLocalId = {
+      for (final l in existingLinks) l.localMapId: l,
+    };
+
+    final currentLocalMapIds = maps.map((m) => m.id).toSet();
+
+    // Maps that were linked before but no longer exist locally — the
+    // creator deleted them. Remove remotely, riddles first.
+    final removedLinks = existingLinks
+        .where((l) => !currentLocalMapIds.contains(l.localMapId))
+        .toList();
+
+    for (final removed in removedLinks) {
+      await _client
+          .from('pack_riddles')
+          .delete()
+          .eq('pack_map_id', removed.id);
+      await _client.from('pack_maps').delete().eq('id', removed.id);
+      await (db.delete(db.downloadedPackMaps)
+            ..where((t) => t.id.equals(removed.id)))
+          .go();
+    }
+
+    final total = maps.length;
+    int done = 0;
+
+    for (final map in maps) {
+      final imageBase64 =
+          map.imageBytes != null ? base64Encode(map.imageBytes!) : null;
+      final existingLink = linkedByLocalId[map.id];
+
+      String packMapId;
+      if (existingLink != null) {
+        packMapId = existingLink.id;
+        await _client.from('pack_maps').update({
+          'title': map.title,
+          'description': map.description,
+          'subject': map.subject,
+          'image_base64': imageBase64,
+          'order_index': maps.indexOf(map),
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', packMapId);
+
+        await _client
+            .from('pack_riddles')
+            .delete()
+            .eq('pack_map_id', packMapId);
+      } else {
+        final mapInsert = await _client.from('pack_maps').insert({
+          'pack_id': packId,
+          'local_map_id': map.id,
+          'title': map.title,
+          'description': map.description,
+          'subject': map.subject,
+          'image_base64': imageBase64,
+          'order_index': maps.indexOf(map),
+        }).select('id').single();
+        packMapId = mapInsert['id'] as String;
+
+        await db.into(db.downloadedPackMaps).insertOnConflictUpdate(
+              DownloadedPackMapsCompanion.insert(
+                id: packMapId,
+                packId: packId,
+                localMapId: map.id,
+                remoteUpdatedAt: DateTime.now(),
+              ),
+            );
+      }
+
+      final riddles = riddlesByMapId[map.id] ?? [];
+      if (riddles.isNotEmpty) {
+        await _client.from('pack_riddles').insert(
+          riddles
+              .map((r) => {
+                    'pack_map_id': packMapId,
+                    'question': r.question,
+                    'type_index': r.typeIndex,
+                    'order_in_map': r.orderInMap,
+                    'payload_json': r.payloadJson,
+                    'source_excerpt': r.sourceExcerpt,
+                  })
+              .toList(),
+        );
+      }
+
+      await (db.update(db.downloadedPackMaps)
+            ..where((t) => t.id.equals(packMapId)))
+          .write(DownloadedPackMapsCompanion(
+        remoteUpdatedAt: Value(DateTime.now()),
+      ));
+
+      done++;
+      onProgress?.call(done / total);
+    }
+
+    return shareCode;
+  }
+
 
   // ── Sync a single map after local edit ────────────────────────────────────
 
