@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -21,11 +22,36 @@ class _SharePackScreenState extends State<SharePackScreen> {
   String? _shareCode;
   String? _error;
 
+  bool _checkingExisting = true;
+  String? _existingPackId;
+  bool _isOwner = false;
+
   // Email linking
   bool _showEmailPrompt = false;
   final _emailCtrl = TextEditingController();
   bool _emailSent = false;
   bool _emailLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExisting();
+  }
+
+  Future<void> _checkExisting() async {
+    final existing =
+        await SupabaseService.instance.lookupPackForFolder(widget.folder.id);
+    if (!mounted) return;
+    setState(() {
+      _existingPackId = existing?.packId;
+      _shareCode = existing?.shareCode;
+      _isOwner = existing?.isOwner ?? false;
+      _checkingExisting = false;
+      if (existing != null) {
+        _phase = _Phase.done;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -34,6 +60,8 @@ class _SharePackScreenState extends State<SharePackScreen> {
   }
 
   Future<void> _upload() async {
+    if (_existingPackId != null && !_isOwner) return; // guard, shouldn't be reachable from UI
+
     setState(() {
       _phase = _Phase.uploading;
       _progress = 0;
@@ -43,7 +71,8 @@ class _SharePackScreenState extends State<SharePackScreen> {
     try {
       final db = DriftService.instance;
       final maps = await (db.db.select(db.db.riddleMaps)
-            ..where((t) => t.folderId.equals(widget.folder.id)))
+            ..where((t) => t.folderId.equals(widget.folder.id))
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
           .get();
 
       final riddlesByMapId = <String, List<Riddle>>{};
@@ -51,19 +80,44 @@ class _SharePackScreenState extends State<SharePackScreen> {
         riddlesByMapId[m.id] = await db.db.getRiddlesForMap(m.id);
       }
 
-      final code = await SupabaseService.instance.uploadFolder(
-        folder: widget.folder,
-        maps: maps,
-        riddlesByMapId: riddlesByMapId,
-        onProgress: (p) => setState(() => _progress = p),
-      );
+      String code;
+      if (_existingPackId != null && _shareCode != null) {
+        code = await SupabaseService.instance.updatePack(
+          packId: _existingPackId!,
+          shareCode: _shareCode!,
+          folder: widget.folder,
+          maps: maps,
+          riddlesByMapId: riddlesByMapId,
+          onProgress: (p) => setState(() => _progress = p),
+        );
+      } else {
+        code = await SupabaseService.instance.uploadFolder(
+          folder: widget.folder,
+          maps: maps,
+          riddlesByMapId: riddlesByMapId,
+          onProgress: (p) => setState(() => _progress = p),
+        );
+      }
+
+      final wasFirstShare = _existingPackId == null;
 
       setState(() {
         _shareCode = code;
         _phase = _Phase.done;
-        // Prompt to link email if still anonymous
-        _showEmailPrompt = SupabaseService.instance.isAnonymous;
+        _showEmailPrompt = wasFirstShare && SupabaseService.instance.isAnonymous;
       });
+
+      if (wasFirstShare) {
+        // Refresh ownership/pack-id now that this folder is a pack.
+        final refreshed = await SupabaseService.instance
+            .lookupPackForFolder(widget.folder.id);
+        if (mounted && refreshed != null) {
+          setState(() {
+            _existingPackId = refreshed.packId;
+            _isOwner = refreshed.isOwner;
+          });
+        }
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -104,25 +158,33 @@ class _SharePackScreenState extends State<SharePackScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: switch (_phase) {
-            _Phase.idle => _IdleView(
-                folder: widget.folder,
-                onShare: _upload,
-                error: _error,
-              ),
-            _Phase.uploading => _UploadingView(progress: _progress),
-            _Phase.done => _DoneView(
-                code: _shareCode!,
-                link: _shareLink,
-                showEmailPrompt: _showEmailPrompt,
-                emailCtrl: _emailCtrl,
-                emailSent: _emailSent,
-                emailLoading: _emailLoading,
-                onLinkEmail: _linkEmail,
-                onDismissEmailPrompt: () =>
-                    setState(() => _showEmailPrompt = false),
-              ),
-          },
+          child: _checkingExisting
+              ? const Center(child: CircularProgressIndicator())
+              : switch (_phase) {
+                  _Phase.idle => _IdleView(
+                      folder: widget.folder,
+                      onShare: _upload,
+                      error: _error,
+                      isUpdate: _existingPackId != null,
+                    ),
+                  _Phase.uploading => _UploadingView(
+                      progress: _progress,
+                      isUpdate: _existingPackId != null,
+                    ),
+                  _Phase.done => _DoneView(
+                      code: _shareCode!,
+                      link: _shareLink,
+                      isOwner: _isOwner,
+                      onPushUpdate: _upload,
+                      showEmailPrompt: _showEmailPrompt,
+                      emailCtrl: _emailCtrl,
+                      emailSent: _emailSent,
+                      emailLoading: _emailLoading,
+                      onLinkEmail: _linkEmail,
+                      onDismissEmailPrompt: () =>
+                          setState(() => _showEmailPrompt = false),
+                    ),
+                },
         ),
       ),
     );
@@ -137,10 +199,12 @@ class _IdleView extends StatelessWidget {
   final Folder folder;
   final VoidCallback onShare;
   final String? error;
+  final bool isUpdate;
 
   const _IdleView({
     required this.folder,
     required this.onShare,
+    required this.isUpdate,
     this.error,
   });
 
@@ -155,7 +219,9 @@ class _IdleView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Upload this folder as a shareable Pack. Anyone with the code can download and play it.',
+          isUpdate
+              ? 'This pack is already shared. Updating will push your latest changes to everyone with the code.'
+              : 'Upload this folder as a shareable Pack. Anyone with the code can download and play it.',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -181,8 +247,10 @@ class _IdleView extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: onShare,
-            icon: const Icon(Icons.cloud_upload_outlined),
-            label: const Text('Upload & Generate Code'),
+            icon: Icon(isUpdate
+                ? Icons.cloud_sync_outlined
+                : Icons.cloud_upload_outlined),
+            label: Text(isUpdate ? 'Update Pack' : 'Upload & Generate Code'),
           ),
         ),
       ],
@@ -194,7 +262,8 @@ class _IdleView extends StatelessWidget {
 
 class _UploadingView extends StatelessWidget {
   final double progress;
-  const _UploadingView({required this.progress});
+  final bool isUpdate;
+  const _UploadingView({required this.progress, required this.isUpdate});
 
   @override
   Widget build(BuildContext context) {
@@ -202,8 +271,11 @@ class _UploadingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_upload_outlined,
-              size: 56, color: EnolaTheme.accent),
+          Icon(
+            isUpdate ? Icons.cloud_sync_outlined : Icons.cloud_upload_outlined,
+            size: 56,
+            color: EnolaTheme.accent,
+          ),
           const SizedBox(height: 32),
           LinearProgressIndicator(
             value: progress,
@@ -214,7 +286,9 @@ class _UploadingView extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '${(progress * 100).toStringAsFixed(0)}% uploaded',
+            isUpdate
+                ? '${(progress * 100).toStringAsFixed(0)}% updated'
+                : '${(progress * 100).toStringAsFixed(0)}% uploaded',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -228,6 +302,8 @@ class _UploadingView extends StatelessWidget {
 class _DoneView extends StatelessWidget {
   final String code;
   final String link;
+  final bool isOwner;
+  final VoidCallback onPushUpdate;
   final bool showEmailPrompt;
   final TextEditingController emailCtrl;
   final bool emailSent;
@@ -238,6 +314,8 @@ class _DoneView extends StatelessWidget {
   const _DoneView({
     required this.code,
     required this.link,
+    required this.isOwner,
+    required this.onPushUpdate,
     required this.showEmailPrompt,
     required this.emailCtrl,
     required this.emailSent,
@@ -252,6 +330,43 @@ class _DoneView extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 8),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: (isOwner ? EnolaTheme.correct : EnolaTheme.textSecond)
+                  .withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: (isOwner ? EnolaTheme.correct : EnolaTheme.textSecond)
+                    .withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isOwner ? Icons.check_circle_outline : Icons.lock_outline,
+                  size: 16,
+                  color: isOwner ? EnolaTheme.correct : EnolaTheme.textSecond,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isOwner
+                        ? 'This pack is shared. Push local changes anytime.'
+                        : 'You downloaded this pack. Only its creator can update it — you can still share the code below.',
+                    style: TextStyle(
+                      color:
+                          isOwner ? EnolaTheme.correct : EnolaTheme.textSecond,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
 
           // QR Code
           Container(
@@ -270,7 +385,6 @@ class _DoneView extends StatelessWidget {
 
           const SizedBox(height: 28),
 
-          // Share code chip
           Text(
             'Share Code',
             style: Theme.of(context)
@@ -330,8 +444,19 @@ class _DoneView extends StatelessWidget {
             ),
           ),
 
-          // ── Email prompt ────────────────────────────────────────────────
-          if (showEmailPrompt) ...[
+          if (isOwner) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onPushUpdate,
+                icon: const Icon(Icons.cloud_sync_outlined),
+                label: const Text('Push Update'),
+              ),
+            ),
+          ],
+
+          if (isOwner && showEmailPrompt) ...[
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
