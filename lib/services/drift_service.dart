@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:drift/drift.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/connection/connection.dart' as impl;
@@ -47,13 +48,15 @@ class DriftService {
 
   Stream<List<RiddleMap>> watchMapsInFolder(int folderId) {
     return (db.select(db.riddleMaps)
-          ..where((t) => t.folderId.equals(folderId)))
+          ..where((t) => t.folderId.equals(folderId))
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
         .watch();
   }
 
   Stream<List<RiddleMap>> watchUnfiledMaps() {
     return (db.select(db.riddleMaps)
-          ..where((t) => t.folderId.isNull()))
+          ..where((t) => t.folderId.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
         .watch();
   }
 
@@ -100,7 +103,31 @@ class DriftService {
     String? description,
     String? subject, {
     Uint8List? imageBytes,
+    int? folderId,
   }) async {
+    // Preserve sortOrder if this map already exists (saveMap is an upsert
+    // via insertOnConflictUpdate, used both for creating new maps and for
+    // overwriting an existing one, e.g. when syncing a shared-pack update).
+    final existingRow = await (db.select(db.riddleMaps)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+
+    int sortOrder;
+    if (existingRow != null) {
+      sortOrder = existingRow.sortOrder;
+    } else {
+      final siblings = folderId == null
+          ? await (db.select(db.riddleMaps)
+                ..where((t) => t.folderId.isNull()))
+              .get()
+          : await (db.select(db.riddleMaps)
+                ..where((t) => t.folderId.equals(folderId)))
+              .get();
+      sortOrder = siblings.isEmpty
+          ? 0
+          : siblings.map((m) => m.sortOrder).reduce(math.max) + 1;
+    }
+
     await db.into(db.riddleMaps).insertOnConflictUpdate(
       RiddleMapsCompanion.insert(
         id: id,
@@ -108,11 +135,26 @@ class DriftService {
         description: Value(description),
         subject: Value(subject),
         imageBytes: Value(imageBytes),
+        folderId: Value(folderId),
+        sortOrder: Value(sortOrder),
       ),
     );
   }
 
   Stream<List<RiddleMap>> watchAllMaps() => db.select(db.riddleMaps).watch();
+
+  /// Persists a new user-defined order for a set of maps that share the
+  /// same folder bucket (a pack, or the unfiled list). Mirrors
+  /// [reorderRiddles] — rewrites sortOrder 0..n-1 to match [ordered].
+  Future<void> reorderMaps(List<RiddleMap> ordered) async {
+    await db.transaction(() async {
+      for (var i = 0; i < ordered.length; i++) {
+        await (db.update(db.riddleMaps)
+              ..where((t) => t.id.equals(ordered[i].id)))
+            .write(RiddleMapsCompanion(sortOrder: Value(i)));
+      }
+    });
+  }
 
   // ── RIDDLES VERSION ───────────────────────────────────────────────────────
 
