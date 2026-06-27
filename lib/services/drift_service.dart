@@ -673,6 +673,44 @@ class DriftService {
     return controller.stream;
   }
 
+/// Deletes [folderId] and everything inside it: maps, their riddles,
+/// their play sessions, and any DownloadedPack/DownloadedPackMaps
+/// tracking rows tied to those maps. Used for both the owner-delete and
+/// generic-user-delete flows — Supabase is handled separately by the
+/// caller (only relevant for owners).
+Future<void> deleteFolderAndContents(int folderId) async {
+  await db.transaction(() async {
+    final maps = await (db.select(db.riddleMaps)
+          ..where((t) => t.folderId.equals(folderId)))
+        .get();
+
+    for (final map in maps) {
+      await (db.delete(db.riddles)..where((t) => t.mapId.equals(map.id)))
+          .go();
+      await (db.delete(db.playSessions)
+            ..where((t) => t.mapId.equals(map.id)))
+          .go();
+      await (db.delete(db.downloadedPackMaps)
+            ..where((t) => t.localMapId.equals(map.id)))
+          .go();
+    }
+
+    await (db.delete(db.riddleMaps)..where((t) => t.folderId.equals(folderId)))
+        .go();
+    await (db.delete(db.folders)..where((t) => t.id.equals(folderId))).go();
+  });
+}
+
+/// Removes the DownloadedPacks tracking row for [packId], if any.
+/// Called when a non-owner deletes their local copy of a downloaded pack,
+/// so a future "Get a Pack" with the same code re-downloads cleanly
+/// instead of silently no-op'ing against a stale tracking row.
+Future<void> removePackTracking(String packId) async {
+  await (db.delete(db.downloadedPacks)..where((t) => t.id.equals(packId)))
+      .go();
+}
+
+
   // ── DOWNLOADED PACKS ──────────────────────────────────────────────────────
 
   Stream<List<DownloadedPack>> watchDownloadedPacks() {
