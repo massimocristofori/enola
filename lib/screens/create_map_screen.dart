@@ -253,8 +253,8 @@ class _CreateMapScreenState extends ConsumerState<CreateMapScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildImagePicker(),
-                      const SizedBox(height: 24),
+                      //_buildImagePicker(),
+                      //const SizedBox(height: 24),
                       _buildTextField(
                         controller: _titleCtrl,
                         label: 'Map Title',
