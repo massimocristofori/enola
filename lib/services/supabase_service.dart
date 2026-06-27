@@ -607,6 +607,31 @@ class SupabaseService {
     ));
   }
 
+// ── Delete (owner-only remote teardown) ──────────────────────────────────
+
+/// Deletes a pack and all its pack_maps/pack_riddles from Supabase.
+/// Callers must only invoke this for owners — RLS also enforces this
+/// server-side, so a non-owner's calls will simply affect zero rows.
+Future<void> deletePackRemote(String packId) async {
+  await ensureSignedIn();
+
+  final mapRows = await _client
+      .from('pack_maps')
+      .select('id')
+      .eq('pack_id', packId);
+
+  for (final row in (mapRows as List)) {
+    await _client
+        .from('pack_riddles')
+        .delete()
+        .eq('pack_map_id', row['id'] as String);
+  }
+
+  await _client.from('pack_maps').delete().eq('pack_id', packId);
+  await _client.from('packs').delete().eq('id', packId);
+}
+
+
   // ── Popular packs feed ────────────────────────────────────────────────────
 
   Future<List<RemotePackSummary>> fetchPopularPacks({int limit = 10}) async {
