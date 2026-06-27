@@ -712,13 +712,30 @@ class _PackHeader extends ConsumerWidget {
     required this.packId,
   });
 
-  Future<void> _confirmDelete(BuildContext context) async {
+  Future<void> _handleDeleteTap(BuildContext context) async {
+    final lookup =
+        await SupabaseService.instance.lookupPackForFolder(packId);
+
+    if (lookup == null) {
+      // Never shared / never downloaded — plain local delete.
+      await _confirmPlainDelete(context);
+      return;
+    }
+
+    if (lookup.isOwner) {
+      await _confirmOwnerDelete(context, lookup.packId);
+    } else {
+      await _confirmNonOwnerDelete(context, lookup.packId);
+    }
+  }
+
+  Future<void> _confirmPlainDelete(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete pack?'),
         content: Text(
-          'This will delete "$packName". Maps inside it will be unfiled, not deleted.',
+          'This will permanently delete "$packName" and all maps inside it.',
         ),
         actions: [
           TextButton(
@@ -735,14 +752,79 @@ class _PackHeader extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      final maps = await (DriftService.instance.db
-              .select(DriftService.instance.db.riddleMaps)
-            ..where((t) => t.folderId.equals(packId)))
-          .get();
-      for (final map in maps) {
-        await DriftService.instance.setMapFolder(map.id, null);
-      }
-      await DriftService.instance.deleteFolder(packId);
+      await DriftService.instance.deleteFolderAndContents(packId);
+      if (context.mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _confirmOwnerDelete(
+      BuildContext context, String remotePackId) async {
+    // Returns: null = cancel, false = local only, true = local + remote
+    final choice = await showDialog<bool?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete shared pack?'),
+        content: Text(
+          'This will permanently delete "$packName" and all maps inside it. '
+          'This pack is shared — do you also want to remove it from '
+          'Supabase? Anyone who downloaded it will keep their copy, but '
+          'won\'t be able to receive future updates and the share code '
+          'will stop working.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep in Supabase'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete everywhere'),
+          ),
+        ],
+      ),
+    );
+
+    if (choice == null) return;
+
+    if (choice == true) {
+      await SupabaseService.instance.deletePackRemote(remotePackId);
+    }
+    await DriftService.instance.deleteFolderAndContents(packId);
+    if (context.mounted) Navigator.pop(context);
+  }
+
+  Future<void> _confirmNonOwnerDelete(
+      BuildContext context, String remotePackId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete pack?'),
+        content: Text(
+          'This will delete "$packName" and all maps inside it from this '
+          'device only. The shared pack itself is not affected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DriftService.instance.deleteFolderAndContents(packId);
+      await DriftService.instance.removePackTracking(remotePackId);
       if (context.mounted) Navigator.pop(context);
     }
   }
@@ -801,7 +883,7 @@ class _PackHeader extends ConsumerWidget {
                 color: EnolaTheme.textSecond,
               ),
               IconButton(
-                onPressed: () => _confirmDelete(context),
+                onPressed: () => _handleDeleteTap(context),
                 icon: const Icon(Icons.delete_outline_rounded),
                 color: EnolaTheme.textSecond,
               ),
@@ -873,6 +955,7 @@ class _PackHeader extends ConsumerWidget {
     );
   }
 }
+
 
 // ── Editable pack title ───────────────────────────────────────────────────────
 
