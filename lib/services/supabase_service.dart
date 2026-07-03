@@ -526,33 +526,45 @@ class SupabaseService {
 
   // ── Staleness check ───────────────────────────────────────────────────────
 
-  Future<List<StaleMapInfo>> checkForUpdates() async {
-    final db = DriftService.instance.db;
-    final localMaps = await db.select(db.downloadedPackMaps).get();
-    if (localMaps.isEmpty) return [];
+Future<List<StaleMapInfo>> checkForUpdates() async {
+  final db = DriftService.instance.db;
 
-    final packMapIds = localMaps.map((m) => m.id).toList();
-    final remoteRows = await _client
-        .from('pack_maps')
-        .select('id, updated_at')
-        .inFilter('id', packMapIds);
+  // Only packs this device does NOT own — creatorId != null means
+  // "I downloaded this from someone else".
+  final ownedPacks = await db.select(db.downloadedPacks).get();
+  final nonOwnedPackIds = ownedPacks
+      .where((p) => p.creatorId != null)
+      .map((p) => p.id)
+      .toSet();
 
-    final stale = <StaleMapInfo>[];
-    for (final row in (remoteRows as List)) {
-      final remoteUpdatedAt =
-          DateTime.parse(row['updated_at'] as String);
-      final local = localMaps.firstWhere((m) => m.id == row['id']);
-      if (remoteUpdatedAt.isAfter(local.remoteUpdatedAt)) {
-        stale.add(StaleMapInfo(
-          packMapId: local.id,
-          localMapId: local.localMapId,
-          packId: local.packId,
-          remoteUpdatedAt: remoteUpdatedAt,
-        ));
-      }
+  if (nonOwnedPackIds.isEmpty) return [];
+
+  final localMaps = await (db.select(db.downloadedPackMaps)
+        ..where((t) => t.packId.isIn(nonOwnedPackIds)))
+      .get();
+  if (localMaps.isEmpty) return [];
+
+  final packMapIds = localMaps.map((m) => m.id).toList();
+  final remoteRows = await _client
+      .from('pack_maps')
+      .select('id, updated_at')
+      .inFilter('id', packMapIds);
+
+  final stale = <StaleMapInfo>[];
+  for (final row in (remoteRows as List)) {
+    final remoteUpdatedAt = DateTime.parse(row['updated_at'] as String);
+    final local = localMaps.firstWhere((m) => m.id == row['id']);
+    if (remoteUpdatedAt.isAfter(local.remoteUpdatedAt)) {
+      stale.add(StaleMapInfo(
+        packMapId: local.id,
+        localMapId: local.localMapId,
+        packId: local.packId,
+        remoteUpdatedAt: remoteUpdatedAt,
+      ));
     }
-    return stale;
   }
+  return stale;
+}
 
   Future<void> applyMapUpdate(StaleMapInfo info) async {
     final db = DriftService.instance;
