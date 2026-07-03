@@ -566,58 +566,68 @@ Future<List<StaleMapInfo>> checkForUpdates() async {
   return stale;
 }
 
-  Future<void> applyMapUpdate(StaleMapInfo info) async {
-    final db = DriftService.instance;
+Future<void> applyMapUpdate(StaleMapInfo info) async {
+  final db = DriftService.instance;
 
-    final mapRow = await _client
-        .from('pack_maps')
-        .select('title, description, subject, image_base64, updated_at')
-        .eq('id', info.packMapId)
-        .single();
+  // saveMap() overwrites folderId with whatever is passed (defaults to
+  // null), so we must fetch and re-pass the current folder or the map
+  // gets unfiled from its pack on every update.
+  final existing = await (db.db.select(db.db.riddleMaps)
+        ..where((t) => t.id.equals(info.localMapId)))
+      .getSingleOrNull();
+  final currentFolderId = existing?.folderId;
 
-    final imageBase64 = mapRow['image_base64'] as String?;
-    final imageBytes =
-        imageBase64 != null ? base64Decode(imageBase64) : null;
+  final mapRow = await _client
+      .from('pack_maps')
+      .select('title, description, subject, image_base64, updated_at')
+      .eq('id', info.packMapId)
+      .single();
 
-    await db.saveMap(
-      info.localMapId,
-      mapRow['title'] as String,
-      mapRow['description'] as String?,
-      mapRow['subject'] as String?,
-      imageBytes: imageBytes,
-    );
+  final imageBase64 = mapRow['image_base64'] as String?;
+  final imageBytes =
+      imageBase64 != null ? base64Decode(imageBase64) : null;
 
-    await db.deleteRiddlesForMap(info.localMapId);
-    await (db.db.delete(db.db.playSessions)
-          ..where((t) => t.mapId.equals(info.localMapId)))
-        .go();
+  await db.saveMap(
+    info.localMapId,
+    mapRow['title'] as String,
+    mapRow['description'] as String?,
+    mapRow['subject'] as String?,
+    imageBytes: imageBytes,
+    folderId: currentFolderId,   // ← preserve pack membership
+  );
 
-    final riddleRows = await _client
-        .from('pack_riddles')
-        .select(
-            'question, type_index, order_in_map, payload_json, source_excerpt')
-        .eq('pack_map_id', info.packMapId)
-        .order('order_in_map');
+  await db.deleteRiddlesForMap(info.localMapId);
+  await (db.db.delete(db.db.playSessions)
+        ..where((t) => t.mapId.equals(info.localMapId)))
+      .go();
 
-    for (final r in (riddleRows as List)) {
-      await db.db.into(db.db.riddles).insert(
-            RiddlesCompanion.insert(
-              mapId: info.localMapId,
-              question: r['question'] as String,
-              typeIndex: r['type_index'] as int,
-              orderInMap: r['order_in_map'] as int,
-              payloadJson: Value(r['payload_json'] as String?),
-              sourceExcerpt: Value(r['source_excerpt'] as String?),
-            ),
-          );
-    }
+  final riddleRows = await _client
+      .from('pack_riddles')
+      .select(
+          'question, type_index, order_in_map, payload_json, source_excerpt')
+      .eq('pack_map_id', info.packMapId)
+      .order('order_in_map');
 
-    await (db.db.update(db.db.downloadedPackMaps)
-          ..where((t) => t.id.equals(info.packMapId)))
-        .write(DownloadedPackMapsCompanion(
-      remoteUpdatedAt: Value(info.remoteUpdatedAt),
-    ));
+  for (final r in (riddleRows as List)) {
+    await db.db.into(db.db.riddles).insert(
+          RiddlesCompanion.insert(
+            mapId: info.localMapId,
+            question: r['question'] as String,
+            typeIndex: r['type_index'] as int,
+            orderInMap: r['order_in_map'] as int,
+            payloadJson: Value(r['payload_json'] as String?),
+            sourceExcerpt: Value(r['source_excerpt'] as String?),
+          ),
+        );
   }
+
+  await (db.db.update(db.db.downloadedPackMaps)
+        ..where((t) => t.id.equals(info.packMapId)))
+      .write(DownloadedPackMapsCompanion(
+    remoteUpdatedAt: Value(info.remoteUpdatedAt),
+  ));
+}
+
 
 // ── Delete (owner-only remote teardown) ──────────────────────────────────
 
