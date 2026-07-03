@@ -9,6 +9,8 @@ import 'package:enola/services/riddle_generation_service.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 
+enum _InputMode { scan, paste }
+
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
@@ -19,6 +21,8 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   final _picker = ImagePicker();
   final List<File> _pages = [];
+  final TextEditingController _pastedTextController = TextEditingController();
+  _InputMode _mode = _InputMode.scan;
   int _riddleCount = 5;
   bool _generating = false;
   String? _error;
@@ -31,6 +35,7 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _pastedTextController.dispose();
     super.dispose();
   }
 
@@ -55,8 +60,15 @@ class _ScanScreenState extends State<ScanScreen> {
     setState(() => _pages.removeAt(index));
   }
 
+  bool get _canGenerate {
+    if (_retrySeconds > 0) return false;
+    return _mode == _InputMode.scan
+        ? _pages.isNotEmpty
+        : _pastedTextController.text.trim().isNotEmpty;
+  }
+
   Future<void> _generate() async {
-    if (_pages.isEmpty || _retrySeconds > 0) return;
+    if (!_canGenerate) return;
 
     if (GeminiService.instance.apiKey == null ||
         GeminiService.instance.apiKey!.isEmpty) {
@@ -68,23 +80,36 @@ class _ScanScreenState extends State<ScanScreen> {
     setState(() {
       _generating = true;
       _error = null;
-      _status = 'Reading pages…';
+      _status = _mode == _InputMode.scan
+          ? 'Reading pages…'
+          : 'Consulting the Oracle…';
     });
 
     try {
-      setState(() => _status = 'Extracting text and consulting the Oracle…');
+      final List riddles;
 
-      final riddles = await RiddleGenerationService.instance.generateFromImages(
-        imagePaths: _pages.map((file) => file.path).toList(),
-        mapId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-				count: _riddleCount,
-      );
+      if (_mode == _InputMode.scan) {
+        setState(() => _status = 'Extracting text and consulting the Oracle…');
+        riddles = await RiddleGenerationService.instance.generateFromImages(
+          imagePaths: _pages.map((file) => file.path).toList(),
+          mapId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+          count: _riddleCount,
+        );
+      } else {
+        riddles = await RiddleGenerationService.instance.generateRiddlesFromText(
+          text: _pastedTextController.text.trim(),
+          mapId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+          count: _riddleCount,
+        );
+      }
 
       if (mounted) {
         if (riddles.isEmpty) {
           setState(() {
             _generating = false;
-            _error = 'The Oracle returned no riddles. Try clearer images.';
+            _error = _mode == _InputMode.scan
+                ? 'The Oracle returned no riddles. Try clearer images.'
+                : 'The Oracle returned no riddles. Try adding more text.';
           });
         } else {
           Navigator.pop(context, riddles);
@@ -93,7 +118,7 @@ class _ScanScreenState extends State<ScanScreen> {
     } catch (e) {
       if (mounted) {
         final errorStr = e.toString();
-        
+
         // Handle the Quota Exceeded error from image.png
         if (errorStr.contains('Quota exceeded') || errorStr.contains('429')) {
           final match = RegExp(r'retry in ([\d.]+)s').firstMatch(errorStr);
@@ -150,8 +175,13 @@ class _ScanScreenState extends State<ScanScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildInstructions(),
+                            const SizedBox(height: 20),
+                            _buildModeToggle(),
                             const SizedBox(height: 24),
-                            _buildPageGrid(),
+                            if (_mode == _InputMode.scan)
+                              _buildPageGrid()
+                            else
+                              _buildTextInput(),
                             const SizedBox(height: 24),
                             const RuneDivider(),
                             const SizedBox(height: 20),
@@ -213,11 +243,11 @@ class _ScanScreenState extends State<ScanScreen> {
                 color: EnolaTheme.accent),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'AI Riddle Generator',
                   style: TextStyle(
                     color: EnolaTheme.textPrimary,
@@ -225,10 +255,12 @@ class _ScanScreenState extends State<ScanScreen> {
                     fontSize: 15,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Photograph your book pages and Enola will read the text and craft riddles automatically.',
-                  style: TextStyle(
+                  _mode == _InputMode.scan
+                      ? 'Photograph your book pages and Enola will read the text and craft riddles automatically.'
+                      : 'Paste any text and Enola will craft riddles from it directly.',
+                  style: const TextStyle(
                     color: EnolaTheme.textSecond,
                     fontSize: 12,
                     height: 1.5,
@@ -240,6 +272,106 @@ class _ScanScreenState extends State<ScanScreen> {
         ],
       ),
     ).animate().fadeIn(duration: 400.ms);
+  }
+
+  Widget _buildModeToggle() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: EnolaTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: EnolaTheme.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ModeTab(
+              label: 'Scan Pages',
+              icon: Icons.camera_alt_rounded,
+              selected: _mode == _InputMode.scan,
+              onTap: () {
+                if (_mode != _InputMode.scan) {
+                  setState(() {
+                    _mode = _InputMode.scan;
+                    _error = null;
+                  });
+                }
+              },
+            ),
+          ),
+          Expanded(
+            child: _ModeTab(
+              label: 'Paste Text',
+              icon: Icons.content_paste_rounded,
+              selected: _mode == _InputMode.paste,
+              onTap: () {
+                if (_mode != _InputMode.paste) {
+                  setState(() {
+                    _mode = _InputMode.paste;
+                    _error = null;
+                  });
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'PASTED TEXT',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: EnolaTheme.accent,
+                letterSpacing: 2,
+              ),
+            ),
+            const Spacer(),
+            ValueListenableBuilder(
+              valueListenable: _pastedTextController,
+              builder: (context, value, _) => Text(
+                '${value.text.trim().length} chars',
+                style: const TextStyle(
+                    fontSize: 12, color: EnolaTheme.textSecond),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: EnolaTheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: EnolaTheme.border),
+          ),
+          child: TextField(
+            controller: _pastedTextController,
+            maxLines: 10,
+            minLines: 6,
+            onChanged: (_) => setState(() {}),
+            style: const TextStyle(
+              color: EnolaTheme.textPrimary,
+              fontSize: 14,
+              height: 1.5,
+            ),
+            decoration: const InputDecoration(
+              hintText: 'Paste your text here…',
+              hintStyle: TextStyle(color: EnolaTheme.textSecond),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(14),
+            ),
+          ),
+        ),
+      ],
+    ).animate().fadeIn(duration: 300.ms);
   }
 
   Widget _buildPageGrid() {
@@ -288,7 +420,7 @@ class _ScanScreenState extends State<ScanScreen> {
           },
         ),
       ],
-    );
+    ).animate().fadeIn(duration: 300.ms);
   }
 
   Widget _buildOptions() {
@@ -389,19 +521,20 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Widget _buildGenerateButton() {
-    final bool canGenerate = _pages.isNotEmpty && _retrySeconds == 0;
+    final label = _mode == _InputMode.scan
+        ? (_pages.isEmpty ? 'Add pages first' : null)
+        : (_pastedTextController.text.trim().isEmpty ? 'Paste text first' : null);
 
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: canGenerate ? _generate : null,
+        onPressed: _canGenerate ? _generate : null,
         icon: const Icon(Icons.auto_fix_high_rounded),
         label: Text(
-          _pages.isEmpty
-              ? 'Add pages first'
-              : _retrySeconds > 0 
-                  ? 'Oracle cooling down...' 
-                  : 'Generate $_riddleCount Riddles',
+          label ??
+              (_retrySeconds > 0
+                  ? 'Oracle cooling down...'
+                  : 'Generate $_riddleCount Riddles'),
         ),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -453,6 +586,57 @@ class _ScanScreenState extends State<ScanScreen> {
         ),
       ),
     ).animate().fadeIn(duration: 500.ms);
+  }
+}
+
+class _ModeTab extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ModeTab({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: 200.ms,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? EnolaTheme.accentSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: selected
+              ? Border.all(color: EnolaTheme.accent, width: 1.5)
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? EnolaTheme.accent : EnolaTheme.textSecond,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected ? EnolaTheme.accent : EnolaTheme.textSecond,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
