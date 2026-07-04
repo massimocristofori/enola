@@ -37,15 +37,17 @@ class RemotePackSummary {
 
 class StaleMapInfo {
   final String packMapId;
-  final String localMapId;
+  final String? localMapId; // null when isNew == true — not created yet
   final String packId;
   final DateTime remoteUpdatedAt;
+  final bool isNew;
 
   const StaleMapInfo({
     required this.packMapId,
     required this.localMapId,
     required this.packId,
     required this.remoteUpdatedAt,
+    this.isNew = false,
   });
 }
 
@@ -529,56 +531,61 @@ class SupabaseService {
 Future<List<StaleMapInfo>> checkForUpdates() async {
   final db = DriftService.instance.db;
 
+  // Only packs this device does NOT own.
   final ownedPacks = await db.select(db.downloadedPacks).get();
   final nonOwnedPackIds = ownedPacks
       .where((p) => p.creatorId != null)
       .map((p) => p.id)
       .toSet();
-
   if (nonOwnedPackIds.isEmpty) return [];
 
   final localMaps = await (db.select(db.downloadedPackMaps)
         ..where((t) => t.packId.isIn(nonOwnedPackIds)))
       .get();
-  if (localMaps.isEmpty) return [];
+  final localByPackMapId = {for (final m in localMaps) m.id: m};
 
-  final packMapIds = localMaps.map((m) => m.id).toList();
+  // Fetch ALL remote pack_maps for these packs — not just ones we
+  // already know about — so newly-added maps are visible too.
   final remoteRows = await _client
       .from('pack_maps')
-      .select('id, updated_at')
-      .inFilter('id', packMapIds);
+      .select('id, pack_id, updated_at')
+      .inFilter('pack_id', nonOwnedPackIds.toList());
 
-  final stale = <StaleMapInfo>[];
+  final result = <StaleMapInfo>[];
   for (final row in (remoteRows as List)) {
+    final packMapId = row['id'] as String;
+    final packId = row['pack_id'] as String;
     final remoteUpdatedAt = DateTime.parse(row['updated_at'] as String);
-    final local = localMaps.firstWhere((m) => m.id == row['id']);
+    final local = localByPackMapId[packMapId];
 
-    // Ignore sub-second drift from Drift's second-precision DateTime
-    // storage — only flag genuine updates.
-    if (remoteUpdatedAt.difference(local.remoteUpdatedAt) >
-        const Duration(seconds: 2)) {
-      stale.add(StaleMapInfo(
-        packMapId: local.id,
-        localMapId: local.localMapId,
-        packId: local.packId,
+    if (local == null) {
+      // Brand-new map the owner added — never downloaded locally.
+      result.add(StaleMapInfo(
+        packMapId: packMapId,
+        localMapId: null,
+        packId: packId,
         remoteUpdatedAt: remoteUpdatedAt,
+        isNew: true,
+      ));
+    } else if (remoteUpdatedAt.difference(local.remoteUpdatedAt) >
+        const Duration(seconds: 2)) {
+      // Existing map, genuinely edited since last sync.
+      result.add(StaleMapInfo(
+        packMapId: packMapId,
+        localMapId: local.localMapId,
+        packId: packId,
+        remoteUpdatedAt: remoteUpdatedAt,
+        isNew: false,
       ));
     }
   }
-  return stale;
+  return result;
 }
+
 
 
 Future<void> applyMapUpdate(StaleMapInfo info) async {
   final db = DriftService.instance;
-
-  // saveMap() overwrites folderId with whatever is passed (defaults to
-  // null), so we must fetch and re-pass the current folder or the map
-  // gets unfiled from its pack on every update.
-  final existing = await (db.db.select(db.db.riddleMaps)
-        ..where((t) => t.id.equals(info.localMapId)))
-      .getSingleOrNull();
-  final currentFolderId = existing?.folderId;
 
   final mapRow = await _client
       .from('pack_maps')
@@ -590,19 +597,45 @@ Future<void> applyMapUpdate(StaleMapInfo info) async {
   final imageBytes =
       imageBase64 != null ? base64Decode(imageBase64) : null;
 
-  await db.saveMap(
-    info.localMapId,
-    mapRow['title'] as String,
-    mapRow['description'] as String?,
-    mapRow['subject'] as String?,
-    imageBytes: imageBytes,
-    folderId: currentFolderId,   // ← preserve pack membership
-  );
+  final String localMapId;
 
-  await db.deleteRiddlesForMap(info.localMapId);
-  await (db.db.delete(db.db.playSessions)
-        ..where((t) => t.mapId.equals(info.localMapId)))
-      .go();
+  if (info.isNew) {
+    // Brand-new map added by the owner — create it locally and file it
+    // into the same folder as the rest of this pack.
+    localMapId = const Uuid().v4();
+    final folderId = await db.getFolderIdForPack(info.packId);
+
+    await db.saveMap(
+      localMapId,
+      mapRow['title'] as String,
+      mapRow['description'] as String?,
+      mapRow['subject'] as String?,
+      imageBytes: imageBytes,
+      folderId: folderId,
+    );
+  } else {
+    localMapId = info.localMapId!;
+
+    // Preserve the map's current folder — saveMap() overwrites folderId
+    // with whatever is passed (defaults to null) on conflict-update.
+    final existing = await (db.db.select(db.db.riddleMaps)
+          ..where((t) => t.id.equals(localMapId)))
+        .getSingleOrNull();
+
+    await db.saveMap(
+      localMapId,
+      mapRow['title'] as String,
+      mapRow['description'] as String?,
+      mapRow['subject'] as String?,
+      imageBytes: imageBytes,
+      folderId: existing?.folderId,
+    );
+
+    await db.deleteRiddlesForMap(localMapId);
+    await (db.db.delete(db.db.playSessions)
+          ..where((t) => t.mapId.equals(localMapId)))
+        .go();
+  }
 
   final riddleRows = await _client
       .from('pack_riddles')
@@ -614,7 +647,7 @@ Future<void> applyMapUpdate(StaleMapInfo info) async {
   for (final r in (riddleRows as List)) {
     await db.db.into(db.db.riddles).insert(
           RiddlesCompanion.insert(
-            mapId: info.localMapId,
+            mapId: localMapId,
             question: r['question'] as String,
             typeIndex: r['type_index'] as int,
             orderInMap: r['order_in_map'] as int,
@@ -624,12 +657,16 @@ Future<void> applyMapUpdate(StaleMapInfo info) async {
         );
   }
 
-  await (db.db.update(db.db.downloadedPackMaps)
-        ..where((t) => t.id.equals(info.packMapId)))
-      .write(DownloadedPackMapsCompanion(
-    remoteUpdatedAt: Value(info.remoteUpdatedAt),
-  ));
+  await db.db.into(db.db.downloadedPackMaps).insertOnConflictUpdate(
+        DownloadedPackMapsCompanion.insert(
+          id: info.packMapId,
+          packId: info.packId,
+          localMapId: localMapId,
+          remoteUpdatedAt: info.remoteUpdatedAt,
+        ),
+      );
 }
+
 
 
 // ── Delete (owner-only remote teardown) ──────────────────────────────────
