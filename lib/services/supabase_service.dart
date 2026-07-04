@@ -529,8 +529,6 @@ class SupabaseService {
 Future<List<StaleMapInfo>> checkForUpdates() async {
   final db = DriftService.instance.db;
 
-  // Only packs this device does NOT own — creatorId != null means
-  // "I downloaded this from someone else".
   final ownedPacks = await db.select(db.downloadedPacks).get();
   final nonOwnedPackIds = ownedPacks
       .where((p) => p.creatorId != null)
@@ -554,7 +552,11 @@ Future<List<StaleMapInfo>> checkForUpdates() async {
   for (final row in (remoteRows as List)) {
     final remoteUpdatedAt = DateTime.parse(row['updated_at'] as String);
     final local = localMaps.firstWhere((m) => m.id == row['id']);
-    if (remoteUpdatedAt.isAfter(local.remoteUpdatedAt)) {
+
+    // Ignore sub-second drift from Drift's second-precision DateTime
+    // storage — only flag genuine updates.
+    if (remoteUpdatedAt.difference(local.remoteUpdatedAt) >
+        const Duration(seconds: 2)) {
       stale.add(StaleMapInfo(
         packMapId: local.id,
         localMapId: local.localMapId,
@@ -565,6 +567,7 @@ Future<List<StaleMapInfo>> checkForUpdates() async {
   }
   return stale;
 }
+
 
 Future<void> applyMapUpdate(StaleMapInfo info) async {
   final db = DriftService.instance;
