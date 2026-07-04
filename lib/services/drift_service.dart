@@ -767,6 +767,23 @@ Future<void> removePackTracking(String packId) async {
         .getSingleOrNull();
   }
 
+/// Given a remote pack id, finds the local folder that pack's existing
+/// maps live in — used when a new map is added to an already-downloaded
+/// pack, so the new map lands in the right pack instead of unfiled.
+Future<int?> getFolderIdForPack(String packId) async {
+  final link = await (db.select(db.downloadedPackMaps)
+        ..where((t) => t.packId.equals(packId))
+        ..limit(1))
+      .getSingleOrNull();
+  if (link == null) return null;
+
+  final map = await (db.select(db.riddleMaps)
+        ..where((t) => t.id.equals(link.localMapId)))
+      .getSingleOrNull();
+  return map?.folderId;
+}
+
+
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
