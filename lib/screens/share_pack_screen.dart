@@ -42,6 +42,13 @@ class _SharePackScreenState extends State<SharePackScreen> {
     final existing =
         await SupabaseService.instance.lookupPackForFolder(widget.folder.id);
     if (!mounted) return;
+
+		// TEMP DEBUG — remove after diagnosing
+  debugPrint('DEBUG existing.packId=${existing?.packId} isOwner=${existing?.isOwner}');
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('DEBUG isOwner=${existing?.isOwner} packId=${existing?.packId}')),
+  );
+
     setState(() {
       _existingPackId = existing?.packId;
       _shareCode = existing?.shareCode;
