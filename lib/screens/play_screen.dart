@@ -18,10 +18,10 @@ import 'package:enola/services/notification_service.dart';
 
 import 'package:drift/drift.dart' as drift;
 
-// Title row (38) + star row (38) = 76
-const double kPlayHeaderHeight = 76.0;
-// Compact: only star row visible
-const double kPlayHeaderCompact = 38.0;
+// Title row only = 38
+const double kPlayHeaderHeight = 38.0;
+// Compact: Header hidden completely when riddle is active
+const double kPlayHeaderCompact = 0.0;
 
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
@@ -45,7 +45,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   bool _trainingActive = false;
 
   // ── Star animation state ───────────────────────────────────────────────────
-  final GlobalKey _headerStarKey = GlobalKey();
+  final GlobalKey _progressBarStarKey = GlobalKey();
   final Map<int, GlobalKey> _nodeKeys = {};
   int? _animatedStars;
   OverlayEntry? _starOverlay;
@@ -440,22 +440,22 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
     final nodeBox =
         nodeKey.currentContext?.findRenderObject() as RenderBox?;
-    final headerBox =
-        _headerStarKey.currentContext?.findRenderObject() as RenderBox?;
-    if (nodeBox == null || headerBox == null) return;
+    final progressStarBox =
+        _progressBarStarKey.currentContext?.findRenderObject() as RenderBox?;
+    if (nodeBox == null || progressStarBox == null) return;
 
     final nodePos = nodeBox.localToGlobal(
       Offset(nodeBox.size.width / 2, nodeBox.size.height / 2),
     );
-    final headerPos = headerBox.localToGlobal(
-      Offset(headerBox.size.width / 2, headerBox.size.height / 2),
+    final destinationPos = progressStarBox.localToGlobal(
+      Offset(progressStarBox.size.width / 2, progressStarBox.size.height / 2),
     );
 
     _starOverlay?.remove();
     _starOverlay = OverlayEntry(
       builder: (_) => _FlyingStarsOverlay(
         from: nodePos,
-        to: headerPos,
+        to: destinationPos,
         starCount: starCount,
         onStarLanded: (landedCount) {
           if (mounted)
@@ -609,9 +609,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                             error: (e, _) =>
                                 Center(child: Text('$e')),
                             data: (riddles) {
-                                                            return AnimatedSwitcher(
+                              return AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
-                                // <--- Fix 1: Override layoutBuilder to align the Stack to the top
                                 layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
                                   return Stack(
                                     alignment: Alignment.topCenter,
@@ -648,6 +647,8 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                         riddles: riddles,
                                         mapId: widget.mapId,
                                         playState: playState,
+                                        achievedStars: achievedStars,
+                                        hasBeenPlayed: hasBeenPlayed,
                                         isCompleted: _isCompleted,
                                         imageBytes: map?.imageBytes,
                                         nodeKeys: _nodeKeys,
@@ -657,6 +658,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                                             _onCompletedNodeTap,
                                         onToggleTraining: () =>
                                             _onToggleTraining(riddles),
+                                        progressBarStarKey: _progressBarStarKey,
                                       ),
                               );
 
@@ -671,11 +673,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
                   child: _PlayHeader(
                     mapId: widget.mapId,
                     title: title,
-                    achievedStars: achievedStars,
-                    maxStars: maxStars,
-                    hasBeenPlayed: hasBeenPlayed,
                     compact: riddleActive,
-                    starKey: _headerStarKey,
                     onEdit: _onEditMap,
                     onDelete: _onDeleteMap,
                   ),
@@ -695,6 +693,8 @@ class _MapView extends StatefulWidget {
   final List<Riddle> riddles;
   final String mapId;
   final dynamic playState;
+  final int achievedStars;
+  final bool hasBeenPlayed;
   final bool isCompleted;
   final dynamic imageBytes;
   final Map<int, GlobalKey> nodeKeys;
@@ -702,12 +702,15 @@ class _MapView extends StatefulWidget {
   final void Function(int) onNodeTap;
   final void Function(int) onCompletedNodeTap;
   final VoidCallback onToggleTraining;
+  final GlobalKey progressBarStarKey;
 
   const _MapView({
     super.key,
     required this.riddles,
     required this.mapId,
     required this.playState,
+    required this.achievedStars,
+    required this.hasBeenPlayed,
     required this.isCompleted,
     required this.imageBytes,
     required this.nodeKeys,
@@ -715,6 +718,7 @@ class _MapView extends StatefulWidget {
     required this.onNodeTap,
     required this.onCompletedNodeTap,
     required this.onToggleTraining,
+    required this.progressBarStarKey,
   });
 
   @override
@@ -787,7 +791,6 @@ class _MapViewState extends State<_MapView> {
     }
   }
 
-  // Helper method to get the active milestone index based on ranking logic
   int _getActiveMilestoneIndex(double starRatio) {
     final score = (starRatio * 10).round();
     if (score < 5) return 0;
@@ -798,16 +801,14 @@ class _MapViewState extends State<_MapView> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate real-time star metrics
     final int maxStars = widget.riddles.length * 3;
-    final int achievedStars = widget.playState?.totalStars ?? 0;
-    final double starRatio = maxStars > 0 ? achievedStars / maxStars : 0.0;
+    final int achievedStars = widget.achievedStars;
+    final double starRatio = maxStars > 0 && widget.hasBeenPlayed ? achievedStars / maxStars : 0.0;
     final int activeMilestoneIndex = _getActiveMilestoneIndex(starRatio);
 
-    const double rankingBarHeight = 72.0;
+    const double rankingBarHeight = 98.0; 
     const double stickyHeight = rankingBarHeight;
 
-    // Fix 2: Wrap with SizedBox.expand so it claims the full available height
     return SizedBox.expand(
       child: Stack(
         children: [
@@ -850,11 +851,11 @@ class _MapViewState extends State<_MapView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── NEW: Dynamic Ranking Milestone Progress Row ──
+                // ── Dynamic Ranking Milestone Progress Row ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Slightly increased vertical padding
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
@@ -867,11 +868,9 @@ class _MapViewState extends State<_MapView> {
                         ),
                       ],
                     ),
-                    // Changed child to a Column to stack the circles and the progress bar
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // The existing row of milestone circles
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: List.generate(4, (index) {
@@ -920,13 +919,38 @@ class _MapViewState extends State<_MapView> {
                             );
                           }),
                         ),
-                        const SizedBox(height: 12), // Spacing between circles and progress bar
+                        const SizedBox(height: 12),
                         
-                        // ── Inserted Progress Bar ──
+                        // ── Flanked Star Progress Bar ──
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: _StarProgressBar(
-                            progress: starRatio, // Utilizing the already calculated starRatio
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: Row(
+                            children: [
+                              Text(
+                                '$achievedStars',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF555555),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _StarProgressBar(
+                                  progress: starRatio,
+                                  starKey: widget.progressBarStarKey,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '$maxStars',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF555555),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -934,8 +958,7 @@ class _MapViewState extends State<_MapView> {
                   ),
                 ),
 
-
-                // ── HIDDEN (NOT REMOVED): Original Training panel & Hint texts ──
+                // Original Training panel & Hint texts (HIDDEN)
                 Visibility(
                   visible: false,
                   maintainState: true,
@@ -1107,27 +1130,18 @@ class _StarProgressBar extends StatelessWidget {
   }
 }
 
-
 // ── Play Header ───────────────────────────────────────────────────────────────
 
 class _PlayHeader extends StatelessWidget {
   final String mapId;
   final String title;
-  final int achievedStars;
-  final int maxStars;
-  final bool hasBeenPlayed;
   final bool compact;
-  final GlobalKey starKey;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const _PlayHeader({
     required this.mapId,
     required this.title,
-    required this.achievedStars,
-    required this.maxStars,
-    required this.hasBeenPlayed,
-    required this.starKey,
     this.compact = false,
     this.onEdit,
     this.onDelete,
@@ -1175,13 +1189,11 @@ class _PlayHeader extends StatelessWidget {
                         border: Border(
                           top: BorderSide(
                               color: Color(0xFFE5E7EB), width: 1),
-                          // Bottom border removed to clear the middle line
                         ),
                       ),
                       child: Row(
                         children: [
                           const SizedBox(width: 12),
-                          // ── Title ──
                           Expanded(
                             child: Text(
                               title,
@@ -1197,7 +1209,6 @@ class _PlayHeader extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // ── Edit Button ──
                           GestureDetector(
                             onTap: onEdit,
                             child: const Padding(
@@ -1209,7 +1220,6 @@ class _PlayHeader extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // ── Delete Button ──
                           GestureDetector(
                             onTap: onDelete,
                             child: const Padding(
@@ -1226,44 +1236,6 @@ class _PlayHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                // ── Star row — always 38px ──
-                SizedBox(
-                  height: 38,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          '$achievedStars',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF555555),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _StarProgressBar(
-                            progress: maxStars > 0 && hasBeenPlayed
-                                ? achievedStars / maxStars
-                                : 0.0,
-                            starKey: starKey,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          '$maxStars',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF555555),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1272,8 +1244,6 @@ class _PlayHeader extends StatelessWidget {
     );
   }
 }
-
-
 
 // ── Flying stars overlay ──────────────────────────────────────────────────────
 
