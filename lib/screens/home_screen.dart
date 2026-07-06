@@ -726,7 +726,7 @@ class _PackHeader extends ConsumerWidget {
 
     final List<Color> gradientColors = isOwned
         ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
-        : const [Color(0xFF81D7FD), Color(0xFF00ADFF)];
+        : const [Color(0xFF81D7FD), Color(0xFF249689)];
 
     return Hero(
       tag: 'pack-$packId',
@@ -970,9 +970,9 @@ class _PackCard extends ConsumerWidget {
 
     final List<Color> gradientColors = isOwned
         ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
-        : const [Color(0xFF81D7FD), Color(0xFF00ADFF)];
+        : const [Color(0xa1ee8b60), Color(0xFF249689)];
     final Color accentColor =
-        isOwned ? const Color(0xffff4c00) : const Color(0xFF00ADFF);
+        isOwned ? const Color(0xffff4c00) : const Color(0xFF249689);
 
     return GestureDetector(
       onTap: () => _openPack(context),
