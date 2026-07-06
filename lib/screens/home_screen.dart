@@ -212,25 +212,36 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         // to its own content height instead of being forced into a fixed
         // aspect-ratio cell. Cards are pinned to the same per-column width
         // as before via _cardWidth(context).
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
-          sliver: SliverToBoxAdapter(
-            child: Wrap(
-              spacing: 24,
-              runSpacing: 14,
-              children: [
-                for (int i = 0; i < packs.length; i++)
-                  SizedBox(
-                    width: _cardWidth(context),
-                    child: _PackGridItem(
-                      pack: packs[i],
-                      index: i,
+        //
+        // When there are no packs yet, show a prompt encouraging the user
+        // to create or download one instead of the (empty) Wrap.
+        if (packs.isEmpty)
+          SliverToBoxAdapter(
+            child: _EmptyHomeState(
+              onCreatePack: () => _openCreatePack(context),
+              onGetPack: () => _openGetPack(context),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(40, 0, 40, 0),
+            sliver: SliverToBoxAdapter(
+              child: Wrap(
+                spacing: 24,
+                runSpacing: 14,
+                children: [
+                  for (int i = 0; i < packs.length; i++)
+                    SizedBox(
+                      width: _cardWidth(context),
+                      child: _PackGridItem(
+                        pack: packs[i],
+                        index: i,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
         // ── Section divider ──
         /*SliverToBoxAdapter(
@@ -299,6 +310,71 @@ class _PackGridItem extends StatelessWidget {
         .animate(delay: (index * 60).ms)
         .fadeIn(duration: 350.ms)
         .scale(begin: const Offset(0.95, 0.95));
+  }
+}
+
+// ── Empty Home State (no packs yet) ────────────────────────────────────────
+
+/// Shown on the root screen in place of the packs Wrap when the user has
+/// not created or downloaded any pack yet. Mirrors the styling of
+/// _EmptyPackState. Disappears automatically once allFoldersProvider
+/// returns at least one pack (handled by the isEmpty check in the parent
+/// build method) — the top-right create/download icons in _Header remain
+/// available throughout, this is purely an additional nudge.
+class _EmptyHomeState extends StatelessWidget {
+  final VoidCallback onCreatePack;
+  final VoidCallback onGetPack;
+
+  const _EmptyHomeState({
+    required this.onCreatePack,
+    required this.onGetPack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 24),
+            Text(
+              'No packs yet',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: EnolaTheme.accent,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Create your own pack or download one to get started.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: onCreatePack,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Create Pack'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onGetPack,
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Get a Pack'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 700.ms).scale(
+            begin: const Offset(0.9, 0.9),
+          ),
+    );
   }
 }
 
