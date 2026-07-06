@@ -23,6 +23,22 @@ import 'package:drift/drift.dart' as drift_orm;
 
 const double kCardAspectRatio = 0.84;
 
+// ── Ownership provider ────────────────────────────────────────────────────────
+
+/// Resolves whether the local folder [folderId] is an owned pack (created
+/// on this device, or never shared at all) vs. a downloaded, non-owned
+/// pack. Wraps SupabaseService.lookupPackForFolder, which does a local
+/// Drift lookup (fast, no network call) — null result means "never shared
+/// or downloaded", which counts as owned.
+final packOwnershipProvider =
+    FutureProvider.family<OwnedPackLookup?, int>((ref, folderId) async {
+  return SupabaseService.instance.lookupPackForFolder(folderId);
+});
+
+/// True if [lookup] represents an owned pack. Treats "never shared" (null)
+/// as owned, matching the existing plain-delete-dialog logic.
+bool _isOwnedLookup(OwnedPackLookup? lookup) => lookup == null || lookup.isOwner;
+
 class HomeScreen extends ConsumerWidget {
   final int? packId;
   final String? packName;
@@ -704,7 +720,9 @@ class _PackHeader extends ConsumerWidget {
     final matches =
         packsAsync.valueOrNull?.where((f) => f.id == packId) ?? [];
     final pack = matches.isNotEmpty ? matches.first : null;
-    final bool isOwned = pack == null || pack.creatorId == null;
+
+    final ownershipAsync = ref.watch(packOwnershipProvider(packId));
+    final bool isOwned = _isOwnedLookup(ownershipAsync.valueOrNull);
 
     final List<Color> gradientColors = isOwned
         ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
@@ -946,7 +964,9 @@ class _PackCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mapsAsync = ref.watch(mapsInFolderProvider(pack.id));
     final maps = mapsAsync.valueOrNull ?? [];
-    final bool isOwned = pack.creatorId == null;
+
+    final ownershipAsync = ref.watch(packOwnershipProvider(pack.id));
+    final bool isOwned = _isOwnedLookup(ownershipAsync.valueOrNull);
 
     final List<Color> gradientColors = isOwned
         ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
