@@ -186,6 +186,8 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
           child: _Header(
             staleMaps: _staleMaps,
             onApplyUpdates: _applyUpdates,
+            onCreatePack: () => _openCreatePack(context),
+            onGetPack: () => _openGetPack(context),
           ),
         ),
 
@@ -209,15 +211,6 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
                       index: i,
                     ),
                   ),
-                SizedBox(
-                  width: _cardWidth(context),
-                  child: _CreateOrGetPackCard(
-                    onCreate: () => _openCreatePack(context),
-                    onGet: () => _openGetPack(context),
-                  ).animate().fadeIn(duration: 350.ms).scale(
-                        begin: const Offset(0.95, 0.95),
-                      ),
-                ),
               ],
             ),
           ),
@@ -354,10 +347,14 @@ class _PackScrollView extends ConsumerWidget {
 class _Header extends StatelessWidget {
   final List<StaleMapInfo> staleMaps;
   final VoidCallback onApplyUpdates;
+  final VoidCallback onCreatePack;
+  final VoidCallback onGetPack;
 
   const _Header({
     required this.staleMaps,
     required this.onApplyUpdates,
+    required this.onCreatePack,
+    required this.onGetPack,
   });
 
   @override
@@ -367,23 +364,42 @@ class _Header extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Ready for a Riddle?',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: EnolaTheme.textPrimary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ready for a Riddle?',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: EnolaTheme.textPrimary,
+                          ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap a pack to explore or play',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: EnolaTheme.textSecond,
+                          ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Tap a pack to explore or play',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: EnolaTheme.textSecond,
-                    ),
+              IconButton(
+                onPressed: onCreatePack,
+                icon: const Icon(Icons.add_rounded),
+                color: EnolaTheme.textSecond,
+                tooltip: 'Create Pack',
+              ),
+              IconButton(
+                onPressed: onGetPack,
+                icon: const Icon(Icons.download_rounded),
+                color: EnolaTheme.textSecond,
+                tooltip: 'Get a Pack',
               ),
             ],
           ),
@@ -545,162 +561,6 @@ class _CreatePackSheetState extends State<_CreatePackSheet> {
   }
 }
 
-// ── Create or Get Pack Card (combined, last position in grid) ────────────────
-
-class _CreateOrGetPackCard extends StatelessWidget {
-  final VoidCallback onCreate;
-  final VoidCallback onGet;
-
-  const _CreateOrGetPackCard({
-    required this.onCreate,
-    required this.onGet,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: kCardAspectRatio,
-      child: Column(
-        children: [
-          Expanded(
-            child: _DashedActionTile(
-              icon: Icons.add_rounded,
-              label: 'Create Pack',
-              onTap: onCreate,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: _DashedActionTile(
-              icon: Icons.download_rounded,
-              label: 'Get a Pack',
-              onTap: onGet,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashedActionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _DashedActionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white.withValues(alpha: 0.4),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: const Color(0xFFC7CCD4),
-          radius: 8,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 22, color: EnolaTheme.textSecond),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: EnolaTheme.textSecond,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-class _DashedBorderPainter extends CustomPainter {
-  final Color color;
-  final double radius;
-  final double dashWidth;
-  final double dashGap;
-  final double strokeWidth;
-
-  _DashedBorderPainter({
-    required this.color,
-    required this.radius,
-    this.dashWidth = 6,
-    this.dashGap = 4,
-    this.strokeWidth = 1.5,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        strokeWidth / 2,
-        strokeWidth / 2,
-        size.width - strokeWidth,
-        size.height - strokeWidth,
-      ),
-      Radius.circular(radius),
-    );
-
-    final path = Path()..addRRect(rrect);
-    final dashedPath = _dashPath(path, dashWidth: dashWidth, dashGap: dashGap);
-    canvas.drawPath(dashedPath, paint);
-  }
-
-  Path _dashPath(Path source, {required double dashWidth, required double dashGap}) {
-    final dest = Path();
-    for (final metric in source.computeMetrics()) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final next = distance + dashWidth;
-        dest.addPath(
-          metric.extractPath(distance, math.min(next, metric.length)),
-          Offset.zero,
-        );
-        distance = next + dashGap;
-      }
-    }
-    return dest;
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
-    return oldDelegate.color != color ||
-        oldDelegate.radius != radius ||
-        oldDelegate.dashWidth != dashWidth ||
-        oldDelegate.dashGap != dashGap ||
-        oldDelegate.strokeWidth != strokeWidth;
-  }
-}
-
 // ── Header (inside a pack) ────────────────────────────────────────────────────
 
 class _PackHeader extends ConsumerWidget {
@@ -844,10 +704,16 @@ class _PackHeader extends ConsumerWidget {
     final matches =
         packsAsync.valueOrNull?.where((f) => f.id == packId) ?? [];
     final pack = matches.isNotEmpty ? matches.first : null;
+    final bool isOwned = pack == null || pack.creatorId == null;
+
+    final List<Color> gradientColors = isOwned
+        ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
+        : const [Color(0xFF81D7FD), Color(0xFF00ADFF)];
 
     return Hero(
       tag: 'pack-$packId',
-      flightShuttleBuilder: _shuttle,
+      flightShuttleBuilder: (flightContext, animation, direction, fromCtx, toCtx) =>
+          _shuttle(flightContext, animation, direction, fromCtx, toCtx, gradientColors),
       child: Material(
         type: MaterialType.transparency,
         child: Padding(
@@ -900,6 +766,7 @@ class _PackHeader extends ConsumerWidget {
     HeroFlightDirection direction,
     BuildContext fromCtx,
     BuildContext toCtx,
+    List<Color> gradientColors,
   ) {
     return AnimatedBuilder(
       animation: animation,
@@ -916,10 +783,8 @@ class _PackHeader extends ConsumerWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color.lerp(
-                      const Color(0xa1ee8b60), Colors.transparent, t)!,
-                  Color.lerp(
-                      const Color(0xffff4c00), Colors.transparent, t)!,
+                  Color.lerp(gradientColors[0], Colors.transparent, t)!,
+                  Color.lerp(gradientColors[1], Colors.transparent, t)!,
                 ],
               ),
               borderRadius: BorderRadius.circular(8 * (1.0 - t)),
@@ -1081,6 +946,13 @@ class _PackCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mapsAsync = ref.watch(mapsInFolderProvider(pack.id));
     final maps = mapsAsync.valueOrNull ?? [];
+    final bool isOwned = pack.creatorId == null;
+
+    final List<Color> gradientColors = isOwned
+        ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
+        : const [Color(0xFF81D7FD), Color(0xFF00ADFF)];
+    final Color accentColor =
+        isOwned ? const Color(0xffff4c00) : const Color(0xFF00ADFF);
 
     return GestureDetector(
       onTap: () => _openPack(context),
@@ -1090,15 +962,18 @@ class _PackCard extends ConsumerWidget {
           type: MaterialType.transparency,
           child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xa1ee8b60), Color(0xffff4c00)],
+                colors: gradientColors,
               ),
               borderRadius: BorderRadius.circular(8),
+              border: isOwned
+                  ? null
+                  : Border.all(color: accentColor, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xffff4c00).withAlpha(70),
+                  color: accentColor.withAlpha(70),
                   blurRadius: 20,
                   spreadRadius: 2,
                   offset: const Offset(0, 6),
