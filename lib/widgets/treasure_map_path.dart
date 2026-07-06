@@ -315,10 +315,7 @@ class _RiddleNodeState extends State<_RiddleNode>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (widget.imageBytes != null)
-                Image.memory(widget.imageBytes!, fit: BoxFit.cover)
-              else
-                Image.asset('assets/images/0.jpeg', fit: BoxFit.cover),
+                Image.asset('assets/images/ranking/0.jpg', fit: BoxFit.cover),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
