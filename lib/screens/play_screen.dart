@@ -854,7 +854,7 @@ class _MapViewState extends State<_MapView> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Slightly increased vertical padding
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
@@ -867,56 +867,73 @@ class _MapViewState extends State<_MapView> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(4, (index) {
-                        final bool isActive = index == activeMilestoneIndex;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeInOut,
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isActive ? EnolaTheme.accent : Colors.transparent,
-                              width: 2.5,
-                            ),
-                            boxShadow: isActive
-                                ? [
-                                    BoxShadow(
-                                      color: EnolaTheme.accent.withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: Opacity(
-                            opacity: isActive ? 1.0 : 0.35,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(23),
-                              child: Image.asset(
-                                'assets/images/ranking/$index.jpg',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[100],
-                                    child: Icon(
-                                      Icons.star_rounded,
-                                      color: isActive ? Colors.amber : Colors.grey[400],
-                                      size: 20,
-                                    ),
-                                  );
-                                },
+                    // Changed child to a Column to stack the circles and the progress bar
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // The existing row of milestone circles
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(4, (index) {
+                            final bool isActive = index == activeMilestoneIndex;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeInOut,
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isActive ? EnolaTheme.accent : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                                boxShadow: isActive
+                                    ? [
+                                        BoxShadow(
+                                          color: EnolaTheme.accent.withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        )
+                                      ]
+                                    : null,
                               ),
-                            ),
+                              child: Opacity(
+                                opacity: isActive ? 1.0 : 0.35,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(23),
+                                  child: Image.asset(
+                                    'assets/images/ranking/$index.jpg',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[100],
+                                        child: Icon(
+                                          Icons.star_rounded,
+                                          color: isActive ? Colors.amber : Colors.grey[400],
+                                          size: 20,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 12), // Spacing between circles and progress bar
+                        
+                        // ── Inserted Progress Bar ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: _StarProgressBar(
+                            progress: starRatio, // Utilizing the already calculated starRatio
                           ),
-                        );
-                      }),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+
 
                 // ── HIDDEN (NOT REMOVED): Original Training panel & Hint texts ──
                 Visibility(
