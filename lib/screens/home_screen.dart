@@ -233,7 +233,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
         ),
 
         // ── Section divider ──
-        SliverToBoxAdapter(
+        /*SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(40, 20, 40, 4),
             child: Row(
@@ -258,7 +258,7 @@ class _RootScrollViewState extends ConsumerState<_RootScrollView> {
               ],
             ),
           ),
-        ),
+        ),*/
 
         // ── Unfiled maps ──
         if (unfiled.isNotEmpty)
