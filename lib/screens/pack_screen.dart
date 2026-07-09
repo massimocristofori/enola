@@ -364,6 +364,108 @@ class _PackHeader extends ConsumerWidget {
   }
 }
 
+// ── Header lip (colored echo of the card edge) ───────────────────────────
+
+class _PackHeaderLip extends StatelessWidget {
+  final List<Color> gradientColors;
+  const _PackHeaderLip({required this.gradientColors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 12,
+      margin: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: gradientColors,
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+    );
+  }
+}
+
+// ── Peeking rank tiles (faded echo of the card's rank grid) ──────────────
+
+class _PackRankPeek extends ConsumerWidget {
+  final int packId;
+  const _PackRankPeek({required this.packId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mapsAsync = ref.watch(mapsInFolderProvider(packId));
+    final maps = mapsAsync.valueOrNull ?? [];
+    if (maps.isEmpty) return const SizedBox.shrink();
+
+    final ranksPresent = <int>{};
+    for (final map in maps) {
+      final countAsync = ref.watch(riddleCountProvider(map.id));
+      final sessionAsync = ref.watch(latestSessionProvider(map.id));
+      final count = countAsync.valueOrNull ?? 0;
+      final session = sessionAsync.valueOrNull;
+
+      int achievedStars = 0;
+      if (session != null && session.riddleStarsJson != null) {
+        try {
+          final list = jsonDecode(session.riddleStarsJson!) as List;
+          achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
+        } catch (_) {}
+      }
+      final maxStars = count * 3;
+      final starRatio = maxStars > 0 ? achievedStars / maxStars : 0.0;
+      ranksPresent.add(rankIndex(starRatio));
+    }
+
+    // Show highest ranks first, capped so it reads as a "peek" not a
+    // duplicate of the full grid on the home card.
+    final shown = (ranksPresent.toList()..sort((a, b) => b.compareTo(a)))
+        .take(4)
+        .toList();
+
+    if (shown.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: Row(
+        children: [
+          for (final rank in shown)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Opacity(
+                opacity: 0.55,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: Colors.white, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(20),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/images/$rank.jpg',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
 // ── Editable pack title ─────────────────────────────────────────────────
 
 class _EditablePackTitle extends StatefulWidget {
