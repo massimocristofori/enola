@@ -7,6 +7,8 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/widgets/fantasy_widgets.dart';
 import 'package:enola/screens/home_screen.dart';
 
+import 'package:enola/utils/rank_image.dart';
+
 class ResultScreen extends StatelessWidget {
   final String mapId;
   final int correct;
@@ -25,42 +27,6 @@ class ResultScreen extends StatelessWidget {
 
   double get _starRatio => maxStars == 0 ? 0 : totalStars / maxStars;
 
-  String get _rank {
-    if (_starRatio >= 0.9) return 'Grand Sage';
-    if (_starRatio >= 0.7) return 'Scholar';
-    if (_starRatio >= 0.5) return 'Apprentice';
-    return 'Novice';
-  }
-
-  String get _rankEmoji {
-    if (_starRatio >= 0.9) return '👑';
-    if (_starRatio >= 0.7) return '🏆';
-    if (_starRatio >= 0.5) return '⚔️';
-    return '📜';
-  }
-
-String get _rankImage {
-  final score = (_starRatio * 10).round();
-  if (score < 5) return 'assets/images/ranking/0.jpg';
-  if (score <= 6) return 'assets/images/ranking/1.jpg';
-  if (score <= 9) return 'assets/images/ranking/2.jpg';
-  return 'assets/images/ranking/3.jpg';
-}
-
-
-  String get _message {
-    if (_starRatio >= 0.9) return 'The oracle bows before your wisdom.';
-    if (_starRatio >= 0.7) return 'A worthy scholar walks these halls.';
-    if (_starRatio >= 0.5) return 'Your knowledge grows with each quest.';
-    return 'The path to mastery begins with a single step.';
-  }
-
-  Color get _scoreColor {
-    if (_starRatio >= 0.9) return const Color(0xFFFFD700); 
-    if (_starRatio >= 0.7) return const Color(0xFF00E676); 
-    if (_starRatio >= 0.5) return const Color(0xFF00E5FF); 
-    return const Color(0xFFFF9100); 
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +120,7 @@ Widget _buildCrest() {
           letterSpacing: 1,
           shadows: [
             Shadow(
-              color: _scoreColor.withValues(alpha: 0.4),
+              color: rankColor(_starRatio).withValues(alpha: 0.4),
               blurRadius: 25,
             ),
           ],
