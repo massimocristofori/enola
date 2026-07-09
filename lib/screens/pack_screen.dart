@@ -259,45 +259,52 @@ class _PackHeader extends ConsumerWidget {
           _shuttle(flightContext, animation, direction, fromCtx, toCtx, gradientColors),
       child: Material(
         type: MaterialType.transparency,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _EditablePackTitle(
-                      packId: packId,
-                      initialName: packName,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _PackHeaderLip(gradientColors: gradientColors),
+            _PackRankPeek(packId: packId),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _EditablePackTitle(
+                          packId: packId,
+                          initialName: packName,
+                        ),
+                        if (stats != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            '${stats.mapCount} maps · '
+                            '${stats.achievedStars} / ${stats.totalStars} ★',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: EnolaTheme.textSecond,
+                                ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if (stats != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${stats.mapCount} maps · '
-                        '${stats.achievedStars} / ${stats.totalStars} ★',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: EnolaTheme.textSecond,
-                            ),
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    onPressed:
+                        pack == null ? null : () => _sharePack(context, pack),
+                    icon: const Icon(Icons.ios_share),
+                    color: EnolaTheme.textSecond,
+                  ),
+                  IconButton(
+                    onPressed: () => _handleDeleteTap(context),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    color: EnolaTheme.textSecond,
+                  ),
+                ],
               ),
-              IconButton(
-                onPressed:
-                    pack == null ? null : () => _sharePack(context, pack),
-                icon: const Icon(Icons.ios_share),
-                color: EnolaTheme.textSecond,
-              ),
-              IconButton(
-                onPressed: () => _handleDeleteTap(context),
-                icon: const Icon(Icons.delete_outline_rounded),
-                color: EnolaTheme.textSecond,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -418,8 +425,6 @@ class _PackRankPeek extends ConsumerWidget {
       ranksPresent.add(rankIndex(starRatio));
     }
 
-    // Show highest ranks first, capped so it reads as a "peek" not a
-    // duplicate of the full grid on the home card.
     final shown = (ranksPresent.toList()..sort((a, b) => b.compareTo(a)))
         .take(4)
         .toList();
@@ -464,7 +469,6 @@ class _PackRankPeek extends ConsumerWidget {
     );
   }
 }
-
 
 // ── Editable pack title ─────────────────────────────────────────────────
 
@@ -873,62 +877,93 @@ class _MapCard extends ConsumerWidget {
       isComplete: isComplete,
     );
 
-        return Hero(
-      tag: 'pack-$packId',
-      flightShuttleBuilder: (flightContext, animation, direction, fromCtx, toCtx) =>
-          _shuttle(flightContext, animation, direction, fromCtx, toCtx, gradientColors),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _PackHeaderLip(gradientColors: gradientColors),
-            _PackRankPeek(packId: packId),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Hero(
+      tag: 'map-card-${map.id}',
+      flightShuttleBuilder: flightShuttle,
+      child: StreamBuilder<TrainingSession?>(
+        stream: (DriftService.instance.db
+                .select(DriftService.instance.db.trainingSessions)
+              ..where((t) => t.mapId.equals(map.id))
+              ..where((t) => t.completedAt.isNull())
+              ..orderBy([
+                (t) => drift_orm.OrderingTerm.desc(t.startedAt),
+              ])
+              ..limit(1))
+            .watchSingleOrNull(),
+        builder: (context, trainingSnap) {
+          final rawSession = trainingSnap.data;
+          final isTrainingOn = rawSession != null &&
+              DateTime.now().isBefore(rawSession.endsAt);
+
+          final cardW = cardWidth(context);
+          final cardH = cardW / kCardAspectRatio;
+
+          return LongPressDraggable<String>(
+            data: map.id,
+            delay: const Duration(milliseconds: 350),
+            onDragStarted: onDragStarted,
+            onDragEnd: (_) => onDragEnd?.call(),
+            feedback: SizedBox(
+              width: cardW,
+              height: cardH,
+              child: Material(
+                type: MaterialType.transparency,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(90),
+                        blurRadius: 32,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: _CardShellDragging(
+                    coverAsset: coverAsset,
+                    title: map.title,
+                    achievedStars: achievedStars,
+                    maxStars: maxStars,
+                    hasBeenPlayed: hasBeenPlayed,
+                    isComplete: isComplete,
+                  ),
+                ),
+              ),
+            ),
+            childWhenDragging: Opacity(
+              opacity: 0.35,
+              child: cardShell,
+            ),
+            child: GestureDetector(
+              onTap: () => _openPlay(context),
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _EditablePackTitle(
-                          packId: packId,
-                          initialName: packName,
-                        ),
-                        if (stats != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            '${stats.mapCount} maps · '
-                            '${stats.achievedStars} / ${stats.totalStars} ★',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: EnolaTheme.textSecond,
-                                ),
-                          ),
-                        ],
-                      ],
+                  cardShell,
+                  Positioned(
+                    top: -8,
+                    right: -8,
+                    child: _EarButton(
+                      icon: isTrainingOn
+                          ? Icons.school_rounded
+                          : Icons.school_outlined,
+                      iconColor: isTrainingOn
+                          ? Colors.white
+                          : EnolaTheme.textSecond
+                              .withValues(alpha: 0.95),
+                      backgroundColor: isTrainingOn
+                          ? EnolaTheme.secondary
+                          : Colors.white,
+                      onTap: () => _toggleTraining(context),
                     ),
-                  ),
-                  IconButton(
-                    onPressed:
-                        pack == null ? null : () => _sharePack(context, pack),
-                    icon: const Icon(Icons.ios_share),
-                    color: EnolaTheme.textSecond,
-                  ),
-                  IconButton(
-                    onPressed: () => _handleDeleteTap(context),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    color: EnolaTheme.textSecond,
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
-
   }
 }
 
