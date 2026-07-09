@@ -79,7 +79,6 @@ class _PackScreenState extends ConsumerState<PackScreen> {
 
     final lipHeight = kLipHeightExpanded -
         (kLipHeightExpanded - kLipHeightCollapsed) * _collapseT;
-    final statsOpacity = 1.0 - _collapseT;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -154,7 +153,6 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                       packName: widget.packName,
                       topInset: topInset,
                       lipHeight: lipHeight,
-                      statsOpacity: statsOpacity,
                       chromeVisible: _chromeVisible,
                     ),
                   ),
@@ -187,7 +185,6 @@ class _PackHeader extends ConsumerStatefulWidget {
   final String packName;
   final double topInset;
   final double lipHeight;
-  final double statsOpacity;
   final bool chromeVisible;
 
   const _PackHeader({
@@ -195,7 +192,6 @@ class _PackHeader extends ConsumerStatefulWidget {
     required this.packName,
     required this.topInset,
     required this.lipHeight,
-    required this.statsOpacity,
     required this.chromeVisible,
   });
 
@@ -368,8 +364,6 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final statsAsync = ref.watch(folderStatsProvider(widget.packId));
-    final stats = statsAsync.valueOrNull;
     final packsAsync = ref.watch(allFoldersProvider);
     final matches =
         packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
@@ -384,9 +378,9 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
       height: widget.topInset + widget.lipHeight,
       child: Column(
         children: [
-          // Solid strip behind the status bar (clock/battery), matching
-          // the top of the card's gradient so the color reads as
-          // continuous from the very edge of the screen.
+          // Solid strip behind the status bar, matching the top of the
+          // card's gradient so the color reads as continuous from the
+          // very edge of the screen.
           Container(
             height: widget.topInset,
             color: gradientColors.first,
@@ -395,7 +389,11 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
             child: Stack(
               children: [
                 // The card, laid out at full natural size and clipped
-                // down to just the visible lip strip.
+                // down to just the visible lip strip. Title is always
+                // hidden here — the chrome overlay below renders its own
+                // left-aligned title instead, so pack_screen and the
+                // home-screen card can use different title alignments
+                // without the Hero flight needing to reconcile them.
                 ClipRect(
                   child: OverflowBox(
                     alignment: Alignment.bottomCenter,
@@ -412,7 +410,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                               : PackCardBody(
                                   pack: pack,
                                   isOwned: isOwned,
-                                  hideTitle: _isEditingTitle,
+                                  hideTitle: true,
                                 ),
                         ),
                       ),
@@ -420,9 +418,10 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                   ),
                 ),
 
-                // Chrome overlay: pencil/share/delete + stats, or the
-                // inline title editor — sits outside the Hero, fades in
-                // once the flight has landed.
+                // Chrome overlay: pencil, left-aligned title (or its
+                // inline editor), share, delete — all vertically centered
+                // in one row. Sits outside the Hero, fades in once the
+                // flight has landed.
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: !widget.chromeVisible,
@@ -433,7 +432,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: _isEditingTitle
                             ? _buildEditingRow()
-                            : _buildNormalRow(context, currentTitle, stats, pack),
+                            : _buildNormalRow(context, currentTitle, pack),
                       ),
                     ),
                   ),
@@ -449,36 +448,28 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
   Widget _buildNormalRow(
     BuildContext context,
     String currentTitle,
-    FolderStats? stats,
     Folder? pack,
   ) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         IconButton(
           onPressed: () => _startEditingTitle(currentTitle),
-          icon: const Icon(Icons.edit_rounded, size: 16),
+          icon: const Icon(Icons.edit_rounded, size: 18),
           color: Colors.white,
           padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
         Expanded(
-          child: Opacity(
-            opacity: widget.statsOpacity,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: stats == null
-                  ? const SizedBox.shrink()
-                  : Text(
-                      '${stats.mapCount} maps · '
-                      '${stats.achievedStars} / ${stats.totalStars} ★',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+          child: Text(
+            currentTitle,
+            textAlign: TextAlign.left,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
             ),
           ),
         ),
@@ -503,6 +494,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
 
   Widget _buildEditingRow() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(width: 8),
         Expanded(
@@ -510,11 +502,11 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
             controller: _titleController,
             focusNode: _titleFocusNode,
             autofocus: true,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
             ),
             decoration: const InputDecoration(
               isDense: true,
