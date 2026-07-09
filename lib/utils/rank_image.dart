@@ -3,6 +3,9 @@
 // corresponding ranking illustration asset. Used across the app wherever a
 // "rank" image needs to reflect how well a player has performed.
 
+import 'dart:convert';
+import 'package:flutter/material.dart';
+
 String rankImageForRatio(double ratio) {
   final score = (ratio * 10).round();
   if (score < 5) return 'assets/images/ranking/0.jpg';
