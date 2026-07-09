@@ -10,3 +10,27 @@ String rankImageForRatio(double ratio) {
   if (score <= 9) return 'assets/images/ranking/2.jpg';
   return 'assets/images/ranking/3.jpg';
 }
+
+String rankTitleForRatio(double ratio) {
+  final score = (ratio * 10).round();
+  if (score < 5) return 'Novice';
+  if (score <= 6) return 'Apprentice';
+  if (score <= 9) return 'Scholar';
+  return 'Grand Sage';
+}
+
+String rankMessageForRatio(double ratio) {
+  final score = (ratio * 10).round();
+  if (score < 5) return 'The path to mastery begins with a single step.';
+  if (score <= 6) return 'Your knowledge grows with each quest.';
+  if (score <= 9) return 'A worthy scholar walks these halls.';
+  return 'The oracle bows before your wisdom.';
+}
+
+String rankColorForRatio(double ratio) {
+  final score = (ratio * 10).round();
+  if (score < 5) return const Color(0xFFFF9100);
+  if (score <= 6) return const Color(0xFF00E5FF);
+  if (score <= 9) return const Color(0xFF00E676);
+  return const Color(0xFFFFD700);
+}
