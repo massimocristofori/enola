@@ -117,7 +117,7 @@ Widget _buildCrest() {
         style: TextStyle(
           fontSize: 36,
           fontWeight: FontWeight.w900,
-          color: _scoreColor,
+          color: rankColorForRatio(_starRatio),
           letterSpacing: 1,
           shadows: [
             Shadow(
@@ -164,7 +164,7 @@ Widget _buildCrest() {
           icon: Icons.emoji_events_rounded,
           value: '${((_starRatio) * 100).round()}%',
           label: 'Score',
-          color: _scoreColor, 
+          color: rankColorForRatio(_starRatio), 
         ),
       ],
     ).animate().fadeIn(delay: 1000.ms, duration: 400.ms);
@@ -180,7 +180,7 @@ Widget _buildCrest() {
             icon: const Icon(Icons.replay_rounded),
             label: const Text('Play Again'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _scoreColor,
+              backgroundColor: rankColorForRatio(_starRatio),
               foregroundColor: Colors.black87, 
               elevation: 4,
             ),
@@ -196,11 +196,11 @@ Widget _buildCrest() {
                 (_) => false,
               );
             },
-            icon: Icon(Icons.home_rounded, color: _scoreColor),
+            icon: Icon(Icons.home_rounded, color: rankColorForRatio(_starRatio)),
             label: Text('Back to Maps',
-                style: TextStyle(color: _scoreColor, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: rankColorForRatio(_starRatio), fontWeight: FontWeight.bold)),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: _scoreColor, width: 1.5),
+              side: BorderSide(color: rankColorForRatio(_starRatio), width: 1.5),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
