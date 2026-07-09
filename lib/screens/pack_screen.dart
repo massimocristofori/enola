@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift_orm;
@@ -16,12 +17,9 @@ import 'package:enola/services/training_service.dart';
 import 'package:enola/screens/share_pack_screen.dart';
 import 'package:enola/screens/pack_shared.dart';
 
-// Tunable lip heights — these are approximations of the info-bar's actual
-// rendered height and will likely need a few pixels of adjustment once
-// seen on device.
-const double kLipHeightExpanded = 46.0; // resting height right after landing
-const double kLipHeightCollapsed = 34.0; // height once scrolled
-const double kLipCollapseScrollThreshold = 40.0; // px of scroll to fully collapse
+const double kLipHeightExpanded = 46.0;
+const double kLipHeightCollapsed = 34.0;
+const double kLipCollapseScrollThreshold = 40.0;
 
 class PackScreen extends ConsumerStatefulWidget {
   final int packId;
@@ -35,15 +33,13 @@ class PackScreen extends ConsumerStatefulWidget {
 
 class _PackScreenState extends ConsumerState<PackScreen> {
   final ScrollController _scrollController = ScrollController();
-  double _collapseT = 0.0; // 0 = resting lip height, 1 = fully collapsed
+  double _collapseT = 0.0;
   bool _chromeVisible = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Icons/stats fade in shortly after the push transition lands, rather
-    // than popping in the instant the flight starts.
     Future.delayed(const Duration(milliseconds: 420), () {
       if (mounted) setState(() => _chromeVisible = true);
     });
@@ -79,92 +75,105 @@ class _PackScreenState extends ConsumerState<PackScreen> {
     final width = MediaQuery.of(context).size.width;
     final cols = crossAxisCount(width);
     final maps = mapsAsync.valueOrNull ?? [];
+    final topInset = MediaQuery.of(context).padding.top;
 
     final lipHeight = kLipHeightExpanded -
         (kLipHeightExpanded - kLipHeightCollapsed) * _collapseT;
     final statsOpacity = 1.0 - _collapseT;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFECEFF4), Colors.white],
-          stops: [0.0, 0.65],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFECEFF4), Colors.white],
+            stops: [0.0, 0.65],
+          ),
         ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: mapsAsync.isLoading
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(40),
-                              child: CircularProgressIndicator(
-                                  color: EnolaTheme.accent),
-                            ),
-                          )
-                        : CustomScrollView(
-                            controller: _scrollController,
-                            slivers: [
-                              // Spacer so content starts below the lip.
-                              SliverToBoxAdapter(
-                                child: SizedBox(height: lipHeight),
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: SafeArea(
+                  top: false,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: mapsAsync.isLoading
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40),
+                                child: CircularProgressIndicator(
+                                    color: EnolaTheme.accent),
                               ),
-                              if (maps.isEmpty)
+                            )
+                          : CustomScrollView(
+                              controller: _scrollController,
+                              slivers: [
                                 SliverToBoxAdapter(
-                                  child: _EmptyPackState(
-                                      onCreate: () => _openCreate(context)),
-                                )
-                              else
-                                SliverPadding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                      40, 4, 40, 100),
-                                  sliver: SliverToBoxAdapter(
-                                    child: _ReorderableMapGrid(
-                                      maps: maps,
-                                      crossAxisCount: cols,
+                                  child: SizedBox(
+                                      height: topInset + lipHeight),
+                                ),
+                                if (maps.isEmpty)
+                                  SliverToBoxAdapter(
+                                    child: _EmptyPackState(
+                                        onCreate: () =>
+                                            _openCreate(context)),
+                                  )
+                                else
+                                  SliverPadding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        40, 4, 40, 100),
+                                    sliver: SliverToBoxAdapter(
+                                      child: _ReorderableMapGrid(
+                                        maps: maps,
+                                        crossAxisCount: cols,
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
+                              ],
+                            ),
+                    ),
                   ),
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
                     child: _PackHeader(
                       packId: widget.packId,
                       packName: widget.packName,
+                      topInset: topInset,
                       lipHeight: lipHeight,
                       statsOpacity: statsOpacity,
                       chromeVisible: _chromeVisible,
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ),
-        floatingActionButtonLocation:
-            FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _PackBackFab(onBack: () => Navigator.pop(context)),
-            const SizedBox(width: 12),
-            _CreateFab(onTap: () => _openCreate(context)),
-            const SizedBox(width: 12),
-            const TrainingFab(),
-          ],
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerFloat,
+          floatingActionButton: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PackBackFab(onBack: () => Navigator.pop(context)),
+              const SizedBox(width: 12),
+              _CreateFab(onTap: () => _openCreate(context)),
+              const SizedBox(width: 12),
+              const TrainingFab(),
+            ],
+          ),
         ),
       ),
     );
@@ -172,20 +181,11 @@ class _PackScreenState extends ConsumerState<PackScreen> {
 }
 
 // ── Pack lip header ────────────────────────────────────────────────────
-//
-// The Hero child here is the SAME PackCardBody used by the home card, at
-// its full natural size. An OverflowBox lets it lay out at that full size
-// regardless of the SizedBox height we give it, and a ClipRect on top
-// clips everything except the bottom `lipHeight` slice — so what's visible
-// is only the "title bar" portion, as if the card slid up and off, with
-// the rest clipped by the top of the screen. Because both ends of the
-// Hero flight use this exact same widget, no custom flightShuttleBuilder
-// is needed: Flutter's default Hero flight already produces the "slides
-// up, gets clipped" motion.
 
-class _PackHeader extends ConsumerWidget {
+class _PackHeader extends ConsumerStatefulWidget {
   final int packId;
   final String packName;
+  final double topInset;
   final double lipHeight;
   final double statsOpacity;
   final bool chromeVisible;
@@ -193,14 +193,60 @@ class _PackHeader extends ConsumerWidget {
   const _PackHeader({
     required this.packId,
     required this.packName,
+    required this.topInset,
     required this.lipHeight,
     required this.statsOpacity,
     required this.chromeVisible,
   });
 
+  @override
+  ConsumerState<_PackHeader> createState() => _PackHeaderState();
+}
+
+class _PackHeaderState extends ConsumerState<_PackHeader> {
+  bool _isEditingTitle = false;
+  late TextEditingController _titleController;
+  late FocusNode _titleFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.packName);
+    _titleFocusNode = FocusNode();
+    _titleFocusNode.addListener(() {
+      if (!_titleFocusNode.hasFocus && _isEditingTitle) _commitTitle();
+    });
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _titleFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _startEditingTitle(String currentTitle) {
+    _titleController.text = currentTitle;
+    setState(() => _isEditingTitle = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _titleFocusNode.requestFocus();
+      _titleController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _titleController.text.length,
+      );
+    });
+  }
+
+  Future<void> _commitTitle() async {
+    final newName = _titleController.text.trim();
+    setState(() => _isEditingTitle = false);
+    if (newName.isEmpty || newName == widget.packName) return;
+    await DriftService.instance.updateFolderTitle(widget.packId, newName);
+  }
+
   Future<void> _handleDeleteTap(BuildContext context) async {
     final lookup =
-        await SupabaseService.instance.lookupPackForFolder(packId);
+        await SupabaseService.instance.lookupPackForFolder(widget.packId);
 
     if (lookup == null) {
       await _confirmPlainDelete(context);
@@ -220,7 +266,7 @@ class _PackHeader extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete pack?'),
         content: Text(
-          'This will permanently delete "$packName" and all maps inside it.',
+          'This will permanently delete "${widget.packName}" and all maps inside it.',
         ),
         actions: [
           TextButton(
@@ -237,7 +283,7 @@ class _PackHeader extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await DriftService.instance.deleteFolderAndContents(packId);
+      await DriftService.instance.deleteFolderAndContents(widget.packId);
       if (context.mounted) Navigator.pop(context);
     }
   }
@@ -249,7 +295,7 @@ class _PackHeader extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete shared pack?'),
         content: Text(
-          'This will permanently delete "$packName" and all maps inside it. '
+          'This will permanently delete "${widget.packName}" and all maps inside it. '
           'This pack is shared — do you also want to remove it from '
           'Supabase? Anyone who downloaded it will keep their copy, but '
           'won\'t be able to receive future updates and the share code '
@@ -278,7 +324,7 @@ class _PackHeader extends ConsumerWidget {
     if (choice == true) {
       await SupabaseService.instance.deletePackRemote(remotePackId);
     }
-    await DriftService.instance.deleteFolderAndContents(packId);
+    await DriftService.instance.deleteFolderAndContents(widget.packId);
     if (context.mounted) Navigator.pop(context);
   }
 
@@ -289,7 +335,7 @@ class _PackHeader extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete pack?'),
         content: Text(
-          'This will delete "$packName" and all maps inside it from this '
+          'This will delete "${widget.packName}" and all maps inside it from this '
           'device only. The shared pack itself is not affected.',
         ),
         actions: [
@@ -307,7 +353,7 @@ class _PackHeader extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await DriftService.instance.deleteFolderAndContents(packId);
+      await DriftService.instance.deleteFolderAndContents(widget.packId);
       await DriftService.instance.removePackTracking(remotePackId);
       if (context.mounted) Navigator.pop(context);
     }
@@ -320,141 +366,172 @@ class _PackHeader extends ConsumerWidget {
     );
   }
 
-  Future<void> _renameDialog(BuildContext context, String currentName) async {
-    final controller = TextEditingController(text: currentName);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename pack'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+  @override
+  Widget build(BuildContext context) {
+    final statsAsync = ref.watch(folderStatsProvider(widget.packId));
+    final stats = statsAsync.valueOrNull;
+    final packsAsync = ref.watch(allFoldersProvider);
+    final matches =
+        packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
+    final pack = matches.isNotEmpty ? matches.first : null;
+    final currentTitle = pack?.title ?? widget.packName;
+
+    final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
+    final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
+    final gradientColors = packGradientColors(isOwned);
+
+    return SizedBox(
+      height: widget.topInset + widget.lipHeight,
+      child: Column(
+        children: [
+          // Solid strip behind the status bar (clock/battery), matching
+          // the top of the card's gradient so the color reads as
+          // continuous from the very edge of the screen.
+          Container(
+            height: widget.topInset,
+            color: gradientColors.first,
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Save'),
+          Expanded(
+            child: Stack(
+              children: [
+                // The card, laid out at full natural size and clipped
+                // down to just the visible lip strip.
+                ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.bottomCenter,
+                    minHeight: 0,
+                    maxHeight: double.infinity,
+                    child: Hero(
+                      tag: 'pack-${widget.packId}',
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: pack == null
+                              ? const SizedBox.shrink()
+                              : PackCardBody(
+                                  pack: pack,
+                                  isOwned: isOwned,
+                                  hideTitle: _isEditingTitle,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Chrome overlay: pencil/share/delete + stats, or the
+                // inline title editor — sits outside the Hero, fades in
+                // once the flight has landed.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: !widget.chromeVisible,
+                    child: AnimatedOpacity(
+                      opacity: widget.chromeVisible ? 1 : 0,
+                      duration: const Duration(milliseconds: 250),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: _isEditingTitle
+                            ? _buildEditingRow()
+                            : _buildNormalRow(context, currentTitle, stats, pack),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
-    if (newName != null && newName.isNotEmpty && newName != currentName) {
-      await DriftService.instance.updateFolderTitle(packId, newName);
-    }
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(folderStatsProvider(packId));
-    final stats = statsAsync.valueOrNull;
-    final packsAsync = ref.watch(allFoldersProvider);
-    final matches =
-        packsAsync.valueOrNull?.where((f) => f.id == packId) ?? [];
-    final pack = matches.isNotEmpty ? matches.first : null;
-
-    final ownershipAsync = ref.watch(packOwnershipProvider(packId));
-    final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
-
-    return SizedBox(
-      height: lipHeight,
-      child: Stack(
-        children: [
-          // The card itself: laid out at its full natural size via
-          // OverflowBox, then clipped down to just `lipHeight`.
-          ClipRect(
-            child: OverflowBox(
-              alignment: Alignment.bottomCenter,
-              minHeight: 0,
-              maxHeight: double.infinity,
-              child: Hero(
-                tag: 'pack-$packId',
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: pack == null
-                        ? const SizedBox.shrink()
-                        : PackCardBody(pack: pack, isOwned: isOwned),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Chrome overlay: tap-to-rename, stats, share/delete — sits
-          // outside the Hero entirely, so it never participates in the
-          // flight and only fades in once the transition has landed.
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: !chromeVisible,
-              child: AnimatedOpacity(
-                opacity: chromeVisible ? 1 : 0,
-                duration: const Duration(milliseconds: 250),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () => _renameDialog(context, packName),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Opacity(
-                            opacity: statsOpacity,
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                /*child: stats == null
-                                    ? const SizedBox.shrink()
-                                    : Text(
-                                        '${stats.mapCount} maps · '
-                                        '${stats.achievedStars} / ${stats.totalStars} ★',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 11,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),*/
-                              ),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: pack == null
-                              ? null
-                              : () => _sharePack(context, pack),
-                          icon: const Icon(Icons.ios_share, size: 22),
-                          color: Colors.white,
-                          padding: EdgeInsets.all(4),
-                          constraints: const BoxConstraints(
-                              minWidth: 32, minHeight: 32),
-                        ),
-                        IconButton(
-                          onPressed: () => _handleDeleteTap(context),
-                          icon: const Icon(Icons.delete_outline_rounded,
-                              size: 22),
-                          color: Colors.white,
-                          padding: EdgeInsets.all(4),
-                          constraints: const BoxConstraints(
-                              minWidth: 32, minHeight: 32),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
+  Widget _buildNormalRow(
+    BuildContext context,
+    String currentTitle,
+    FolderStats? stats,
+    Folder? pack,
+  ) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => _startEditingTitle(currentTitle),
+          icon: const Icon(Icons.edit_rounded, size: 16),
+          color: Colors.white,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+        ),
+        Expanded(
+          child: Opacity(
+            opacity: widget.statsOpacity,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: stats == null
+                  ? const SizedBox.shrink()
+                  : Text(
+                      '${stats.mapCount} maps · '
+                      '${stats.achievedStars} / ${stats.totalStars} ★',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
-        ],
-      ),
+        ),
+        IconButton(
+          onPressed: pack == null ? null : () => _sharePack(context, pack),
+          icon: const Icon(Icons.ios_share, size: 18),
+          color: Colors.white,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+        IconButton(
+          onPressed: () => _handleDeleteTap(context),
+          icon: const Icon(Icons.delete_outline_rounded, size: 18),
+          color: Colors.white,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+
+  Widget _buildEditingRow() {
+    return Row(
+      children: [
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: _titleController,
+            focusNode: _titleFocusNode,
+            autofocus: true,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+            ),
+            onSubmitted: (_) => _commitTitle(),
+          ),
+        ),
+        IconButton(
+          onPressed: _commitTitle,
+          icon: const Icon(Icons.check_rounded, size: 20),
+          color: Colors.white,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+      ],
     );
   }
 }
