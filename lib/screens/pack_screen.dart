@@ -263,7 +263,7 @@ class _PackHeader extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _PackHeaderLip(gradientColors: gradientColors),
-            _PackRankPeek(packId: packId),
+            //_PackRankPeek(packId: packId),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
               child: Row(
