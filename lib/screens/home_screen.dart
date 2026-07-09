@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:enola/services/supabase_service.dart';
+
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
