@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:enola/database/database.dart';
 import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/providers/map_providers.dart';
+import 'package:enola/utils/rank_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 enum NodeStatus { completed, current, locked }
@@ -69,6 +70,14 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath> {
         final stars =
             index < widget.riddleStars.length ? widget.riddleStars[index] : 0;
 
+        // Cumulative stars/ratio through this node, used to pick the rank image.
+        final cumulativeStars = widget.riddleStars
+            .take(index + 1)
+            .fold<int>(0, (sum, s) => sum + s);
+        final cumulativeMax = (index + 1) * 3;
+        final starRatio =
+            cumulativeMax > 0 ? cumulativeStars / cumulativeMax : 0.0;
+
         widget.nodeKeys.putIfAbsent(index, () => GlobalKey());
 
         final nodeWidget = _RiddleNode(
@@ -77,6 +86,7 @@ class _TreasureMapPathState extends ConsumerState<TreasureMapPath> {
           index: index + 1,
           status: status,
           stars: stars,
+          starRatio: starRatio,
           imageBytes: widget.imageBytes,
           immediateActivation: widget.immediateActivation,
           onTap: isCurrent && widget.onCurrentNodeTap != null
@@ -148,6 +158,7 @@ class _RiddleNode extends StatefulWidget {
   final int index;
   final NodeStatus status;
   final int stars;
+  final double starRatio;
   final Uint8List? imageBytes;
   final VoidCallback? onTap;
   final VoidCallback? onCompletedTap;
@@ -159,6 +170,7 @@ class _RiddleNode extends StatefulWidget {
     required this.index,
     required this.status,
     required this.stars,
+    required this.starRatio,
     this.imageBytes,
     this.onTap,
     this.onCompletedTap,
@@ -315,7 +327,8 @@ class _RiddleNodeState extends State<_RiddleNode>
           child: Stack(
             fit: StackFit.expand,
             children: [
-                Image.asset('assets/images/ranking/0.jpg', fit: BoxFit.cover),
+              Image.asset(rankImageForRatio(widget.starRatio),
+                  fit: BoxFit.cover),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
