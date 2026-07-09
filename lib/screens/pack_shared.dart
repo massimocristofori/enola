@@ -46,7 +46,7 @@ List<Color> packGradientColors(bool isOwned) => isOwned
     : const [Color(0x4e249689), Color(0xFF249689)];
 
 Color packAccentColor(bool isOwned) =>
-    isOwned ? const Color(0xffff4c00) : const Color(0x#4e249689);
+    isOwned ? const Color(0xffff4c00) : const Color(0x4e249689);
 
 // ── Ownership provider ──────────────────────────────────────────────────
 
