@@ -409,7 +409,7 @@ class _PackHeader extends ConsumerWidget {
                               padding: const EdgeInsets.only(left: 10),
                               child: Align(
                                 alignment: Alignment.centerLeft,
-                                child: stats == null
+                                /*child: stats == null
                                     ? const SizedBox.shrink()
                                     : Text(
                                         '${stats.mapCount} maps · '
@@ -421,7 +421,7 @@ class _PackHeader extends ConsumerWidget {
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                      ),
+                                      ),*/
                               ),
                             ),
                           ),
@@ -430,18 +430,18 @@ class _PackHeader extends ConsumerWidget {
                           onPressed: pack == null
                               ? null
                               : () => _sharePack(context, pack),
-                          icon: const Icon(Icons.ios_share, size: 18),
+                          icon: const Icon(Icons.ios_share, size: 22),
                           color: Colors.white,
-                          padding: EdgeInsets.zero,
+                          padding: EdgeInsets.all(4),
                           constraints: const BoxConstraints(
                               minWidth: 32, minHeight: 32),
                         ),
                         IconButton(
                           onPressed: () => _handleDeleteTap(context),
                           icon: const Icon(Icons.delete_outline_rounded,
-                              size: 18),
+                              size: 22),
                           color: Colors.white,
-                          padding: EdgeInsets.zero,
+                          padding: EdgeInsets.all(4),
                           constraints: const BoxConstraints(
                               minWidth: 32, minHeight: 32),
                         ),
