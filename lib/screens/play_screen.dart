@@ -15,6 +15,7 @@ import 'package:enola/screens/create_map_screen.dart';
 import 'package:enola/services/drift_service.dart';
 import 'package:enola/services/training_service.dart';
 import 'package:enola/services/notification_service.dart';
+import 'package:enola/utils/rank_image.dart';
 
 import 'package:drift/drift.dart' as drift;
 
@@ -1502,12 +1503,4 @@ class _PlayAgainFab extends StatelessWidget {
       ],
     );
   }
-}
-
-String _rankImage(double starRatio) {
-  final score = (starRatio * 10).round();
-  if (score < 5) return 'assets/images/ranking/0.jpg';
-  if (score <= 6) return 'assets/images/ranking/1.jpg';
-  if (score <= 9) return 'assets/images/ranking/2.jpg';
-  return 'assets/images/ranking/3.jpg';
 }
