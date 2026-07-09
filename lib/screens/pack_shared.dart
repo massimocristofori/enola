@@ -40,46 +40,36 @@ int rankIndex(double starRatio) {
 }
 
 // ── Pack color helpers ───────────────────────────────────────────────────
-// Shared between the home-screen pack card and the pack-screen lip, so the
-// two ends of the Hero flight always agree on color exactly.
 
 List<Color> packGradientColors(bool isOwned) => isOwned
     ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
-    : const [Color(0x4E249689), Color(0xFF249689)];
+    : const [Color(0xa1ee8b60), Color(0xFF249689)];
 
 Color packAccentColor(bool isOwned) =>
     isOwned ? const Color(0xffff4c00) : const Color(0xFF249689);
 
 // ── Ownership provider ──────────────────────────────────────────────────
 
-/// Resolves whether the local folder [folderId] is an owned pack (created
-/// on this device, or never shared at all) vs. a downloaded, non-owned
-/// pack. Wraps SupabaseService.lookupPackForFolder, which does a local
-/// Drift lookup (fast, no network call) — null result means "never shared
-/// or downloaded", which counts as owned.
 final packOwnershipProvider =
     FutureProvider.family<OwnedPackLookup?, int>((ref, folderId) async {
   return SupabaseService.instance.lookupPackForFolder(folderId);
 });
 
-/// True if [lookup] represents an owned pack. Treats "never shared" (null)
-/// as owned.
 bool isOwnedLookup(OwnedPackLookup? lookup) =>
     lookup == null || lookup.isOwner;
 
 // ── Shared pack card visual (rank grid + title bar) ──────────────────────
-//
-// Used identically by the home screen's pack grid card AND the pack
-// screen's collapsing header ("lip"). Because both ends of the Hero flight
-// render this exact same widget (just at different widths), the flight
-// naturally morphs one into the other with no custom shuttle needed — the
-// "clip down to a lip" effect is applied entirely outside this widget, by
-// whichever screen is hosting it.
 
 class PackCardBody extends ConsumerWidget {
   final Folder pack;
   final bool isOwned;
-  const PackCardBody({super.key, required this.pack, required this.isOwned});
+  final bool hideTitle;
+  const PackCardBody({
+    super.key,
+    required this.pack,
+    required this.isOwned,
+    this.hideTitle = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -118,7 +108,7 @@ class PackCardBody extends ConsumerWidget {
         children: [
           PackRankGrid(maps: maps),
           const SizedBox(height: 4),
-          PackInfoBar(title: pack.title),
+          PackInfoBar(title: pack.title, hideTitle: hideTitle),
         ],
       ),
     );
@@ -265,7 +255,8 @@ class RankTile extends StatelessWidget {
 
 class PackInfoBar extends StatelessWidget {
   final String title;
-  const PackInfoBar({super.key, required this.title});
+  final bool hideTitle;
+  const PackInfoBar({super.key, required this.title, this.hideTitle = false});
 
   @override
   Widget build(BuildContext context) {
@@ -278,15 +269,18 @@ class PackInfoBar extends StatelessWidget {
           color: const Color(0x44ffffff),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+        child: Opacity(
+          opacity: hideTitle ? 0 : 1,
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -294,7 +288,7 @@ class PackInfoBar extends StatelessWidget {
   }
 }
 
-// ── Training FAB (used on both HomeScreen and PackScreen) ────────────────
+// ── Training FAB ──────────────────────────────────────────────────────────
 
 class TrainingFab extends StatefulWidget {
   const TrainingFab({super.key});
