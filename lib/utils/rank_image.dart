@@ -27,7 +27,7 @@ String rankMessageForRatio(double ratio) {
   return 'The oracle bows before your wisdom.';
 }
 
-String rankColorForRatio(double ratio) {
+Color rankColorForRatio(double ratio) {
   final score = (ratio * 10).round();
   if (score < 5) return const Color(0xFFFF9100);
   if (score <= 6) return const Color(0xFF00E5FF);
