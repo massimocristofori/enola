@@ -1,8 +1,3 @@
-import 'dart:convert';
-
-import 'package:enola/services/supabase_service.dart';
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +8,7 @@ import 'package:enola/theme/enola_theme.dart';
 import 'package:enola/screens/download_pack_screen.dart';
 import 'package:enola/screens/pack_screen.dart';
 import 'package:enola/services/drift_service.dart';
+import 'package:enola/services/supabase_service.dart';
 import 'package:enola/screens/pack_shared.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -197,7 +193,7 @@ class _PackGridItem extends StatelessWidget {
   }
 }
 
-// ── Empty Home State (no packs yet) ─────────────────────────────────────────
+// ── Empty Home State (no packs yet) ──────────────────────────────────────
 
 class _EmptyHomeState extends StatelessWidget {
   final VoidCallback onCreatePack;
@@ -367,7 +363,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Create Pack Sheet ────────────────────────────────────────────────────
+// ── Create Pack Sheet ─────────────────────────────────────────────────────
 
 class _CreatePackSheet extends StatefulWidget {
   const _CreatePackSheet();
@@ -474,7 +470,11 @@ class _CreatePackSheetState extends State<_CreatePackSheet> {
   }
 }
 
-// ── Pack Card ────────────────────────────────────────────────────────────
+// ── Pack Card ─────────────────────────────────────────────────────────────
+//
+// Wraps the shared PackCardBody in the Hero + tap handler. The visual
+// (rank grid + title bar) itself lives in pack_shared.dart so the pack
+// screen's lip can reuse the exact same widget.
 
 class _PackCard extends ConsumerWidget {
   final Folder pack;
@@ -483,17 +483,8 @@ class _PackCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mapsAsync = ref.watch(mapsInFolderProvider(pack.id));
-    final maps = mapsAsync.valueOrNull ?? [];
-
     final ownershipAsync = ref.watch(packOwnershipProvider(pack.id));
     final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
-
-    final List<Color> gradientColors = isOwned
-        ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
-        : const [Color(0x4e249689), Color(0xFF249689)];
-    final Color accentColor =
-        isOwned ? const Color(0xffff4c00) : const Color(0xFF249689);
 
     return GestureDetector(
       onTap: onTap,
@@ -501,211 +492,9 @@ class _PackCard extends ConsumerWidget {
         tag: 'pack-${pack.id}',
         child: Material(
           type: MaterialType.transparency,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: gradientColors,
-              ),
-              borderRadius: BorderRadius.circular(8),
-              border:
-                  isOwned ? null : Border.all(color: accentColor, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: accentColor.withAlpha(70),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: Colors.black.withAlpha(30),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _PackRankGrid(maps: maps),
-                const SizedBox(height: 4),
-                _PackInfoBar(title: pack.title),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Pack Rank Grid ───────────────────────────────────────────────────────
-
-class _PackRankGrid extends ConsumerWidget {
-  final List<RiddleMap> maps;
-  const _PackRankGrid({required this.maps});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (maps.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(
-          child: Icon(
-            Icons.folder_open_rounded,
-            size: 48,
-            color: Color(0x8Cffffff),
-          ),
-        ),
-      );
-    }
-
-    final rankCounts = <int, int>{0: 0, 1: 0, 2: 0, 3: 0, 4: 0};
-
-    for (final map in maps) {
-      final countAsync = ref.watch(riddleCountProvider(map.id));
-      final sessionAsync = ref.watch(latestSessionProvider(map.id));
-
-      final count = countAsync.valueOrNull ?? 0;
-      final session = sessionAsync.valueOrNull;
-
-      int achievedStars = 0;
-      if (session != null && session.riddleStarsJson != null) {
-        try {
-          final list = jsonDecode(session.riddleStarsJson!) as List;
-          achievedStars = list.fold<int>(0, (sum, e) => sum + (e as int));
-        } catch (_) {}
-      }
-
-      final maxStars = count * 3;
-      final starRatio = maxStars > 0 ? achievedStars / maxStars : 0.0;
-      final rank = rankIndex(starRatio);
-      rankCounts[rank] = (rankCounts[rank] ?? 0) + 1;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const cols = 3;
-          const spacing = 8.0;
-          final tileSize =
-              (constraints.maxWidth - spacing * (cols - 1)) / cols;
-
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: [
-              for (int rank = 4; rank >= 0; rank--)
-                _RankTile(
-                  rank: rank,
-                  count: rankCounts[rank] ?? 0,
-                  size: tileSize,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _RankTile extends StatelessWidget {
-  final int rank;
-  final int count;
-  final double size;
-
-  const _RankTile({
-    required this.rank,
-    required this.count,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isEmpty = count == 0;
-
-    return Opacity(
-      opacity: isEmpty ? 0.4 : 1.0,
-      child: SizedBox(
-        width: size,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(25),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(9),
-                child: Image.asset(
-                  'assets/images/$rank.jpg',
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0x8714181b),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Pack Info Bar ────────────────────────────────────────────────────────
-
-class _PackInfoBar extends StatelessWidget {
-  final String title;
-  const _PackInfoBar({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        decoration: BoxDecoration(
-          color: const Color(0x44ffffff),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+          child: SizedBox(
+            width: double.infinity,
+            child: PackCardBody(pack: pack, isOwned: isOwned),
           ),
         ),
       ),
