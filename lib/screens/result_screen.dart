@@ -9,6 +9,7 @@ import 'package:enola/screens/home_screen.dart';
 
 import 'package:enola/utils/rank_image.dart';
 
+
 class ResultScreen extends StatelessWidget {
   final String mapId;
   final int correct;
@@ -91,7 +92,7 @@ Widget _buildCrest() {
           ],
         ),
         child: Image.asset(
-          _rankImage,
+          rankImageForRatio(_starRatio),
           fit: BoxFit.cover,
         ),
       ).animate().scale(
@@ -112,7 +113,7 @@ Widget _buildCrest() {
       ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
       const SizedBox(height: 8),
       Text(
-        _rank,
+        rankTitleForRatio(_starRatio),
         style: TextStyle(
           fontSize: 36,
           fontWeight: FontWeight.w900,
@@ -120,7 +121,7 @@ Widget _buildCrest() {
           letterSpacing: 1,
           shadows: [
             Shadow(
-              color: rankColor(_starRatio).withValues(alpha: 0.4),
+              color: rankColorForRatio(_starRatio).withValues(alpha: 0.4),
               blurRadius: 25,
             ),
           ],
@@ -128,7 +129,7 @@ Widget _buildCrest() {
       ).animate().fadeIn(delay: 400.ms, duration: 500.ms).slideY(begin: 0.3, end: 0),
       const SizedBox(height: 12),
       Text(
-        _message,
+        rankMessageForRatio(_starRatio),
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: EnolaTheme.textSecond,
