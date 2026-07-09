@@ -251,7 +251,7 @@ class _PackHeader extends ConsumerWidget {
 
     final List<Color> gradientColors = isOwned
         ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
-        : const [Color(0xFF81D7FD), Color(0xFF249689)];
+        : const [Color(0x#4e249689), Color(0xFF249689)];
 
     return Hero(
       tag: 'pack-$packId',
