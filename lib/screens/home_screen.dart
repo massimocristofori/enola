@@ -491,7 +491,7 @@ class _PackCard extends ConsumerWidget {
 
     final List<Color> gradientColors = isOwned
         ? const [Color(0xa1ee8b60), Color(0xffff4c00)]
-        : const [Color(0xa1ee8b60), Color(0xFF249689)];
+        : const [Color(0x4e249689), Color(0xFF249689)];
     final Color accentColor =
         isOwned ? const Color(0xffff4c00) : const Color(0xFF249689);
 
