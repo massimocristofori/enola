@@ -72,12 +72,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     Navigator.push(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 450),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, __, ___) => PackScreen(
-          packId: pack.id,
-          packName: pack.title,
-        ),
+        transitionDuration: const Duration(milliseconds: 750),
+				reverseTransitionDuration: const Duration(milliseconds: 600),
+				pageBuilder: (_, animation, __) => PackScreen(
+  packId: pack.id,
+  packName: pack.title,
+  flightAnimation: animation,
+),
+
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,
