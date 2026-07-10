@@ -66,7 +66,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     if (mounted) setState(() => _trainingActive = active);
   }
 
-  Future<void> _onToggleTraining(List<Riddle> riddles) async {
+  Future<void> _onToggleTraining(List<dynamic> riddles) async {
     if (_trainingActive) {
       final confirm = await _showStopTrainingDialog();
       if (!confirm) return;
@@ -158,7 +158,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   // ── Riddle complete ────────────────────────────────────────────────────────
   Future<void> _onRiddleComplete(
-      List<Riddle> riddles, int riddleIndex, int errorCount) async {
+      List<dynamic> riddles, int riddleIndex, int errorCount) async {
     if (_activeRiddleTraining && _activeRiddleId != null) {
       final correct = errorCount == 0;
       await TrainingService.instance.onRiddleAnswered(
@@ -292,7 +292,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
 // ── Map view ──────────────────────────────────────────────────────────────────
 class _MapView extends StatefulWidget {
-  final List<Riddle> riddles;
+  final List<dynamic> riddles;
   final String mapId;
   final String mapTitle; // Added for the Progress Panel
   final dynamic playState;
