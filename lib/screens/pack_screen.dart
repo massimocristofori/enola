@@ -483,7 +483,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
 
                 // Chrome overlay: left-aligned title, pencil on the
                 // right. Fades in once the flip has landed.
-                Positioned.fill(
+                /*Positioned.fill(
                   child: IgnorePointer(
                     ignoring: !widget.chromeVisible,
                     child: AnimatedOpacity(
@@ -497,7 +497,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                       ),
                     ),
                   ),
-                ),
+                ),*/
               ],
             ),
           ),
