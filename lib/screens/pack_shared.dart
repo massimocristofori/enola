@@ -21,23 +21,6 @@ double cardWidth(BuildContext context) {
   return (w - 80 - (cols - 1) * 24) / cols;
 }
 
-String rankImage(double starRatio) {
-  final score = (starRatio * 10).round();
-  if (score == 0) return 'assets/images/0.jpg';
-  if (score < 5) return 'assets/images/1.jpg';
-  if (score <= 6) return 'assets/images/2.jpg';
-  if (score <= 9) return 'assets/images/3.jpg';
-  return 'assets/images/4.jpg';
-}
-
-int rankIndex(double starRatio) {
-  final score = (starRatio * 10).round();
-  if (score == 0) return 0;
-  if (score < 5) return 1;
-  if (score <= 6) return 2;
-  if (score <= 9) return 3;
-  return 4;
-}
 
 // ── Pack color helpers ───────────────────────────────────────────────────
 
