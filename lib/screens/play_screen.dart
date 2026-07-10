@@ -19,11 +19,6 @@ import 'package:enola/utils/rank_image.dart';
 
 import 'package:drift/drift.dart' as drift;
 
-// Title row only = 38
-const double kPlayHeaderHeight = 38.0;
-// Compact: Header hidden completely when riddle is active
-const double kPlayHeaderCompact = 0.0;
-
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
   const PlayScreen({super.key, required this.mapId});
@@ -573,114 +568,101 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
           FloatingActionButtonLocation.centerFloat,
       floatingActionButton: riddleActive
           ? null
-          : _isCompleted
-              ? _PlayAgainFab(
-                  onPlayAgain: _playAgain,
-                  onBack: () => Navigator.pop(context),
-                )
-              : _BackFab(onTap: () => Navigator.pop(context)),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _CircleFab(
+                  icon: Icons.chevron_left_rounded,
+                  onTap: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 12),
+                _CircleFab(
+                  icon: Icons.edit_rounded,
+                  onTap: _onEditMap,
+                ),
+                const SizedBox(width: 12),
+                _CircleFab(
+                  icon: Icons.delete_outline_rounded,
+                  iconColor: Colors.red,
+                  onTap: _onDeleteMap,
+                ),
+                if (_isCompleted) ...[
+                  const SizedBox(width: 12),
+                  _CircleFab(
+                    icon: Icons.replay_rounded,
+                    color: EnolaTheme.accent,
+                    iconColor: Colors.white,
+                    onTap: _playAgain,
+                  ),
+                ],
+              ],
+            ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  top: riddleActive
-                      ? kPlayHeaderCompact
-                      : kPlayHeaderHeight,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: showingLoader
-                      ? const Center(
+            child: showingLoader
+                ? const Center(
+                    child: CircularProgressIndicator(color: EnolaTheme.accent))
+                : mapAsync.when(
+                    loading: () => const Center(
+                        child:
+                            CircularProgressIndicator(color: EnolaTheme.accent)),
+                    error: (e, _) => Center(child: Text('$e')),
+                    data: (map) => riddlesAsync.when(
+                      loading: () => const Center(
                           child: CircularProgressIndicator(
-                              color: EnolaTheme.accent))
-                      : mapAsync.when(
-                          loading: () => const Center(
-                              child: CircularProgressIndicator(
-                                  color: EnolaTheme.accent)),
-                          error: (e, _) => Center(child: Text('$e')),
-                          data: (map) => riddlesAsync.when(
-                            loading: () => const Center(
-                                child: CircularProgressIndicator(
-                                    color: EnolaTheme.accent)),
-                            error: (e, _) =>
-                                Center(child: Text('$e')),
-                            data: (riddles) {
-                              return AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                                  return Stack(
-                                    alignment: Alignment.topCenter,
-                                    children: <Widget>[
-                                      ...previousChildren,
-                                      if (currentChild != null) currentChild,
-                                    ],
-                                  );
-                                },
-                                child: riddleActive
-                                    ? RiddleScreen(
-                                        key: ValueKey(
-                                            'riddle-$_activeRiddleIndex'),
-                                        riddle: riddles[
-                                            _activeRiddleIndex!],
-                                        riddleIndex:
-                                            _activeRiddleIndex!,
-                                        readOnly: _activeRiddleReadOnly,
-                                        trainingMode:
-                                            _activeRiddleTraining,
-                                        onDismiss: _dismissRiddle,
-                                        onComplete: (errorCount) =>
-                                            _onRiddleComplete(
-                                                riddles,
-                                                _activeRiddleIndex!,
-                                                errorCount),
-                                        onSkip: () => _onRiddleComplete(
-                                            riddles,
-                                            _activeRiddleIndex!,
-                                            3),
-                                      )
-                                    : _MapView(
-                                        key: const ValueKey('map'),
-                                        riddles: riddles,
-                                        mapId: widget.mapId,
-                                        playState: playState,
-                                        achievedStars: achievedStars,
-                                        hasBeenPlayed: hasBeenPlayed,
-                                        isCompleted: _isCompleted,
-                                        imageBytes: map?.imageBytes,
-                                        nodeKeys: _nodeKeys,
-                                        trainingActive: _trainingActive,
-                                        onNodeTap: _onNodeTap,
-                                        onCompletedNodeTap:
-                                            _onCompletedNodeTap,
-                                        onToggleTraining: () =>
-                                            _onToggleTraining(riddles),
-                                        progressBarStarKey: _progressBarStarKey,
-                                      ),
-                              );
-
-                            },
-                          ),
-                        ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _PlayHeader(
-                    mapId: widget.mapId,
-                    title: title,
-                    compact: riddleActive,
-                    onEdit: _onEditMap,
-                    onDelete: _onDeleteMap,
+                              color: EnolaTheme.accent)),
+                      error: (e, _) => Center(child: Text('$e')),
+                      data: (riddles) {
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          layoutBuilder: (Widget? currentChild,
+                              List<Widget> previousChildren) {
+                            return Stack(
+                              alignment: Alignment.topCenter,
+                              children: <Widget>[
+                                ...previousChildren,
+                                if (currentChild != null) currentChild,
+                              ],
+                            );
+                          },
+                          child: riddleActive
+                              ? RiddleScreen(
+                                  key: ValueKey('riddle-$_activeRiddleIndex'),
+                                  riddle: riddles[_activeRiddleIndex!],
+                                  riddleIndex: _activeRiddleIndex!,
+                                  readOnly: _activeRiddleReadOnly,
+                                  trainingMode: _activeRiddleTraining,
+                                  onDismiss: _dismissRiddle,
+                                  onComplete: (errorCount) =>
+                                      _onRiddleComplete(riddles,
+                                          _activeRiddleIndex!, errorCount),
+                                  onSkip: () => _onRiddleComplete(
+                                      riddles, _activeRiddleIndex!, 3),
+                                )
+                              : _MapView(
+                                  key: const ValueKey('map'),
+                                  title: title,
+                                  riddles: riddles,
+                                  mapId: widget.mapId,
+                                  playState: playState,
+                                  achievedStars: achievedStars,
+                                  hasBeenPlayed: hasBeenPlayed,
+                                  isCompleted: _isCompleted,
+                                  imageBytes: map?.imageBytes,
+                                  nodeKeys: _nodeKeys,
+                                  trainingActive: _trainingActive,
+                                  onNodeTap: _onNodeTap,
+                                  onCompletedNodeTap: _onCompletedNodeTap,
+                                  onToggleTraining: () =>
+                                      _onToggleTraining(riddles),
+                                  progressBarStarKey: _progressBarStarKey,
+                                ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -691,6 +673,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 // ── Map view ──────────────────────────────────────────────────────────────────
 
 class _MapView extends StatefulWidget {
+  final String title;
   final List<Riddle> riddles;
   final String mapId;
   final dynamic playState;
@@ -707,6 +690,7 @@ class _MapView extends StatefulWidget {
 
   const _MapView({
     super.key,
+    required this.title,
     required this.riddles,
     required this.mapId,
     required this.playState,
@@ -807,7 +791,7 @@ class _MapViewState extends State<_MapView> {
     final double starRatio = maxStars > 0 && widget.hasBeenPlayed ? achievedStars / maxStars : 0.0;
     final int activeMilestoneIndex = _getActiveMilestoneIndex(starRatio);
 
-    const double rankingBarHeight = 98.0; 
+    const double rankingBarHeight = 124.0;
     const double stickyHeight = rankingBarHeight;
 
     return SizedBox.expand(
@@ -852,7 +836,7 @@ class _MapViewState extends State<_MapView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Dynamic Ranking Milestone Progress Row ──
+                // ── Title + Dynamic Ranking Milestone Progress Row ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: Container(
@@ -872,6 +856,18 @@ class _MapViewState extends State<_MapView> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        Text(
+                          widget.title,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: EnolaTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: List.generate(4, (index) {
@@ -879,8 +875,8 @@ class _MapViewState extends State<_MapView> {
                             return AnimatedContainer(
                               duration: const Duration(milliseconds: 350),
                               curve: Curves.easeInOut,
-                              width: 46,
-                              height: 46,
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
@@ -900,7 +896,7 @@ class _MapViewState extends State<_MapView> {
                               child: Opacity(
                                 opacity: isActive ? 1.0 : 0.35,
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(23),
+                                  borderRadius: BorderRadius.circular(20),
                                   child: Image.asset(
                                     'assets/images/ranking/$index.jpg',
                                     fit: BoxFit.cover,
@@ -910,7 +906,7 @@ class _MapViewState extends State<_MapView> {
                                         child: Icon(
                                           Icons.star_rounded,
                                           color: isActive ? Colors.amber : Colors.grey[400],
-                                          size: 20,
+                                          size: 18,
                                         ),
                                       );
                                     },
@@ -1131,121 +1127,6 @@ class _StarProgressBar extends StatelessWidget {
   }
 }
 
-// ── Play Header ───────────────────────────────────────────────────────────────
-
-class _PlayHeader extends StatelessWidget {
-  final String mapId;
-  final String title;
-  final bool compact;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
-
-  const _PlayHeader({
-    required this.mapId,
-    required this.title,
-    this.compact = false,
-    this.onEdit,
-    this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Hero(
-      tag: 'map-card-$mapId',
-      child: Material(
-        type: MaterialType.transparency,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          height: compact ? kPlayHeaderCompact : kPlayHeaderHeight,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(bottom: Radius.circular(8)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x18000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipRect(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Title row — collapses to 0 in compact mode ──
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  height: compact ? 0 : 38,
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        border: Border(
-                          top: BorderSide(
-                              color: Color(0xFFE5E7EB), width: 1),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              title,
-                              textAlign: TextAlign.left,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w400,
-                                color: EnolaTheme.textPrimary,
-                                height: 1.3,
-                                letterSpacing: 0.1,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: onEdit,
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Icon(
-                                Icons.edit_rounded,
-                                size: 20,
-                                color: EnolaTheme.textPrimary,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: onDelete,
-                            child: const Padding(
-                              padding: EdgeInsets.only(left: 10, right: 12),
-                              child: Icon(
-                                Icons.delete_outline_rounded,
-                                size: 20,
-                                color: Colors.red,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Flying stars overlay ──────────────────────────────────────────────────────
 
 class _FlyingStarsOverlay extends StatefulWidget {
@@ -1373,22 +1254,31 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay>
   }
 }
 
-// ── Back FAB ──────────────────────────────────────────────────────────────────
+// ── Circle FAB (icon-only) ────────────────────────────────────────────────────
 
-class _BackFab extends StatelessWidget {
+class _CircleFab extends StatelessWidget {
+  final IconData icon;
   final VoidCallback onTap;
-  const _BackFab({required this.onTap});
+  final Color? color;
+  final Color? iconColor;
+
+  const _CircleFab({
+    required this.icon,
+    required this.onTap,
+    this.color,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          color: color ?? Colors.white,
+          shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.12),
@@ -1397,110 +1287,8 @@ class _BackFab extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.chevron_left_rounded,
-                size: 22, color: EnolaTheme.textPrimary),
-            SizedBox(width: 4),
-            Text(
-              'My Maps',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: EnolaTheme.textPrimary,
-              ),
-            ),
-          ],
-        ),
+        child: Icon(icon, size: 22, color: iconColor ?? EnolaTheme.textPrimary),
       ),
-    );
-  }
-}
-
-// ── Play Again FAB ────────────────────────────────────────────────────────────
-
-class _PlayAgainFab extends StatelessWidget {
-  final VoidCallback onPlayAgain;
-  final VoidCallback onBack;
-  const _PlayAgainFab(
-      {required this.onPlayAgain, required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: onBack,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 24, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.chevron_left_rounded,
-                    size: 22, color: EnolaTheme.textPrimary),
-                SizedBox(width: 4),
-                Text(
-                  'My Maps',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: EnolaTheme.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        GestureDetector(
-          onTap: onPlayAgain,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 24, vertical: 14),
-            decoration: BoxDecoration(
-              color: EnolaTheme.accent,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: EnolaTheme.accent.withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.replay_rounded,
-                    size: 20, color: Colors.white),
-                SizedBox(width: 6),
-                Text(
-                  'Play Again',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
