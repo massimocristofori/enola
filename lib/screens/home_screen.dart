@@ -481,6 +481,7 @@ class _CreatePackSheetState extends State<_CreatePackSheet> {
 class _PackCard extends ConsumerWidget {
   final Folder pack;
   final VoidCallback onTap;
+
   const _PackCard({required this.pack, required this.onTap});
 
   @override
@@ -491,13 +492,19 @@ class _PackCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Hero(
-        tag: 'pack-${pack.id}',
-        child: Material(
-          type: MaterialType.transparency,
-          child: SizedBox(
-            width: double.infinity,
-            child: PackCardBody(pack: pack, isOwned: isOwned),
-          ),
+        tag: 'pack-${pack.id}', // Ensure this tag matches the receiving Hero in PackScreen
+        flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+          return _PackFlipShuttle(
+            animation: animation,
+            flightDirection: flightDirection,
+            pack: pack,
+            isOwned: isOwned,
+            backColor: packAccentColor(isOwned), 
+          );
+        },
+        child: PackCardBody(
+          pack: pack,
+          isOwned: isOwned,
         ),
       ),
     );
