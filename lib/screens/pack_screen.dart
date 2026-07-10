@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -26,8 +25,14 @@ const double kLipCollapseScrollThreshold = 40.0;
 class PackScreen extends ConsumerStatefulWidget {
   final int packId;
   final String packName;
+  final Animation<double>? flightAnimation;
 
-  const PackScreen({super.key, required this.packId, required this.packName});
+  const PackScreen({
+    super.key,
+    required this.packId,
+    required this.packName,
+    this.flightAnimation,
+  });
 
   @override
   ConsumerState<PackScreen> createState() => _PackScreenState();
@@ -36,19 +41,29 @@ class PackScreen extends ConsumerStatefulWidget {
 class _PackScreenState extends ConsumerState<PackScreen> {
   final ScrollController _scrollController = ScrollController();
   double _collapseT = 0.0;
-  bool _chromeVisible = false;
+  bool _showContent = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    Future.delayed(const Duration(milliseconds: 420), () {
-      if (mounted) setState(() => _chromeVisible = true);
-    });
+    final anim = widget.flightAnimation;
+    if (anim == null) {
+      _showContent = true;
+    } else {
+      _showContent = anim.isCompleted;
+      anim.addStatusListener(_onFlightStatus);
+    }
+  }
+
+  void _onFlightStatus(AnimationStatus status) {
+    if (!mounted) return;
+    setState(() => _showContent = status == AnimationStatus.completed);
   }
 
   @override
   void dispose() {
+    widget.flightAnimation?.removeStatusListener(_onFlightStatus);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -220,58 +235,65 @@ class _PackScreenState extends ConsumerState<PackScreen> {
       value: SystemUiOverlayStyle.dark,
       child: Container(
         decoration: const BoxDecoration(
-    gradient: LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFFECEFF4), Colors.white],
-      stops: [0.0, 0.65],
-    ),
-  ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFECEFF4), Colors.white],
+            stops: [0.0, 0.65],
+          ),
+        ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Stack(
             children: [
               Positioned.fill(
-                child: SafeArea(
-                  top: false,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: mapsAsync.isLoading
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(40),
-                                child: CircularProgressIndicator(
-                                    color: EnolaTheme.accent),
-                              ),
-                            )
-                          : CustomScrollView(
-                              controller: _scrollController,
-                              slivers: [
-                                SliverToBoxAdapter(
-                                  child: SizedBox(
-                                      height: topInset + lipHeight),
-                                ),
-                                if (maps.isEmpty)
-                                  SliverToBoxAdapter(
-                                    child: _EmptyPackState(
-                                        onCreate: () =>
-                                            _openCreate(context)),
-                                  )
-                                else
-                                  SliverPadding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        40, 4, 40, 100),
-                                    sliver: SliverToBoxAdapter(
-                                      child: _ReorderableMapGrid(
-                                        maps: maps,
-                                        crossAxisCount: cols,
-                                      ),
-                                    ),
+                child: IgnorePointer(
+                  ignoring: !_showContent,
+                  child: AnimatedOpacity(
+                    opacity: _showContent ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: SafeArea(
+                      top: false,
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 600),
+                          child: mapsAsync.isLoading
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(40),
+                                    child: CircularProgressIndicator(
+                                        color: EnolaTheme.accent),
                                   ),
-                              ],
-                            ),
+                                )
+                              : CustomScrollView(
+                                  controller: _scrollController,
+                                  slivers: [
+                                    SliverToBoxAdapter(
+                                      child: SizedBox(
+                                          height: topInset + lipHeight),
+                                    ),
+                                    if (maps.isEmpty)
+                                      SliverToBoxAdapter(
+                                        child: _EmptyPackState(
+                                            onCreate: () =>
+                                                _openCreate(context)),
+                                      )
+                                    else
+                                      SliverPadding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            40, 4, 40, 100),
+                                        sliver: SliverToBoxAdapter(
+                                          child: _ReorderableMapGrid(
+                                            maps: maps,
+                                            crossAxisCount: cols,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -289,7 +311,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                       packName: widget.packName,
                       topInset: topInset,
                       lipHeight: lipHeight,
-                      chromeVisible: _chromeVisible,
+                      chromeVisible: _showContent,
                     ),
                   ),
                 ),
@@ -298,36 +320,43 @@ class _PackScreenState extends ConsumerState<PackScreen> {
           ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _FabBar(
+          floatingActionButton: IgnorePointer(
+            ignoring: !_showContent,
+            child: AnimatedOpacity(
+              opacity: _showContent ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _FabBarItem(
-                    icon: Icons.home_rounded,
-                    onTap: () => Navigator.pop(context),
+                  _FabBar(
+                    children: [
+                      _FabBarItem(
+                        icon: Icons.home_rounded,
+                        onTap: () => Navigator.pop(context),
+                      ),
+                      _FabBarItem(
+                        icon: Icons.add_rounded,
+                        iconColor: EnolaTheme.accent,
+                        onTap: () => _openCreate(context),
+                      ),
+                      _FabBarItem(
+                        icon: Icons.ios_share,
+                        onTap: pack == null
+                            ? null
+                            : () => _sharePack(context, pack),
+                      ),
+                      _FabBarItem(
+                        icon: Icons.delete_outline_rounded,
+                        iconColor: Colors.red,
+                        onTap: () => _handleDeleteTap(context),
+                      ),
+                    ],
                   ),
-                  _FabBarItem(
-                    icon: Icons.add_rounded,
-                    iconColor: EnolaTheme.accent,
-                    onTap: () => _openCreate(context),
-                  ),
-                  _FabBarItem(
-                    icon: Icons.ios_share,
-                    onTap: pack == null
-                        ? null
-                        : () => _sharePack(context, pack),
-                  ),
-                  _FabBarItem(
-                    icon: Icons.delete_outline_rounded,
-                    iconColor: Colors.red,
-                    onTap: () => _handleDeleteTap(context),
-                  ),
+                  const SizedBox(width: 12),
+                  const TrainingFab(),
                 ],
               ),
-              const SizedBox(width: 12),
-              const TrainingFab(),
-            ],
+            ),
           ),
         ),
       ),
@@ -413,8 +442,8 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
       height: widget.topInset + widget.lipHeight,
       child: Column(
         children: [
-          // Solid strip behind the status bar, matching the header body
-          // color below so the two read as one continuous flat surface.
+          // Solid strip behind the status bar, matching the home-screen
+          // background so the two read as one continuous surface.
           Container(
             height: widget.topInset,
             color: const Color(0xFFECEFF4),
@@ -423,41 +452,40 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
             child: Stack(
               children: [
                 // Flat color surface (no rounded card graphic). Still
-                // wrapped in a Hero so the flight from the home-screen
-                // pack card keeps working; the shuttle just no longer
-                // needs to reconcile a rounded/boxed shape here.
+                // wrapped in a Hero so the flip shuttle takes over
+                // during the flight.
                 ClipRect(
                   child: OverflowBox(
                     alignment: Alignment.bottomCenter,
                     minHeight: 0,
                     maxHeight: double.infinity,
                     child: Hero(
-  tag: 'pack-${widget.packId}',
-  flightShuttleBuilder: pack == null
-      ? null
-      : (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-          return _PackFlipShuttle(
-            animation: animation,
-            flightDirection: flightDirection,
-            pack: pack,
-            isOwned: isOwned,
-            backColor: gradientColors.first,
-          );
-        },
-  child: SizedBox(
-    width: double.infinity,
-    child: Material(
-      type: MaterialType.transparency,
-      child: Container(color: gradientColors.first),
-    ),
-  ),
-),
-
+                      tag: 'pack-${widget.packId}',
+                      flightShuttleBuilder: pack == null
+                          ? null
+                          : (flightContext, animation, flightDirection,
+                              fromHeroContext, toHeroContext) {
+                              return _PackFlipShuttle(
+                                animation: animation,
+                                flightDirection: flightDirection,
+                                pack: pack,
+                                isOwned: isOwned,
+                                backColor: gradientColors.first,
+                              );
+                            },
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: Container(color: gradientColors.first),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
 
                 // Chrome overlay: left-aligned title, pencil on the
-                // right. Fades in once the Hero flight has landed.
+                // right. Fades in once the flip has landed.
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: !widget.chromeVisible,
@@ -543,6 +571,111 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
       ],
+    );
+  }
+}
+
+// ── Card flip shuttle ────────────────────────────────────────────────────
+//
+// Mid-flight replacement for the Hero: rotates around the Y axis with a
+// touch of perspective, showing the pack card face until the halfway
+// point, then swapping to the flat header color for the rest of the
+// flight. A thin edge highlight peaks in visibility right at the 90°
+// midpoint to sell the sense of a card turning in space. Works for both
+// push (home→pack) and pop (pack→home) since we swap which face is
+// "front" vs "back" based on flightDirection.
+
+class _PackFlipShuttle extends StatelessWidget {
+  final Animation<double> animation;
+  final HeroFlightDirection flightDirection;
+  final Folder pack;
+  final bool isOwned;
+  final Color backColor;
+
+  const _PackFlipShuttle({
+    required this.animation,
+    required this.flightDirection,
+    required this.pack,
+    required this.isOwned,
+    required this.backColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isPush = flightDirection == HeroFlightDirection.push;
+    final curved =
+        CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic);
+
+    final Widget cardFace = Material(
+      type: MaterialType.transparency,
+      child: PackCardBody(pack: pack, isOwned: isOwned),
+    );
+    final Widget colorFace = Material(
+      type: MaterialType.transparency,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+
+    final Widget frontFace = isPush ? cardFace : colorFace;
+    final Widget backFace = isPush ? colorFace : cardFace;
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, _) {
+        final t = curved.value;
+        final angle = t * math.pi;
+        final showFront = t < 0.5;
+
+        final transform = Matrix4.identity()
+          ..setEntry(3, 2, 0.0022)
+          ..rotateY(angle);
+
+        // Peaks to 1 exactly at the 90° midpoint, zero at either end.
+        final edgeVisibility = (1 - (2 * (t - 0.5)).abs()).clamp(0.0, 1.0);
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Transform(
+              alignment: Alignment.center,
+              transform: transform,
+              child: showFront
+                  ? frontFace
+                  : Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()..rotateY(math.pi),
+                      child: backFace,
+                    ),
+            ),
+            IgnorePointer(
+              child: Opacity(
+                opacity: edgeVisibility,
+                child: Container(
+                  width: 3,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.0),
+                        Colors.black.withValues(alpha: 0.55),
+                        Colors.white.withValues(alpha: 0.35),
+                        Colors.black.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.45, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1314,80 +1447,3 @@ class _FabBarItem extends StatelessWidget {
     );
   }
 }
-
-// ── Card flip shuttle ────────────────────────────────────────────────────
-//
-// Mid-flight replacement for the Hero: rotates around the Y axis with a
-// touch of perspective, showing the pack card face until the halfway
-// point, then swapping to the flat header color for the rest of the
-// flight. Works for both push (home→pack) and pop (pack→home) because
-// we just swap which face is "front" vs "back" based on flightDirection.
-
-class _PackFlipShuttle extends StatelessWidget {
-  final Animation<double> animation;
-  final HeroFlightDirection flightDirection;
-  final Folder pack;
-  final bool isOwned;
-  final Color backColor;
-
-  const _PackFlipShuttle({
-    required this.animation,
-    required this.flightDirection,
-    required this.pack,
-    required this.isOwned,
-    required this.backColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isPush = flightDirection == HeroFlightDirection.push;
-
-    final Widget cardFace = Material(
-      type: MaterialType.transparency,
-      child: PackCardBody(pack: pack, isOwned: isOwned),
-    );
-    final Widget colorFace = Material(
-      type: MaterialType.transparency,
-      child: Container(
-        decoration: BoxDecoration(
-          color: backColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-
-    // t=0 is always the "from" Hero's look, t=1 is always the "to"
-    // Hero's look — which face that corresponds to flips depending on
-    // whether we're pushing or popping.
-    final Widget frontFace = isPush ? cardFace : colorFace;
-    final Widget backFace = isPush ? colorFace : cardFace;
-
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        final t = animation.value;
-        final angle = t * math.pi;
-        final showFront = t < 0.5;
-
-        final transform = Matrix4.identity()
-          ..setEntry(3, 2, 0.0015) // perspective
-          ..rotateY(angle);
-
-        return Transform(
-          alignment: Alignment.center,
-          transform: transform,
-          child: showFront
-              ? frontFace
-              : Transform(
-                  // Counter-rotate so the back face reads right-side-up
-                  // instead of mirrored once we're past 90°.
-                  alignment: Alignment.center,
-                  transform: Matrix4.identity()..rotateY(math.pi),
-                  child: backFace,
-                ),
-        );
-      },
-    );
-  }
-}
-
