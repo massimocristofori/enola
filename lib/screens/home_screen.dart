@@ -493,16 +493,7 @@ class _PackCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Hero(
-        tag: 'pack-${pack.id}', // Ensure this tag matches the receiving Hero in PackScreen
-        flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-          return PackFlipShuttle(
-            animation: animation,
-            flightDirection: flightDirection,
-            pack: pack,
-            isOwned: isOwned,
-            backColor: packAccentColor(isOwned), 
-          );
-        },
+        tag: 'pack-${pack.id}',
         child: PackCardBody(
           pack: pack,
           isOwned: isOwned,
@@ -511,3 +502,4 @@ class _PackCard extends ConsumerWidget {
     );
   }
 }
+
