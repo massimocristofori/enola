@@ -1,5 +1,6 @@
 // ── play_screen.dart ──────────────────────────────────────────────────────────
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,10 @@ import 'package:enola/services/training_service.dart';
 import 'package:enola/services/notification_service.dart';
 import 'package:enola/utils/rank_image.dart';
 import 'package:drift/drift.dart' as drift;
+
+// Maintained to ensure external screens like pack_screen can reference it
+const double kPlayHeaderHeight = 38.0;
+const double kPlayHeaderCompact = 0.0;
 
 class PlayScreen extends ConsumerStatefulWidget {
   final String mapId;
@@ -66,7 +71,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
     if (mounted) setState(() => _trainingActive = active);
   }
 
-  Future<void> _onToggleTraining(List<dynamic> riddles) async {
+  Future<void> _onToggleTraining(List<Riddle> riddles) async {
     if (_trainingActive) {
       final confirm = await _showStopTrainingDialog();
       if (!confirm) return;
@@ -85,16 +90,26 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   Future<int?> _showStartTrainingDialog() async {
-    const options = [
-      ('1 hour', 60),
-      ('3 hours', 180),
-      ('6 hours', 360),
-      ('12 hours', 720),
-      ('24 hours', 1440),
-      ('48 hours', 2880),
+    final List<MapEntry<String, int>> choices = [
+      const MapEntry('1 hour', 60),
+      const MapEntry('3 hours', 180),
+      const MapEntry('6 hours', 360),
+      const MapEntry('12 hours', 720),
+      const MapEntry('24 hours', 1440),
+      const MapEntry('48 hours', 2880),
     ];
-    // Implementation of dialog returning minutes...
-    return 60; // Mocked for structure
+
+    return showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enable Training Mode'),
+        content: const Text('How often would you like to be quizzed on forgotten or weak items?'),
+        actions: choices.map((c) => TextButton(
+          onPressed: () => Navigator.pop(context, c.value),
+          child: Text(c.key),
+        )).toList(),
+      ),
+    );
   }
 
   Future<bool> _showStopTrainingDialog() async {
@@ -119,12 +134,29 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   // ── Session loading ────────────────────────────────────────────────────────
   Future<void> _loadSession() async {
-    if (mounted) {
+    try {
+      final session = await ref.read(latestSessionProvider(widget.mapId).future);
+      if (!mounted) return;
       setState(() {
-        _initialising = false; // Mocked for structure
+        _initialising = false;
         _initError = null;
-        _isCompleted = false;
-        _activeRiddleIndex = null;
+        if (session == null) {
+          _isCompleted = false;
+          _activeRiddleIndex = 0;
+        } else {
+          _isCompleted = session.completedAt != null;
+          if (_isCompleted) {
+            _activeRiddleIndex = null;
+          } else {
+            _activeRiddleIndex = session.lastCompletedIndex == null ? 0 : session.lastCompletedIndex! + 1;
+          }
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _initialising = false;
+        _initError = e.toString();
       });
     }
   }
@@ -157,8 +189,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   }
 
   // ── Riddle complete ────────────────────────────────────────────────────────
-  Future<void> _onRiddleComplete(
-      List<dynamic> riddles, int riddleIndex, int errorCount) async {
+  Future<void> _onRiddleComplete(List<Riddle> riddles, int riddleIndex, int errorCount) async {
     if (_activeRiddleTraining && _activeRiddleId != null) {
       final correct = errorCount == 0;
       await TrainingService.instance.onRiddleAnswered(
@@ -170,11 +201,78 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       _dismissRiddle();
       return;
     }
+
+    final db = DriftService.instance.db;
+    final session = await ref.read(latestSessionProvider(widget.mapId).future);
+    final now = DateTime.now();
+
+    int calculatedStars = 3 - errorCount;
+    if (calculatedStars < 1) calculatedStars = 1;
+
+    int baseStars = 0;
+    if (session != null && session.starsJson != null) {
+      try {
+        final Map<String, dynamic> currentStars = jsonDecode(session.starsJson!);
+        baseStars = currentStars.values.fold(0, (sum, val) => sum + (val as int));
+      } catch (_) {}
+    }
+
+    if (session == null) {
+      final starsMap = {riddles[riddleIndex].id.toString(): calculatedStars};
+      await db.into(db.playSessions).insert(
+        PlaySessionsCompanion.insert(
+          mapId: widget.mapId,
+          lastCompletedIndex: drift.Value(riddleIndex),
+          starsJson: drift.Value(jsonEncode(starsMap)),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      _scheduleStarAnimation(riddleIndex, calculatedStars, baseStars);
+    } else {
+      Map<String, dynamic> starsMap = {};
+      if (session.starsJson != null) {
+        try {
+          starsMap = jsonDecode(session.starsJson!);
+        } catch (_) {}
+      }
+      final riddleIdStr = riddles[riddleIndex].id.toString();
+      final int oldStars = starsMap[riddleIdStr] ?? 0;
+      if (calculatedStars > oldStars) {
+        starsMap[riddleIdStr] = calculatedStars;
+      }
+
+      final isMapCompleted = riddleIndex >= riddles.length - 1;
+      await (db.update(db.playSessions)..where((t) => t.id.equals(session.id))).write(
+        PlaySessionsCompanion(
+          lastCompletedIndex: drift.Value(riddleIndex),
+          starsJson: drift.Value(jsonEncode(starsMap)),
+          completedAt: isMapCompleted ? drift.Value(now) : const drift.Value.absent(),
+          updatedAt: drift.Value(now),
+        ),
+      );
+
+      if (calculatedStars > oldStars) {
+        _scheduleStarAnimation(riddleIndex, calculatedStars - oldStars, baseStars);
+      }
+    }
+
+    ref.invalidate(latestSessionProvider(widget.mapId));
+    final updatedSession = await ref.read(latestSessionProvider(widget.mapId).future);
+
+    setState(() {
+      if (updatedSession != null && updatedSession.completedAt != null) {
+        _isCompleted = true;
+        _activeRiddleIndex = null;
+      } else {
+        _activeRiddleIndex = riddleIndex + 1;
+      }
+    });
   }
 
   // ── Star animation ─────────────────────────────────────────────────────────
   void _scheduleStarAnimation(int riddleIndex, int starCount, int baseStars) {
-    Future.delayed(const Duration(milliseconds: 1700), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       _runStarAnimation(riddleIndex, starCount, baseStars);
     });
@@ -182,7 +280,39 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
   void _runStarAnimation(int riddleIndex, int starCount, int baseStars) {
     if (!mounted) return;
-    // Animation logic
+    final nodeKey = _nodeKeys[riddleIndex];
+    if (nodeKey == null) return;
+
+    final RenderBox? nodeBox = nodeKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? barBox = _progressBarStarKey.currentContext?.findRenderObject() as RenderBox?;
+
+    if (nodeBox == null || barBox == null) return;
+
+    final nodePos = nodeBox.localToGlobal(Offset.zero) + Offset(nodeBox.size.width / 2, nodeBox.size.height / 2);
+    final barPos = barBox.localToGlobal(Offset.zero) + Offset(barBox.size.width, barBox.size.height / 2);
+
+    _starOverlay?.remove();
+    _starOverlay = OverlayEntry(
+      builder: (context) => _FlyingStarsOverlay(
+        from: nodePos,
+        to: barPos,
+        starCount: starCount,
+        onStarLanded: (landed) {
+          setState(() {
+            _animatedStars = baseStars + landed;
+          });
+        },
+        onComplete: () {
+          _starOverlay?.remove();
+          _starOverlay = null;
+          setState(() {
+            _animatedStars = null;
+          });
+        },
+      ),
+    );
+
+    Overlay.of(context).insert(_starOverlay!);
   }
 
   // ── Play again ─────────────────────────────────────────────────────────────
@@ -210,24 +340,32 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Delete Map?'),
         content: const Text(
-          'This will permanently delete the map and all its riddles and progress. This cannot be undone.',
+          'This will permanently delete this map, its riddles, and all play history. This action cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: EnolaTheme.textSecond)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
-    if (confirmed != true) return;
-    
-    // Deletion logic...
-    Navigator.pop(context);
+
+    if (confirmed == true && mounted) {
+      final db = DriftService.instance.db;
+      await NotificationService.instance.cancelMapTrainingNotifications(widget.mapId);
+      await (db.delete(db.playSessions)..where((t) => t.mapId.equals(widget.mapId))).go();
+      await (db.delete(db.riddles)..where((t) => t.mapId.equals(widget.mapId))).go();
+      await (db.delete(db.maps)..where((t) => t.id.equals(widget.mapId))).go();
+      
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -235,33 +373,75 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
   Widget build(BuildContext context) {
     final mapAsync = ref.watch(mapProvider(widget.mapId));
     final riddlesAsync = ref.watch(riddlesForMapProvider(widget.mapId));
-    final playState = ref.watch(playStateProvider); // Adjusted based on your provider structure
+    final sessionAsync = ref.watch(latestSessionProvider(widget.mapId));
 
-    if (_initialising || mapAsync.isLoading || riddlesAsync.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_initialising || mapAsync.isLoading || riddlesAsync.isLoading || sessionAsync.isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator(color: EnolaTheme.accent)),
+      );
     }
 
-    final map = mapAsync.valueOrNull;
-    final riddles = riddlesAsync.valueOrNull ?? [];
+    if (_initError != null) {
+      return Scaffold(
+        body: Center(child: Text('Error: $_initError')),
+      );
+    }
+
+    final map = mapAsync.value;
+    final riddles = riddlesAsync.value ?? [];
+    final session = sessionAsync.value;
 
     if (map == null) {
-      return const Scaffold(body: Center(child: Text('Error loading map')));
+      return const Scaffold(body: Center(child: Text('Map not found.')));
     }
+
+    int achievedStars = 0;
+    if (session?.starsJson != null) {
+      try {
+        final Map<String, dynamic> starsMap = jsonDecode(session!.starsJson!);
+        achievedStars = starsMap.values.fold(0, (sum, val) => sum + (val as int));
+      } catch (_) {}
+    }
+
+    if (_animatedStars != null) {
+      achievedStars = _animatedStars!;
+    }
+
+    if (_activeRiddleIndex != null && _activeRiddleIndex! < riddles.length) {
+      final activeRiddle = riddles[_activeRiddleIndex!];
+      return RiddleScreen(
+        riddle: activeRiddle,
+        isReadOnly: _activeRiddleReadOnly,
+        isTraining: _activeRiddleTraining,
+        onComplete: (errorCount) => _onRiddleComplete(riddles, _activeRiddleIndex!, errorCount),
+        onDismiss: _dismissRiddle,
+      );
+    }
+
+    if (_isCompleted && _activeRiddleIndex == null && !_activeRiddleReadOnly) {
+      return ResultScreen(
+        mapId: widget.mapId,
+        onPlayAgain: _playAgain,
+        onBack: () => Navigator.pop(context),
+      );
+    }
+
+    final Uint8List? imageBytes = map.imageBytes;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // The main map view
           _MapView(
             riddles: riddles,
             mapId: widget.mapId,
-            mapTitle: map.title, // Passed title to use inside MapView Progress Panel
-            playState: playState,
-            achievedStars: 0, // Bind to your play state logic
-            hasBeenPlayed: true, // Bind to your play state logic
+            mapTitle: map.title,
+            playSession: session,
+            achievedStars: achievedStars,
+            hasBeenPlayed: session != null,
             isCompleted: _isCompleted,
-            imageBytes: null, // Bind to your map image logic
+            imageBytes: imageBytes,
             nodeKeys: _nodeKeys,
             trainingActive: _trainingActive,
             onNodeTap: _onNodeTap,
@@ -270,7 +450,7 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
             progressBarStarKey: _progressBarStarKey,
           ),
 
-          // Requested Update: Bottom FAB Bar (Icon Only)
+          // Bottom FAB bar
           Positioned(
             bottom: 32,
             left: 0,
@@ -292,14 +472,14 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
 // ── Map view ──────────────────────────────────────────────────────────────────
 class _MapView extends StatefulWidget {
-  final List<dynamic> riddles;
+  final List<Riddle> riddles;
   final String mapId;
-  final String mapTitle; // Added for the Progress Panel
-  final dynamic playState;
+  final String mapTitle;
+  final PlaySession? playSession;
   final int achievedStars;
   final bool hasBeenPlayed;
   final bool isCompleted;
-  final dynamic imageBytes;
+  final Uint8List? imageBytes;
   final Map<int, GlobalKey> nodeKeys;
   final bool trainingActive;
 
@@ -313,7 +493,7 @@ class _MapView extends StatefulWidget {
     required this.riddles,
     required this.mapId,
     required this.mapTitle,
-    required this.playState,
+    required this.playSession,
     required this.achievedStars,
     required this.hasBeenPlayed,
     required this.isCompleted,
@@ -343,7 +523,7 @@ class _MapViewState extends State<_MapView> {
   @override
   void didUpdateWidget(covariant _MapView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.playState?.lastCompletedIndex != widget.playState?.lastCompletedIndex) {
+    if (oldWidget.playSession?.lastCompletedIndex != widget.playSession?.lastCompletedIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToActiveNode(immediate: false));
     }
   }
@@ -356,7 +536,32 @@ class _MapViewState extends State<_MapView> {
 
   void _scrollToActiveNode({bool immediate = false}) {
     if (!mounted || !_scrollController.hasClients) return;
-    // Scrolling logic
+    
+    int? activeIndex;
+    if (widget.isCompleted) {
+      activeIndex = widget.riddles.length - 1;
+    } else {
+      activeIndex = widget.playSession?.lastCompletedIndex == null ? 0 : widget.playSession!.lastCompletedIndex! + 1;
+    }
+
+    if (activeIndex == null || activeIndex >= widget.riddles.length) return;
+
+    final key = widget.nodeKeys[activeIndex];
+    if (key == null) return;
+
+    final context = key.currentContext;
+    if (context == null) return;
+
+    if (immediate) {
+      Scrollable.ensureVisible(context, alignment: 0.5);
+    } else {
+      Scrollable.ensureVisible(
+        context,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   int _getActiveMilestoneIndex(double starRatio) {
@@ -367,65 +572,94 @@ class _MapViewState extends State<_MapView> {
     return 3;
   }
 
+  String _rankImageFromIndex(int index) => 'assets/images/$index.jpg';
+
   @override
   Widget build(BuildContext context) {
     final int maxStars = widget.riddles.length * 3;
     final int achievedStars = widget.achievedStars;
     final double starRatio = maxStars > 0 && widget.hasBeenPlayed ? achievedStars / maxStars : 0.0;
+    final activeMilestoneIndex = _getActiveMilestoneIndex(starRatio);
     
-    // Requested Update: 6px smaller milestone images. (Assuming base was 40px, adjusted to 34px)
-    const double milestoneSize = 34.0;
+    const double milestoneSize = 34.0; // 40.0 - 6px = 34.0
 
     return SingleChildScrollView(
       controller: _scrollController,
-      padding: const EdgeInsets.only(top: 60, bottom: 120), // Padding to account for bottom FABs
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Requested Update: Progress Panel with Title ──
+          const SizedBox(height: 54),
+          
+          // Progress Panel with embedded Map Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              children: [
-                Text(
-                  widget.mapTitle,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: EnolaTheme.textPrimary,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    widget.mapTitle,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: EnolaTheme.textPrimary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                _StarProgressBar(
-                  progress: starRatio,
-                  starKey: widget.progressBarStarKey,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: List.generate(4, (index) {
-                    return Container(
-                      width: milestoneSize,
-                      height: milestoneSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        image: DecorationImage(
-                          image: AssetImage('assets/images/$index.jpg'),
-                          fit: BoxFit.cover,
+                  const SizedBox(height: 12),
+                  _StarProgressBar(
+                    progress: starRatio,
+                    starKey: widget.progressBarStarKey,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(4, (index) {
+                      final isActive = index <= activeMilestoneIndex;
+                      return Container(
+                        width: milestoneSize,
+                        height: milestoneSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isActive ? EnolaTheme.accent : const Color(0xFFE5E7EB),
+                            width: isActive ? 2 : 1,
+                          ),
+                          image: DecorationImage(
+                            image: AssetImage(_rankImageFromIndex(index)),
+                            fit: BoxFit.cover,
+                            colorFilter: isActive 
+                                ? null 
+                                : const ColorFilter.mode(Colors.grey, BlendMode.saturation),
+                          ),
                         ),
-                      ),
-                    );
-                  }),
-                ),
-              ],
+                      );
+                    }),
+                  ),
+                ],
+              ),
             ),
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: 16),
           
-          // Render Map Path Nodes here...
-          // TreasureMapPath(riddles: widget.riddles, ... )
+          // Fully Restored Map Path logic
+          TreasureMapPath(
+            riddles: widget.riddles,
+            lastCompletedIndex: widget.playSession?.lastCompletedIndex,
+            isCompleted: widget.isCompleted,
+            imageBytes: widget.imageBytes,
+            nodeKeys: widget.nodeKeys,
+            onNodeTap: widget.onNodeTap,
+            onCompletedNodeTap: widget.onCompletedNodeTap,
+          ),
+          
+          const SizedBox(height: 120), // Bottom scroll padding for FAB bar overlay
         ],
       ),
     );
@@ -444,7 +678,6 @@ class _StarProgressBar extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double width = constraints.maxWidth;
-        const double starSize = 26.0;
         const double barHeight = 8.0;
         
         return Container(
@@ -454,16 +687,19 @@ class _StarProgressBar extends StatelessWidget {
             color: const Color(0xFFE5E7EB),
             borderRadius: BorderRadius.circular(4),
           ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              key: starKey,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8C840),
-                borderRadius: BorderRadius.circular(4),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                key: starKey,
+                width: (width * progress.clamp(0.0, 1.0)),
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8C840),
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
-            ),
+            ],
           ),
         );
       }
@@ -471,7 +707,7 @@ class _StarProgressBar extends StatelessWidget {
   }
 }
 
-// ── Play Screen FAB Bar (Replaces old _PlayAgainFab and _BackFab) ──────────
+// ── Play Screen Integrated Pill FAB Bar ───────────────────────────────────────
 class _PlayActionFabs extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback? onPlayAgain;
@@ -503,28 +739,21 @@ class _PlayActionFabs extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Back Button
           _IconButton(
             icon: Icons.chevron_left_rounded,
             onTap: onBack,
           ),
           const SizedBox(width: 8),
-          
-          // Edit Button
           _IconButton(
             icon: Icons.edit_rounded,
             onTap: onEdit,
           ),
           const SizedBox(width: 8),
-          
-          // Delete Button
           _IconButton(
             icon: Icons.delete_outline_rounded,
             iconColor: Colors.red,
             onTap: onDelete,
           ),
-          
-          // Play Again Button (conditionally rendered)
           if (onPlayAgain != null) ...[
             const SizedBox(width: 8),
             Container(
@@ -601,13 +830,51 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay> with TickerPro
   final List<Animation<double>> _scales = [];
   final List<Animation<double>> _opacities = [];
   int _landed = 0;
-  static const _staggerMs = 180;
-  static const _flightMs = 500;
+
+  static const int _staggerMs = 180;
+  static const int _flightMs = 500;
 
   @override
   void initState() {
     super.initState();
-    // Star animation setup...
+    for (int i = 0; i < widget.starCount; i++) {
+      final controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: _flightMs),
+      );
+
+      final positionAnim = Tween<Offset>(
+        begin: widget.from,
+        end: widget.to,
+      ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInCubic));
+
+      final scaleAnim = TweenSequence<double>([
+        TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.6), weight: 30),
+        TweenSequenceItem(tween: Tween<double>(begin: 1.6, end: 0.8), weight: 70),
+      ]).animate(controller);
+
+      final opacityAnim = TweenSequence<double>([
+        TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0), weight: 20),
+        TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 1.0), weight: 60),
+        TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 20),
+      ]).animate(controller);
+
+      _controllers.add(controller);
+      _positions.add(positionAnim);
+      _scales.add(scaleAnim);
+      _opacities.add(opacityAnim);
+
+      Future.delayed(Duration(milliseconds: i * _staggerMs), () {
+        if (!mounted) return;
+        controller.forward().then((_) {
+          _landed++;
+          widget.onStarLanded(_landed);
+          if (_landed == widget.starCount) {
+            widget.onComplete();
+          }
+        });
+      });
+    }
   }
 
   @override
@@ -625,7 +892,7 @@ class _FlyingStarsOverlayState extends State<_FlyingStarsOverlay> with TickerPro
         if (_controllers.length <= i) return const SizedBox.shrink();
         return AnimatedBuilder(
           animation: _controllers[i],
-          builder: (_, __) {
+          builder: (context, child) {
             return Positioned(
               left: _positions[i].value.dx - 14,
               top: _positions[i].value.dy - 14,
