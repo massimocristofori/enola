@@ -465,7 +465,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                           ? null
                           : (flightContext, animation, flightDirection,
                               fromHeroContext, toHeroContext) {
-                              return _PackFlipShuttle(
+                              return PackFlipShuttle(
                                 animation: animation,
                                 flightDirection: flightDirection,
                                 pack: pack,
@@ -585,14 +585,14 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
 // push (home→pack) and pop (pack→home) since we swap which face is
 // "front" vs "back" based on flightDirection.
 
-class _PackFlipShuttle extends StatelessWidget {
+class PackFlipShuttle extends StatelessWidget {
   final Animation<double> animation;
   final HeroFlightDirection flightDirection;
   final Folder pack;
   final bool isOwned;
   final Color backColor;
 
-  const _PackFlipShuttle({
+  const PackFlipShuttle({
     required this.animation,
     required this.flightDirection,
     required this.pack,
