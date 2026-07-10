@@ -204,18 +204,25 @@ class _PackScreenState extends ConsumerState<PackScreen> {
         packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
     final pack = matches.isNotEmpty ? matches.first : null;
 
+    // Same ownership lookup the header and the home-screen card use, so
+    // the page background starts on the exact color the Hero is
+    // flying from/to.
+    final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
+    final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
+    final gradientColors = packGradientColors(isOwned);
+
     final lipHeight = kLipHeightExpanded -
         (kLipHeightExpanded - kLipHeightCollapsed) * _collapseT;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFECEFF4), Colors.white],
-            stops: [0.0, 0.65],
+            colors: [gradientColors.first, Colors.white],
+            stops: const [0.0, 0.65],
           ),
         ),
         child: Scaffold(
@@ -292,22 +299,32 @@ class _PackScreenState extends ConsumerState<PackScreen> {
           floatingActionButton: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _PackBackFab(onBack: () => Navigator.pop(context)),
-              const SizedBox(width: 12),
-              _CreateFab(onTap: () => _openCreate(context)),
+              _FabBar(
+                children: [
+                  _FabBarItem(
+                    icon: Icons.home_rounded,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  _FabBarItem(
+                    icon: Icons.add_rounded,
+                    iconColor: EnolaTheme.accent,
+                    onTap: () => _openCreate(context),
+                  ),
+                  _FabBarItem(
+                    icon: Icons.ios_share,
+                    onTap: pack == null
+                        ? null
+                        : () => _sharePack(context, pack),
+                  ),
+                  _FabBarItem(
+                    icon: Icons.delete_outline_rounded,
+                    iconColor: Colors.red,
+                    onTap: () => _handleDeleteTap(context),
+                  ),
+                ],
+              ),
               const SizedBox(width: 12),
               const TrainingFab(),
-              const SizedBox(width: 12),
-              _CircleIconFab(
-                icon: Icons.ios_share,
-                onTap: pack == null ? null : () => _sharePack(context, pack),
-              ),
-              const SizedBox(width: 12),
-              _CircleIconFab(
-                icon: Icons.delete_outline_rounded,
-                iconColor: Colors.red,
-                onTap: () => _handleDeleteTap(context),
-              ),
             ],
           ),
         ),
@@ -1224,97 +1241,61 @@ class _EarButton extends StatelessWidget {
   }
 }
 
-// ── FABs ─────────────────────────────────────────────────────────────────
+// ── FAB bar ──────────────────────────────────────────────────────────────
+//
+// A single pill-shaped container holding several icon-only FAB actions,
+// iOS-dock style, replacing what used to be separate floating circles.
 
-class _CreateFab extends StatelessWidget {
-  final VoidCallback onTap;
-  const _CreateFab({required this.onTap});
+class _FabBar extends StatelessWidget {
+  final List<Widget> children;
+  const _FabBar({required this.children});
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.extended(
-      heroTag: 'create_fab',
-      onPressed: onTap,
-      backgroundColor: EnolaTheme.accent,
-      foregroundColor: EnolaTheme.background,
-      icon: const Icon(Icons.add_rounded),
-      label: const Text(
-        'New Map',
-        style: TextStyle(fontWeight: FontWeight.w700),
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: children,
       ),
     );
   }
 }
 
-class _PackBackFab extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const _PackBackFab({required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onBack,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.home_rounded,
-          size: 24,
-          color: EnolaTheme.textPrimary,
-        ),
-      ),
-    );
-  }
-}
-
-// Generic circular FAB used for the share and delete actions, styled to
-// match _PackBackFab. `onTap: null` shows a dimmed, disabled state.
-class _CircleIconFab extends StatelessWidget {
+class _FabBarItem extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
-  final Color iconColor;
+  final Color? iconColor;
 
-  const _CircleIconFab({
+  const _FabBarItem({
     required this.icon,
     required this.onTap,
-    this.iconColor = EnolaTheme.textPrimary,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          size: 24,
-          color: onTap == null ? iconColor.withValues(alpha: 0.3) : iconColor,
-        ),
+    final baseColor = iconColor ?? EnolaTheme.textPrimary;
+    final resolvedColor =
+        onTap == null ? baseColor.withValues(alpha: 0.3) : baseColor;
+
+    return SizedBox(
+      width: 48,
+      height: 56,
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, size: 24, color: resolvedColor),
       ),
     );
   }
