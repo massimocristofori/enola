@@ -917,7 +917,7 @@ class _MapCard extends ConsumerWidget {
       final RenderBox? fromBox =
           fromHeroContext.findRenderObject() as RenderBox?;
       final double fromHeight = fromBox?.size.height ?? 200.0;
-      const double infoBarHeight = kPlayHeaderHeight;
+      const double infoBarHeight = 38;
 
       return AnimatedBuilder(
         animation: animation,
