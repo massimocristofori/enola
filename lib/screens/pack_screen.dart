@@ -451,7 +451,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                       opacity: widget.chromeVisible ? 1 : 0,
                       duration: const Duration(milliseconds: 250),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.all(4),
                         child: _isEditingTitle
                             ? _buildEditingRow()
                             : _buildNormalRow(context, currentTitle),
@@ -481,7 +481,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 16,
+              fontSize: 18,
             ),
           ),
         ),
@@ -511,7 +511,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 16,
+              fontSize: 18,
             ),
             decoration: const InputDecoration(
               isDense: true,
@@ -551,7 +551,7 @@ class _EmptyPackState extends StatelessWidget {
             Text(
               'No maps in this pack',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: EnolaTheme.accent,
+                    color: Colors.white,
                   ),
             ),
             const SizedBox(height: 12),
