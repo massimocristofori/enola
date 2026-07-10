@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:math' as math;
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -455,34 +455,31 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                 // wrapped in a Hero so the flip shuttle takes over
                 // during the flight.
                 ClipRect(
-                  child: OverflowBox(
-                    alignment: Alignment.bottomCenter,
-                    minHeight: 0,
-                    maxHeight: double.infinity,
-                    child: Hero(
-                      tag: 'pack-${widget.packId}',
-                      flightShuttleBuilder: pack == null
-                          ? null
-                          : (flightContext, animation, flightDirection,
-                              fromHeroContext, toHeroContext) {
-                              return PackFlipShuttle(
-                                animation: animation,
-                                flightDirection: flightDirection,
-                                pack: pack,
-                                isOwned: isOwned,
-                                backColor: gradientColors.first,
-                              );
-                            },
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Material(
-                          type: MaterialType.transparency,
-                          child: Container(color: gradientColors.first),
-                        ),
-                      ),
-                    ),
-                  ),
+  child: OverflowBox(
+    alignment: Alignment.bottomCenter,
+    minHeight: 0,
+    maxHeight: double.infinity,
+    child: Hero(
+      tag: 'pack-${widget.packId}',
+      child: SizedBox(
+        width: double.infinity,
+        child: pack == null
+            ? Material(
+                type: MaterialType.transparency,
+                child: Container(color: gradientColors.first),
+              )
+            : Material(
+                type: MaterialType.transparency,
+                child: PackCardBody(
+                  pack: pack,
+                  isOwned: isOwned,
                 ),
+              ),
+      ),
+    ),
+  ),
+),
+
 
                 // Chrome overlay: left-aligned title, pencil on the
                 // right. Fades in once the flip has landed.
@@ -575,110 +572,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
   }
 }
 
-// ── Card flip shuttle ────────────────────────────────────────────────────
-//
-// Mid-flight replacement for the Hero: rotates around the Y axis with a
-// touch of perspective, showing the pack card face until the halfway
-// point, then swapping to the flat header color for the rest of the
-// flight. A thin edge highlight peaks in visibility right at the 90°
-// midpoint to sell the sense of a card turning in space. Works for both
-// push (home→pack) and pop (pack→home) since we swap which face is
-// "front" vs "back" based on flightDirection.
 
-class PackFlipShuttle extends StatelessWidget {
-  final Animation<double> animation;
-  final HeroFlightDirection flightDirection;
-  final Folder pack;
-  final bool isOwned;
-  final Color backColor;
-
-  const PackFlipShuttle({
-    required this.animation,
-    required this.flightDirection,
-    required this.pack,
-    required this.isOwned,
-    required this.backColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isPush = flightDirection == HeroFlightDirection.push;
-    final curved =
-        CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic);
-
-    final Widget cardFace = Material(
-      type: MaterialType.transparency,
-      child: PackCardBody(pack: pack, isOwned: isOwned),
-    );
-    final Widget colorFace = Material(
-      type: MaterialType.transparency,
-      child: Container(
-        decoration: BoxDecoration(
-          color: backColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-
-    final Widget frontFace = isPush ? cardFace : colorFace;
-    final Widget backFace = isPush ? colorFace : cardFace;
-
-    return AnimatedBuilder(
-      animation: curved,
-      builder: (context, _) {
-        final t = curved.value;
-        final angle = t * math.pi;
-        final showFront = t < 0.5;
-
-        final transform = Matrix4.identity()
-          ..setEntry(3, 2, 0.0022)
-          ..rotateY(angle);
-
-        // Peaks to 1 exactly at the 90° midpoint, zero at either end.
-        final edgeVisibility = (1 - (2 * (t - 0.5)).abs()).clamp(0.0, 1.0);
-
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            Transform(
-              alignment: Alignment.center,
-              transform: transform,
-              child: showFront
-                  ? frontFace
-                  : Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()..rotateY(math.pi),
-                      child: backFace,
-                    ),
-            ),
-            IgnorePointer(
-              child: Opacity(
-                opacity: edgeVisibility,
-                child: Container(
-                  width: 3,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.0),
-                        Colors.black.withValues(alpha: 0.55),
-                        Colors.white.withValues(alpha: 0.35),
-                        Colors.black.withValues(alpha: 0.0),
-                      ],
-                      stops: const [0.0, 0.45, 0.55, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
 
 // ── Empty Pack State ─────────────────────────────────────────────────────
 
