@@ -11,6 +11,7 @@ import 'package:enola/services/drift_service.dart';
 import 'package:enola/services/supabase_service.dart';
 import 'package:enola/screens/pack_shared.dart';
 
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -494,7 +495,7 @@ class _PackCard extends ConsumerWidget {
       child: Hero(
         tag: 'pack-${pack.id}', // Ensure this tag matches the receiving Hero in PackScreen
         flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-          return _PackFlipShuttle(
+          return PackFlipShuttle(
             animation: animation,
             flightDirection: flightDirection,
             pack: pack,
