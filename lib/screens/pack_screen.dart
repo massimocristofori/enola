@@ -219,14 +219,14 @@ class _PackScreenState extends ConsumerState<PackScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
       child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [gradientColors.first, Colors.white],
-            stops: const [0.0, 0.65],
-          ),
-        ),
+        decoration: const BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFECEFF4), Colors.white],
+      stops: [0.0, 0.65],
+    ),
+  ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Stack(
@@ -417,7 +417,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
           // color below so the two read as one continuous flat surface.
           Container(
             height: widget.topInset,
-            color: gradientColors.first,
+            color: const Color(0xFFECEFF4),
           ),
           Expanded(
             child: Stack(
@@ -432,15 +432,27 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                     minHeight: 0,
                     maxHeight: double.infinity,
                     child: Hero(
-                      tag: 'pack-${widget.packId}',
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Material(
-                          type: MaterialType.transparency,
-                          child: Container(color: gradientColors.first),
-                        ),
-                      ),
-                    ),
+  tag: 'pack-${widget.packId}',
+  flightShuttleBuilder: pack == null
+      ? null
+      : (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+          return _PackFlipShuttle(
+            animation: animation,
+            flightDirection: flightDirection,
+            pack: pack,
+            isOwned: isOwned,
+            backColor: gradientColors.first,
+          );
+        },
+  child: SizedBox(
+    width: double.infinity,
+    child: Material(
+      type: MaterialType.transparency,
+      child: Container(color: gradientColors.first),
+    ),
+  ),
+),
+
                   ),
                 ),
 
@@ -1302,3 +1314,80 @@ class _FabBarItem extends StatelessWidget {
     );
   }
 }
+
+// ── Card flip shuttle ────────────────────────────────────────────────────
+//
+// Mid-flight replacement for the Hero: rotates around the Y axis with a
+// touch of perspective, showing the pack card face until the halfway
+// point, then swapping to the flat header color for the rest of the
+// flight. Works for both push (home→pack) and pop (pack→home) because
+// we just swap which face is "front" vs "back" based on flightDirection.
+
+class _PackFlipShuttle extends StatelessWidget {
+  final Animation<double> animation;
+  final HeroFlightDirection flightDirection;
+  final Folder pack;
+  final bool isOwned;
+  final Color backColor;
+
+  const _PackFlipShuttle({
+    required this.animation,
+    required this.flightDirection,
+    required this.pack,
+    required this.isOwned,
+    required this.backColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isPush = flightDirection == HeroFlightDirection.push;
+
+    final Widget cardFace = Material(
+      type: MaterialType.transparency,
+      child: PackCardBody(pack: pack, isOwned: isOwned),
+    );
+    final Widget colorFace = Material(
+      type: MaterialType.transparency,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+
+    // t=0 is always the "from" Hero's look, t=1 is always the "to"
+    // Hero's look — which face that corresponds to flips depending on
+    // whether we're pushing or popping.
+    final Widget frontFace = isPush ? cardFace : colorFace;
+    final Widget backFace = isPush ? colorFace : cardFace;
+
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final t = animation.value;
+        final angle = t * math.pi;
+        final showFront = t < 0.5;
+
+        final transform = Matrix4.identity()
+          ..setEntry(3, 2, 0.0015) // perspective
+          ..rotateY(angle);
+
+        return Transform(
+          alignment: Alignment.center,
+          transform: transform,
+          child: showFront
+              ? frontFace
+              : Transform(
+                  // Counter-rotate so the back face reads right-side-up
+                  // instead of mirrored once we're past 90°.
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()..rotateY(math.pi),
+                  child: backFace,
+                ),
+        );
+      },
+    );
+  }
+}
+
