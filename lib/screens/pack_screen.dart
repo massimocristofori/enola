@@ -17,6 +17,7 @@ import 'package:enola/services/supabase_service.dart';
 import 'package:enola/services/training_service.dart';
 import 'package:enola/screens/share_pack_screen.dart';
 import 'package:enola/screens/pack_shared.dart';
+import 'package:enola/utils/rank_image.dart';
 
 const double kLipHeightExpanded = 46.0;
 const double kLipHeightCollapsed = 34.0;
@@ -799,7 +800,7 @@ class _MapCard extends ConsumerWidget {
     final double starRatio =
         maxStars > 0 ? achievedStars / maxStars : 0;
 
-    final String coverAsset = rankImage(starRatio);
+    final String coverAsset = rankImageForRatio(starRatio);
 
     Widget flightShuttle(
       BuildContext flightContext,
