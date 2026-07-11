@@ -11,6 +11,9 @@ import 'package:enola/services/drift_service.dart';
 import 'package:enola/services/supabase_service.dart';
 import 'package:enola/screens/training_dashboard_screen.dart';
 
+import 'package:enola/theme/enola_theme.dart';
+
+
 const double kCardAspectRatio = 0.84;
 
 int crossAxisCount(double width) => width >= 500 ? 3 : 2;
