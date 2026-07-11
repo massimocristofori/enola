@@ -19,9 +19,9 @@ import 'package:enola/screens/share_pack_screen.dart';
 import 'package:enola/screens/pack_shared.dart';
 import 'package:enola/utils/rank_image.dart';
 
-const double kLipHeightExpanded = 46.0;
+const double kLipHeightExpanded = 34.0; //46
 const double kLipHeightCollapsed = 34.0;
-const double kLipCollapseScrollThreshold = 40.0;
+const double kLipCollapseScrollThreshold = 34.0; //40
 
 class PackScreen extends ConsumerStatefulWidget {
   final int packId;
@@ -41,13 +41,13 @@ class PackScreen extends ConsumerStatefulWidget {
 
 class _PackScreenState extends ConsumerState<PackScreen> {
   final ScrollController _scrollController = ScrollController();
-  double _collapseT = 0.0;
+  //double _collapseT = 0.0;
   bool _showContent = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    //_scrollController.addListener(_onScroll);
     final anim = widget.flightAnimation;
     if (anim == null) {
       _showContent = true;
@@ -65,7 +65,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
   @override
   void dispose() {
     widget.flightAnimation?.removeStatusListener(_onFlightStatus);
-    _scrollController.removeListener(_onScroll);
+    //_scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -483,23 +483,6 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
 ),
 
 
-                // Chrome overlay: left-aligned title, pencil on the
-                // right. Fades in once the flip has landed.
-                /*Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: !widget.chromeVisible,
-                    child: AnimatedOpacity(
-                      opacity: widget.chromeVisible ? 1 : 0,
-                      duration: const Duration(milliseconds: 250),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: _isEditingTitle
-                            ? _buildEditingRow()
-                            : _buildNormalRow(context, currentTitle),
-                      ),
-                    ),
-                  ),
-                ),*/
               ],
             ),
           ),
