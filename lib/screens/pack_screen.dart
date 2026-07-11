@@ -389,110 +389,78 @@ class _PackHeader extends ConsumerStatefulWidget {
   ConsumerState<_PackHeader> createState() => _PackHeaderState();
 }
 
-class _PackHeaderState extends ConsumerState<_PackHeader> {
-  bool _isEditingTitle = false;
-  late TextEditingController _titleController;
-  late FocusNode _titleFocusNode;
+@override
+Widget build(BuildContext context) {
+  final packsAsync = ref.watch(allFoldersProvider);
+  final matches =
+      packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
+  final pack = matches.isNotEmpty ? matches.first : null;
+  final currentTitle = pack?.title ?? widget.packName;
 
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController(text: widget.packName);
-    _titleFocusNode = FocusNode();
-    _titleFocusNode.addListener(() {
-      if (!_titleFocusNode.hasFocus && _isEditingTitle) _commitTitle();
-    });
-  }
+  final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
+  final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
+  final gradientColors = packGradientColors(isOwned);
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _titleFocusNode.dispose();
-    super.dispose();
-  }
+  // Slightly lighter than the card's own top color, not as light as the
+  // home-screen card's lightest tone — keeps the seam subtle without
+  // fighting the Hero flight.
+  final Color statusBarTopColor =
+      Color.lerp(gradientColors.first, Colors.white, 0.18)!;
 
-  void _startEditingTitle(String currentTitle) {
-    _titleController.text = currentTitle;
-    setState(() => _isEditingTitle = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _titleFocusNode.requestFocus();
-      _titleController.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _titleController.text.length,
-      );
-    });
-  }
-
-  Future<void> _commitTitle() async {
-    final newName = _titleController.text.trim();
-    setState(() => _isEditingTitle = false);
-    if (newName.isEmpty || newName == widget.packName) return;
-    await DriftService.instance.updateFolderTitle(widget.packId, newName);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final packsAsync = ref.watch(allFoldersProvider);
-    final matches =
-        packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
-    final pack = matches.isNotEmpty ? matches.first : null;
-    final currentTitle = pack?.title ?? widget.packName;
-
-    final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
-    final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
-    final gradientColors = packGradientColors(isOwned);
-
-    return SizedBox(
-      height: widget.topInset + widget.lipHeight,
-      child: Column(
-        children: [
-          // Solid strip behind the status bar, matching the home-screen
-          // background so the two read as one continuous surface.
-          Container(
-            height: widget.topInset,
-            color: gradientColors[1],
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                // Flat color surface (no rounded card graphic). Still
-                // wrapped in a Hero so the flip shuttle takes over
-                // during the flight.
-                ClipRect(
-  child: OverflowBox(
-    alignment: Alignment.bottomCenter,
-    minHeight: 0,
-    maxHeight: double.infinity,
-    child: Hero(
-      tag: 'pack-${widget.packId}',
-      child: SizedBox(
-        width: double.infinity,
-        child: pack == null
-            ? Material(
-                type: MaterialType.transparency,
-                child: Container(color: gradientColors.first),
-              )
-            : Material(
-                type: MaterialType.transparency,
-                child: PackCardBody(
-                  pack: pack,
-                  isOwned: isOwned,
-									flatTitle: true,
-                ),
-              ),
-      ),
-    ),
-  ),
-),
-
-
-              ],
+  return SizedBox(
+    height: widget.topInset + widget.lipHeight,
+    child: Column(
+      children: [
+        // Gradient strip behind the status bar. Its bottom edge matches
+        // PackCardBody's own top color exactly, so the two blend with
+        // no visible seam.
+        Container(
+          height: widget.topInset,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [statusBarTopColor, gradientColors.first],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.bottomCenter,
+                  minHeight: 0,
+                  maxHeight: double.infinity,
+                  child: Hero(
+                    tag: 'pack-${widget.packId}',
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: pack == null
+                          ? Material(
+                              type: MaterialType.transparency,
+                              child: Container(color: gradientColors.first),
+                            )
+                          : Material(
+                              type: MaterialType.transparency,
+                              child: PackCardBody(
+                                pack: pack,
+                                isOwned: isOwned,
+                                flatTitle: true,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildNormalRow(BuildContext context, String currentTitle) {
     return Row(
