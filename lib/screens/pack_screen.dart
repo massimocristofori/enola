@@ -322,43 +322,46 @@ class _PackScreenState extends ConsumerState<PackScreen> {
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
           floatingActionButton: IgnorePointer(
-            ignoring: !_showContent,
-            child: AnimatedOpacity(
-              opacity: _showContent ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _FabBar(
-                    children: [
-                      _FabBarItem(
-                        icon: Icons.home_rounded,
-                        onTap: () => Navigator.pop(context),
-                      ),
-                      _FabBarItem(
-                        icon: Icons.add_rounded,
-                        iconColor: EnolaTheme.accent,
-                        onTap: () => _openCreate(context),
-                      ),
-                      _FabBarItem(
-                        icon: Icons.ios_share,
-                        onTap: pack == null
-                            ? null
-                            : () => _sharePack(context, pack),
-                      ),
-                      _FabBarItem(
-                        icon: Icons.delete_outline_rounded,
-                        iconColor: Colors.red,
-                        onTap: () => _handleDeleteTap(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  const TrainingFab(),
-                ],
-              ),
+  ignoring: !_showContent,
+  child: AnimatedOpacity(
+    opacity: _showContent ? 1 : 0,
+    duration: const Duration(milliseconds: 200),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _FabBar(
+          children: [
+            _FabBarItem(
+              icon: Icons.home_rounded,
+              label: 'Home',
+              onTap: () => Navigator.pop(context),
             ),
-          ),
+            _FabBarItem(
+              icon: Icons.add_rounded,
+              label: 'New Map',
+              background: EnolaTheme.accent,
+              onTap: () => _openCreate(context),
+            ),
+            _FabBarItem(
+              icon: Icons.ios_share,
+              label: 'Share',
+              onTap: pack == null ? null : () => _sharePack(context, pack),
+            ),
+            _FabBarItem(
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete',
+              background: Colors.red,
+              onTap: () => _handleDeleteTap(context),
+            ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        const TrainingFab(),
+      ],
+    ),
+  ),
+),
+
         ),
       ),
     );
@@ -1279,7 +1282,8 @@ class _FabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
+      height: 64,
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -1293,6 +1297,7 @@ class _FabBar extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,
       ),
     );
@@ -1301,28 +1306,62 @@ class _FabBar extends StatelessWidget {
 
 class _FabBarItem extends StatelessWidget {
   final IconData icon;
+  final String label;
   final VoidCallback? onTap;
-  final Color? iconColor;
+  final Color? background; // null = plain white/black item
+  final Color? foreground;
 
   const _FabBarItem({
     required this.icon,
+    required this.label,
     required this.onTap,
-    this.iconColor,
+    this.background,
+    this.foreground,
   });
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = iconColor ?? EnolaTheme.textPrimary;
-    final resolvedColor =
-        onTap == null ? baseColor.withValues(alpha: 0.3) : baseColor;
+    final disabled = onTap == null;
+    final bool special = background != null;
+
+    final fg = foreground ??
+        (special ? Colors.white : EnolaTheme.textPrimary);
+    final resolvedFg = disabled ? fg.withValues(alpha: 0.35) : fg;
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20, color: resolvedFg),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: resolvedFg,
+          ),
+        ),
+      ],
+    );
 
     return SizedBox(
-      width: 48,
-      height: 56,
-      child: IconButton(
-        onPressed: onTap,
-        icon: Icon(icon, size: 24, color: resolvedColor),
+      width: 62,
+      child: Material(
+        color: special
+            ? (disabled ? background!.withValues(alpha: 0.35) : background)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: content,
+          ),
+        ),
       ),
     );
   }
 }
+
