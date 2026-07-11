@@ -447,7 +447,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
           // background so the two read as one continuous surface.
           Container(
             height: widget.topInset,
-            color: const Color(0xFFECEFF4),
+            color: gradientColors[1],
           ),
           Expanded(
             child: Stack(
