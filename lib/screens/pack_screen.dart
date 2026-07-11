@@ -318,7 +318,6 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                       _FabBarItem(
                         icon: Icons.add_rounded,
                         label: 'New Map',
-                        background: EnolaTheme.accent,
                         onTap: () => _openCreate(context),
                       ),
                       _FabBarItem(
