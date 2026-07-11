@@ -474,6 +474,7 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
                 child: PackCardBody(
                   pack: pack,
                   isOwned: isOwned,
+									flatTitle: true,
                 ),
               ),
       ),
