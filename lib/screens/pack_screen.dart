@@ -272,7 +272,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                                   slivers: [
                                     SliverToBoxAdapter(
                                       child: SizedBox(
-                                          height: topInset + lipHeight),
+                                          height: topInset + lipHeight + 10),
                                     ),
                                     if (maps.isEmpty)
                                       SliverToBoxAdapter(
