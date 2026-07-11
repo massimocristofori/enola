@@ -329,44 +329,85 @@ class _TrainingFabState extends State<TrainingFab> {
 
             if (!hasActiveSessions) return const SizedBox.shrink();
 
-            return FloatingActionButton.extended(
-              heroTag: 'training_fab',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const TrainingDashboardScreen(),
-                ),
-              ),
-              backgroundColor: const Color(0xFF249689),
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.school_rounded),
-              label: Row(
-                children: [
-                  const Text(
-                    'Training',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  if (totalCount > 0) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(50),
-                        borderRadius: BorderRadius.circular(10),
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  height: 64,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
                       ),
-                      child: Text(
-                        '$totalCount',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                    ],
+                  ),
+                  child: SizedBox(
+                    width: 62,
+                    child: Material(
+                      color: EnolaTheme.secondary,
+                      borderRadius: BorderRadius.circular(22),
+                      child: InkWell(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TrainingDashboardScreen(),
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 4, horizontal: 2),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.school_rounded,
+                                  size: 20, color: Colors.white),
+                              SizedBox(height: 2),
+                              Text(
+                                'Training',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+                if (totalCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: EnolaTheme.secondary, width: 1.5),
+                      ),
+                      child: Text(
+                        '$totalCount',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: EnolaTheme.secondary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ).animate().fadeIn().slideY(begin: 0.3, end: 0);
           },
         );
@@ -374,3 +415,4 @@ class _TrainingFabState extends State<TrainingFab> {
     );
   }
 }
+
