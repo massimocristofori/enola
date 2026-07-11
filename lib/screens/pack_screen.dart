@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -19,9 +18,7 @@ import 'package:enola/screens/share_pack_screen.dart';
 import 'package:enola/screens/pack_shared.dart';
 import 'package:enola/utils/rank_image.dart';
 
-const double kLipHeightExpanded = 34.0; //46
-const double kLipHeightCollapsed = 34.0;
-const double kLipCollapseScrollThreshold = 34.0; //40
+const double kLipHeightExpanded = 34.0;
 
 class PackScreen extends ConsumerStatefulWidget {
   final int packId;
@@ -41,13 +38,11 @@ class PackScreen extends ConsumerStatefulWidget {
 
 class _PackScreenState extends ConsumerState<PackScreen> {
   final ScrollController _scrollController = ScrollController();
-  //double _collapseT = 0.0;
   bool _showContent = false;
 
   @override
   void initState() {
     super.initState();
-    //_scrollController.addListener(_onScroll);
     final anim = widget.flightAnimation;
     if (anim == null) {
       _showContent = true;
@@ -65,17 +60,8 @@ class _PackScreenState extends ConsumerState<PackScreen> {
   @override
   void dispose() {
     widget.flightAnimation?.removeStatusListener(_onFlightStatus);
-    //_scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    final t = (_scrollController.offset / kLipCollapseScrollThreshold)
-        .clamp(0.0, 1.0);
-    if (t != _collapseT) {
-      setState(() => _collapseT = t);
-    }
   }
 
   void _openCreate(BuildContext context) {
@@ -222,15 +208,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
         packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
     final pack = matches.isNotEmpty ? matches.first : null;
 
-    // Same ownership lookup the header and the home-screen card use, so
-    // the page background starts on the exact color the Hero is
-    // flying from/to.
-    final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
-    final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
-    final gradientColors = packGradientColors(isOwned);
-
-    final lipHeight = kLipHeightExpanded -
-        (kLipHeightExpanded - kLipHeightCollapsed) * _collapseT;
+    const lipHeight = kLipHeightExpanded;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -272,7 +250,8 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                                   slivers: [
                                     SliverToBoxAdapter(
                                       child: SizedBox(
-                                          height: topInset + lipHeight + 10),
+                                          height:
+                                              topInset + lipHeight + 10),
                                     ),
                                     if (maps.isEmpty)
                                       SliverToBoxAdapter(
@@ -322,46 +301,47 @@ class _PackScreenState extends ConsumerState<PackScreen> {
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
           floatingActionButton: IgnorePointer(
-  ignoring: !_showContent,
-  child: AnimatedOpacity(
-    opacity: _showContent ? 1 : 0,
-    duration: const Duration(milliseconds: 200),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _FabBar(
-          children: [
-            _FabBarItem(
-              icon: Icons.home_rounded,
-              label: 'Home',
-              onTap: () => Navigator.pop(context),
+            ignoring: !_showContent,
+            child: AnimatedOpacity(
+              opacity: _showContent ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _FabBar(
+                    children: [
+                      _FabBarItem(
+                        icon: Icons.home_rounded,
+                        label: 'Home',
+                        onTap: () => Navigator.pop(context),
+                      ),
+                      _FabBarItem(
+                        icon: Icons.add_rounded,
+                        label: 'New Map',
+                        background: EnolaTheme.accent,
+                        onTap: () => _openCreate(context),
+                      ),
+                      _FabBarItem(
+                        icon: Icons.ios_share,
+                        label: 'Share',
+                        onTap: pack == null
+                            ? null
+                            : () => _sharePack(context, pack),
+                      ),
+                      _FabBarItem(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Delete',
+                        background: Colors.red,
+                        onTap: () => _handleDeleteTap(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  const TrainingFab(),
+                ],
+              ),
             ),
-            _FabBarItem(
-              icon: Icons.add_rounded,
-              label: 'New Map',
-              background: EnolaTheme.accent,
-              onTap: () => _openCreate(context),
-            ),
-            _FabBarItem(
-              icon: Icons.ios_share,
-              label: 'Share',
-              onTap: pack == null ? null : () => _sharePack(context, pack),
-            ),
-            _FabBarItem(
-              icon: Icons.delete_outline_rounded,
-              label: 'Delete',
-              background: Colors.red,
-              onTap: () => _handleDeleteTap(context),
-            ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        const TrainingFab(),
-      ],
-    ),
-  ),
-),
-
+          ),
         ),
       ),
     );
@@ -389,146 +369,82 @@ class _PackHeader extends ConsumerStatefulWidget {
   ConsumerState<_PackHeader> createState() => _PackHeaderState();
 }
 
-@override
-Widget build(BuildContext context) {
-  final packsAsync = ref.watch(allFoldersProvider);
-  final matches =
-      packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
-  final pack = matches.isNotEmpty ? matches.first : null;
-  final currentTitle = pack?.title ?? widget.packName;
+class _PackHeaderState extends ConsumerState<_PackHeader> {
+  @override
+  Widget build(BuildContext context) {
+    final packsAsync = ref.watch(allFoldersProvider);
+    final matches =
+        packsAsync.valueOrNull?.where((f) => f.id == widget.packId) ?? [];
+    final pack = matches.isNotEmpty ? matches.first : null;
 
-  final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
-  final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
-  final gradientColors = packGradientColors(isOwned);
+    final ownershipAsync = ref.watch(packOwnershipProvider(widget.packId));
+    final bool isOwned = isOwnedLookup(ownershipAsync.valueOrNull);
+    final gradientColors = packGradientColors(isOwned);
 
-  // Slightly lighter than the card's own top color, not as light as the
-  // home-screen card's lightest tone — keeps the seam subtle without
-  // fighting the Hero flight.
-  final Color statusBarTopColor =
-      Color.lerp(gradientColors.first, Colors.white, 0.18)!;
+    // Slightly lighter than the card's own top color, not as light as
+    // the home-screen card's lightest tone — keeps the seam subtle
+    // without fighting the Hero flight.
+    final Color statusBarTopColor =
+        Color.lerp(gradientColors.first, Colors.white, 0.18)!;
 
-  return SizedBox(
-    height: widget.topInset + widget.lipHeight,
-    child: Column(
-      children: [
-        // Gradient strip behind the status bar. Its bottom edge matches
-        // PackCardBody's own top color exactly, so the two blend with
-        // no visible seam.
-        Container(
-          height: widget.topInset,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [statusBarTopColor, gradientColors.first],
+    return SizedBox(
+      height: widget.topInset + widget.lipHeight,
+      child: Column(
+        children: [
+          // Gradient strip behind the status bar. Its bottom edge
+          // matches PackCardBody's own top color exactly, so the two
+          // blend with no visible seam.
+          Container(
+            height: widget.topInset,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [statusBarTopColor, gradientColors.first],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Stack(
-            children: [
-              ClipRect(
-                child: OverflowBox(
-                  alignment: Alignment.bottomCenter,
-                  minHeight: 0,
-                  maxHeight: double.infinity,
-                  child: Hero(
-                    tag: 'pack-${widget.packId}',
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: pack == null
-                          ? Material(
-                              type: MaterialType.transparency,
-                              child: Container(color: gradientColors.first),
-                            )
-                          : Material(
-                              type: MaterialType.transparency,
-                              child: PackCardBody(
-                                pack: pack,
-                                isOwned: isOwned,
-                                flatTitle: true,
+          Expanded(
+            child: Stack(
+              children: [
+                // Flat color surface (no rounded card graphic). Still
+                // wrapped in a Hero so the flip shuttle takes over
+                // during the flight.
+                ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.bottomCenter,
+                    minHeight: 0,
+                    maxHeight: double.infinity,
+                    child: Hero(
+                      tag: 'pack-${widget.packId}',
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: pack == null
+                            ? Material(
+                                type: MaterialType.transparency,
+                                child:
+                                    Container(color: gradientColors.first),
+                              )
+                            : Material(
+                                type: MaterialType.transparency,
+                                child: PackCardBody(
+                                  pack: pack,
+                                  isOwned: isOwned,
+                                  flatTitle: true,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-
-  Widget _buildNormalRow(BuildContext context, String currentTitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            currentTitle,
-            textAlign: TextAlign.left,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
+              ],
             ),
           ),
-        ),
-        IconButton(
-          onPressed: () => _startEditingTitle(currentTitle),
-          icon: const Icon(Icons.edit_rounded, size: 18),
-          color: Colors.white,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        ),
-        const SizedBox(width: 4),
-      ],
-    );
-  }
-
-  Widget _buildEditingRow() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const SizedBox(width: 8),
-        Expanded(
-          child: TextField(
-            controller: _titleController,
-            focusNode: _titleFocusNode,
-            autofocus: true,
-            textAlign: TextAlign.left,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-            ),
-            decoration: const InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-              border: InputBorder.none,
-            ),
-            onSubmitted: (_) => _commitTitle(),
-          ),
-        ),
-        IconButton(
-          onPressed: _commitTitle,
-          icon: const Icon(Icons.check_rounded, size: 20),
-          color: Colors.white,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
-
-
 
 // ── Empty Pack State ─────────────────────────────────────────────────────
 
@@ -803,8 +719,10 @@ class _MapCard extends ConsumerWidget {
                               maxHeight: fromHeight - infoBarHeight,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.white, width: 4),
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                                  border: Border.all(
+                                      color: Colors.white, width: 4),
+                                  borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(8)),
                                 ),
                                 child: ClipRRect(
                                   borderRadius: const BorderRadius.vertical(
@@ -980,7 +898,8 @@ class _CardShell extends StatelessWidget {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
               ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(10)),
                 child: Opacity(
                   opacity: hasBeenPlayed ? 1.0 : 0.45,
                   child: Image.asset(coverAsset, fit: BoxFit.cover),
@@ -1035,7 +954,8 @@ class _CardShellDragging extends StatelessWidget {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
               ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(10)),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -1240,8 +1160,9 @@ class _EarButton extends StatelessWidget {
 
 // ── FAB bar ──────────────────────────────────────────────────────────────
 //
-// A single pill-shaped container holding several icon-only FAB actions,
-// iOS-dock style, replacing what used to be separate floating circles.
+// A single pill-shaped container holding several FAB actions, iOS-dock
+// style. Plain items render black-on-white; "special" items (New Map,
+// Delete) render as colored rounded chips inset inside the same pill.
 
 class _FabBar extends StatelessWidget {
   final List<Widget> children;
@@ -1332,4 +1253,3 @@ class _FabBarItem extends StatelessWidget {
     );
   }
 }
-
