@@ -20,6 +20,170 @@ import 'package:enola/utils/rank_image.dart';
 
 const double kLipHeightExpanded = 34.0;
 
+double _lerp(double a, double b, double t) => a + (b - a) * t;
+
+int mapCardActiveMilestoneIndex(double starRatio) {
+  final score = (starRatio * 10).round();
+  if (score < 5) return 0;
+  if (score <= 6) return 1;
+  if (score <= 9) return 2;
+  return 3;
+}
+
+/// Shared Hero flight shuttle for the map-card <-> play-screen-panel
+/// transition. Cross-fades the cover image into the rank-milestone row
+/// while the shape morphs from card corners into panel corners.
+Widget mapCardHeroShuttle({
+  required Animation<double> animation,
+  required String coverAsset,
+  required String title,
+  required int achievedStars,
+  required int maxStars,
+  required bool hasBeenPlayed,
+  required bool isComplete,
+}) {
+  final double starRatio =
+      maxStars > 0 && hasBeenPlayed ? achievedStars / maxStars : 0.0;
+  final int activeMilestoneIndex = mapCardActiveMilestoneIndex(starRatio);
+
+  return AnimatedBuilder(
+    animation: animation,
+    builder: (context, _) {
+      final double t = Curves.easeInOut.transform(animation.value);
+      final double radius = _lerp(8, 14, t);
+
+      return Material(
+        type: MaterialType.transparency,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(25),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(radius - 2)),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Opacity(
+                        opacity: (1 - t * 1.4).clamp(0.0, 1.0),
+                        child: Container(
+                          margin: const EdgeInsets.all(4),
+                          child: Image.asset(coverAsset, fit: BoxFit.cover),
+                        ),
+                      ),
+                      Opacity(
+                        opacity: ((t - 0.3) / 0.7).clamp(0.0, 1.0),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(4, (index) {
+                              final bool isActive =
+                                  index == activeMilestoneIndex;
+                              return Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isActive
+                                        ? EnolaTheme.accent
+                                        : Colors.transparent,
+                                    width: 2.5,
+                                  ),
+                                ),
+                                child: Opacity(
+                                  opacity: isActive ? 1.0 : 0.35,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Image.asset(
+                                      'assets/images/ranking/$index.jpg',
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[100],
+                                          child: Icon(
+                                            Icons.star_rounded,
+                                            color: isActive
+                                                ? Colors.amber
+                                                : Colors.grey[400],
+                                            size: 18,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: _lerp(13, 16, t),
+                    fontWeight: FontWeight.w600,
+                    color: EnolaTheme.textPrimary,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 3, 12, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      '$achievedStars',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF555555),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: _StarProgressBar(progress: starRatio)),
+                    const SizedBox(width: 10),
+                    Text(
+                      '$maxStars',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF555555),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class PackScreen extends ConsumerStatefulWidget {
   final int packId;
   final String packName;
@@ -308,26 +472,26 @@ class _PackScreenState extends ConsumerState<PackScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _FabBar(
+                  FabBar(
                     children: [
-                      _FabBarItem(
+                      FabBarItem(
                         icon: Icons.home_rounded,
                         label: 'Home',
                         onTap: () => Navigator.pop(context),
                       ),
-                      _FabBarItem(
+                      FabBarItem(
                         icon: Icons.add_rounded,
                         label: 'New Map',
                         onTap: () => _openCreate(context),
                       ),
-                      _FabBarItem(
+                      FabBarItem(
                         icon: Icons.ios_share,
                         label: 'Share',
                         onTap: pack == null
                             ? null
                             : () => _sharePack(context, pack),
                       ),
-                      _FabBarItem(
+                      FabBarItem(
                         icon: Icons.delete_outline_rounded,
                         label: 'Delete',
                         background: Colors.red,
@@ -667,90 +831,9 @@ class _MapCard extends ConsumerWidget {
     final hasBeenPlayed = session != null;
     final isComplete =
         hasBeenPlayed && count > 0 && completedRiddlesCount >= count;
-    final double starRatio =
-        maxStars > 0 ? achievedStars / maxStars : 0;
 
-    final String coverAsset = rankImageForRatio(starRatio);
-
-    Widget flightShuttle(
-      BuildContext flightContext,
-      Animation<double> animation,
-      HeroFlightDirection flightDirection,
-      BuildContext fromHeroContext,
-      BuildContext toHeroContext,
-    ) {
-      final RenderBox? fromBox =
-          fromHeroContext.findRenderObject() as RenderBox?;
-      final double fromHeight = fromBox?.size.height ?? 200.0;
-      const double infoBarHeight = 38;
-
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (context, _) {
-          final t = animation.value;
-          final imageHeight =
-              ((fromHeight - infoBarHeight) * (1.0 - t))
-                  .clamp(0.0, double.infinity);
-
-          return Material(
-            type: MaterialType.transparency,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(25),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: imageHeight,
-                    child: imageHeight > 0
-                        ? ClipRect(
-                            child: OverflowBox(
-                              alignment: Alignment.topCenter,
-                              maxHeight: fromHeight - infoBarHeight,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                      color: Colors.white, width: 4),
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(8)),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(10)),
-                                  child: Image.asset(coverAsset,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity),
-                                ),
-                              ),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                  Expanded(
-                    child: _CardInfoBar(
-                      title: map.title,
-                      achievedStars: achievedStars,
-                      maxStars: maxStars,
-                      hasBeenPlayed: hasBeenPlayed,
-                      isComplete: isComplete,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    }
+    final String coverAsset = rankImageForRatio(
+        maxStars > 0 ? achievedStars / maxStars : 0);
 
     final cardShell = _CardShell(
       coverAsset: coverAsset,
@@ -763,7 +846,17 @@ class _MapCard extends ConsumerWidget {
 
     return Hero(
       tag: 'map-card-${map.id}',
-      flightShuttleBuilder: flightShuttle,
+      flightShuttleBuilder: (flightContext, animation, direction, fromCtx,
+              toCtx) =>
+          mapCardHeroShuttle(
+        animation: animation,
+        coverAsset: coverAsset,
+        title: map.title,
+        achievedStars: achievedStars,
+        maxStars: maxStars,
+        hasBeenPlayed: hasBeenPlayed,
+        isComplete: isComplete,
+      ),
       child: StreamBuilder<TrainingSession?>(
         stream: (DriftService.instance.db
                 .select(DriftService.instance.db.trainingSessions)
@@ -1163,15 +1256,15 @@ class _EarButton extends StatelessWidget {
 // style. Plain items render black-on-white; "special" items (New Map,
 // Delete) render as colored rounded chips inset inside the same pill.
 
-class _FabBar extends StatelessWidget {
+class FabBar extends StatelessWidget {
   final List<Widget> children;
-  const _FabBar({required this.children});
+  const FabBar({super.key, required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 64,
-      //padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -1192,14 +1285,15 @@ class _FabBar extends StatelessWidget {
   }
 }
 
-class _FabBarItem extends StatelessWidget {
+class FabBarItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
   final Color? background; // null = plain white/black item
   final Color? foreground;
 
-  const _FabBarItem({
+  const FabBarItem({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
