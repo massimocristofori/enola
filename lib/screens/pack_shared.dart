@@ -56,11 +56,13 @@ class PackCardBody extends ConsumerWidget {
   final Folder pack;
   final bool isOwned;
   final bool hideTitle;
+	final bool flatTitle;
   const PackCardBody({
     super.key,
     required this.pack,
     required this.isOwned,
     this.hideTitle = false,
+		this.flatTitle = false,
   });
 
   @override
@@ -100,7 +102,7 @@ class PackCardBody extends ConsumerWidget {
         children: [
           PackRankGrid(maps: maps),
           const SizedBox(height: 4),
-          PackInfoBar(title: pack.title, hideTitle: hideTitle),
+          PackInfoBar(title: pack.title, hideTitle: hideTitle, flat: flatTitle),
         ],
       ),
     );
@@ -248,10 +250,38 @@ class RankTile extends StatelessWidget {
 class PackInfoBar extends StatelessWidget {
   final String title;
   final bool hideTitle;
-  const PackInfoBar({super.key, required this.title, this.hideTitle = false});
+  final bool flat;
+  const PackInfoBar({
+    super.key,
+    required this.title,
+    this.hideTitle = false,
+    this.flat = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final text = Opacity(
+      opacity: hideTitle ? 0 : 1,
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+
+    if (flat) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        child: text,
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
       child: Container(
@@ -261,24 +291,12 @@ class PackInfoBar extends StatelessWidget {
           color: const Color(0x44ffffff),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Opacity(
-          opacity: hideTitle ? 0 : 1,
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ),
+        child: text,
       ),
     );
   }
 }
+
 
 // ── Training FAB ──────────────────────────────────────────────────────────
 
