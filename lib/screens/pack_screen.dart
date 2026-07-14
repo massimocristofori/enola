@@ -550,62 +550,36 @@ class _PackHeaderState extends ConsumerState<_PackHeader> {
     final Color statusBarTopColor =
         Color.lerp(gradientColors.first, Colors.white, 0.18)!;
 
-    return SizedBox(
-      height: widget.topInset + widget.lipHeight,
-      child: Column(
-        children: [
-          // Gradient strip behind the status bar. Its bottom edge
-          // matches PackCardBody's own top color exactly, so the two
-          // blend with no visible seam.
-          Container(
-            height: widget.topInset,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [statusBarTopColor, gradientColors.first],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                // Flat color surface (no rounded card graphic). Still
-                // wrapped in a Hero so the flip shuttle takes over
-                // during the flight.
-                ClipRect(
-                  child: OverflowBox(
-                    alignment: Alignment.bottomCenter,
-                    minHeight: 0,
-                    maxHeight: double.infinity,
-                    child: Hero(
-                      tag: 'pack-${widget.packId}',
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: pack == null
-                            ? Material(
-                                type: MaterialType.transparency,
-                                child:
-                                    Container(color: gradientColors.first),
-                              )
-                            : Material(
-                                type: MaterialType.transparency,
-                                child: PackCardBody(
-                                  pack: pack,
-                                  isOwned: isOwned,
-                                  flatTitle: true,
-                                ),
-                              ),
+        return SizedBox(
+      height: widget.topInset + widget.lipHeight, // Total height including status bar
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.bottomCenter,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: Hero(
+            tag: 'pack-${widget.packId}',
+            child: SizedBox(
+              width: double.infinity,
+              child: pack == null
+                  ? Material(
+                      type: MaterialType.transparency,
+                      child: Container(color: gradientColors.first),
+                    )
+                  : Material(
+                      type: MaterialType.transparency,
+                      child: PackCardBody(
+                        pack: pack,
+                        isOwned: isOwned,
+                        flatTitle: true,
                       ),
                     ),
-                  ),
-                ),
-              ],
             ),
           ),
-        ],
+        ),
       ),
     );
+
   }
 }
 
