@@ -482,6 +482,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                       FabBarItem(
                         icon: Icons.add_rounded,
                         label: 'New Map',
+												background: Color(0xFF39D2C0),
                         onTap: () => _openCreate(context),
                       ),
                       FabBarItem(
@@ -494,7 +495,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                       FabBarItem(
                         icon: Icons.delete_outline_rounded,
                         label: 'Delete',
-                        background: Colors.red,
+                        
                         onTap: () => _handleDeleteTap(context),
                       ),
                     ],
