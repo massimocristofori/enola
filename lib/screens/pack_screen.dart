@@ -484,6 +484,7 @@ class _PackScreenState extends ConsumerState<PackScreen> {
                         label: 'New Map',
 												background: Color(0xFF39D2C0),
                         onTap: () => _openCreate(context),
+												oversized: true,
                       ),
                       FabBarItem(
                         icon: Icons.ios_share,
@@ -1266,6 +1267,7 @@ class FabBarItem extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? background; // null = plain white/black item
   final Color? foreground;
+  final bool oversized; // true = protrudes 2px above/below the bar
 
   const FabBarItem({
     super.key,
@@ -1274,6 +1276,7 @@ class FabBarItem extends StatelessWidget {
     required this.onTap,
     this.background,
     this.foreground,
+    this.oversized = false,
   });
 
   @override
@@ -1284,6 +1287,10 @@ class FabBarItem extends StatelessWidget {
     final fg = foreground ??
         (special ? Colors.white : EnolaTheme.textPrimary);
     final resolvedFg = disabled ? fg.withValues(alpha: 0.35) : fg;
+
+    final Color textColor = disabled
+        ? Colors.grey.withValues(alpha: 0.35)
+        : Colors.grey[600]!;
 
     final content = Column(
       mainAxisSize: MainAxisSize.min,
@@ -1296,28 +1303,43 @@ class FabBarItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: resolvedFg,
+            color: textColor,
           ),
         ),
       ],
     );
 
+    final button = Material(
+      color: special
+          ? (disabled ? background!.withValues(alpha: 0.35) : background)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: content,
+        ),
+      ),
+    );
+
+    if (!oversized) {
+      return SizedBox(width: 62, child: button);
+    }
+
+    // FabBar is 64 tall with 6px padding all around, so the Row's
+    // content slot is 52px tall. Give this item 68px (52 + 2*8) inside
+    // an OverflowBox centered on that same slot, so it pokes out 2px
+    // past the pill's top and bottom edge.
     return SizedBox(
       width: 62,
-      child: Material(
-        color: special
-            ? (disabled ? background!.withValues(alpha: 0.35) : background)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-            child: content,
-          ),
-        ),
+      child: OverflowBox(
+        minHeight: 0,
+        maxHeight: double.infinity,
+        child: SizedBox(height: 68, child: button),
       ),
     );
   }
 }
+
