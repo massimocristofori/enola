@@ -337,7 +337,7 @@ class _TrainingFabState extends State<TrainingFab> {
               children: [
                 Container(
                   height: 64,
-                  padding: const EdgeInsets.all(6),
+                  //padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(28),
