@@ -1,39 +1,11 @@
-import 'dart:ui'; // for ImageFilter
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import 'package:enola/database/database.dart';
 import 'package:enola/services/drift_service.dart';
 import 'package:enola/theme/enola_theme.dart';
-import 'package:enola/main.dart' show openTrainingRiddle;
 
-class TrainingDashboardScreen extends StatefulWidget {
+class TrainingDashboardScreen extends StatelessWidget {
   const TrainingDashboardScreen({super.key});
-
-  @override
-  State<TrainingDashboardScreen> createState() =>
-      _TrainingDashboardScreenState();
-}
-
-class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
-  late Future<int> _streakFuture;
-  late Future<Map<String, MasteryProgress>> _masteryFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshSummary();
-  }
-
-  void _refreshSummary() {
-    _streakFuture = DriftService.instance.getTrainingStreak();
-    _masteryFuture = DriftService.instance.getMasteryPerMap().then(
-          (raw) => raw.map(
-            (k, v) => MapEntry(k, MasteryProgress(mastered: v.mastered, total: v.total)),
-          ),
-        );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,117 +27,69 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          // No AppBar — header is inline in the scroll view
           floatingActionButton: _BackFab(
             onTap: () {
               Navigator.of(context)
                   .pushNamedAndRemoveUntil('/', (route) => false);
             },
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerFloat,
           body: SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 600),
-                child: StreamBuilder<List<TrainingRiddleItem>>(
-                  stream: DriftService.instance.watchAllTrainingRiddles(),
+                child: StreamBuilder<List<TrainingProgress>>(
+                  stream: DriftService.instance.watchTrainingProgress(),
                   builder: (context, snapshot) {
-                    final allItems = snapshot.data ?? [];
+                    final all = snapshot.data ?? [];
 
-                    final failed = allItems
-                        .where((i) => i.status == TrainingRiddleStatus.failedNotified)
-                        .toList();
-                    final pending = allItems
-                        .where((i) => i.status == TrainingRiddleStatus.pendingNotified)
-                        .toList();
-                    final upcoming = allItems
-                        .where((i) => i.status == TrainingRiddleStatus.notYetNotified)
-                        .toList();
+                    final inProgress =
+                        all.where((p) => !p.isFinished).toList()
+                          ..sort((a, b) =>
+                              b.startedAt.compareTo(a.startedAt));
+                    final finished = all.where((p) => p.isFinished).toList()
+                      ..sort((a, b) => b.completedAt!
+                          .compareTo(a.completedAt!));
 
-                    final activeCount = failed.length + pending.length;
-
-                    return RefreshIndicator(
-                      onRefresh: () async {
-                        setState(() => _refreshSummary());
-                      },
-                      child: CustomScrollView(
-                        slivers: [
-                          // ── Inline header (mirrors HomeScreen) ──────────
-                          const SliverToBoxAdapter(
-                            child: _DashboardHeader(),
-                          ),
-
-                          // ── Summary header ───────────────────────────────
-                          SliverToBoxAdapter(
-                            child: FutureBuilder<(int, Map<String, MasteryProgress>)>(
-                              future: Future.wait([_streakFuture, _masteryFuture])
-                                  .then((r) => (
-                                        r[0] as int,
-                                        r[1] as Map<String, MasteryProgress>,
-                                      )),
-                              builder: (context, snap) {
-                                final streak = snap.data?.$1 ?? 0;
-                                final mastery = snap.data?.$2 ?? {};
-                                return _SummaryHeader(
-                                  streak: streak,
-                                  mastery: mastery,
-                                );
-                              },
+                    return CustomScrollView(
+                      slivers: [
+                        const SliverToBoxAdapter(child: _DashboardHeader()),
+                        if (all.isEmpty)
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _EmptyState(),
+                          )
+                        else ...[
+                          if (inProgress.isNotEmpty) ...[
+                            _sectionHeader('In progress', inProgress.length),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) => _ProgressCard(
+                                  progress: inProgress[index],
+                                  index: index,
+                                ),
+                                childCount: inProgress.length,
+                              ),
                             ),
-                          ),
-
-                          // ── Empty state ──────────────────────────────────
-                          if (allItems.isEmpty)
-                            const SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: _EmptyPendingState(),
-                            )
-                          else ...[
-
-                            // ── "Waiting for you" section ────────────────
-                            if (failed.isNotEmpty || pending.isNotEmpty) ...[
-                              _sectionHeader('Waiting for you', activeCount),
-                              SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final item = [...failed, ...pending][index];
-                                    return _RiddleCard(
-                                      item: item,
-                                      index: index,
-                                      onTap: () => openTrainingRiddle(
-                                        item.mapId,
-                                        item.riddle.id,
-                                      ),
-                                    );
-                                  },
-                                  childCount: failed.length + pending.length,
-                                ),
-                              ),
-                            ],
-
-                            // ── "Coming up" section ──────────────────────
-                            if (upcoming.isNotEmpty) ...[
-                              _sectionHeader('Coming up', null),
-                              SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final item = upcoming[index];
-                                    return _RiddleCard(
-                                      item: item,
-                                      index: index,
-                                      onTap: null,
-                                    );
-                                  },
-                                  childCount: upcoming.length,
-                                ),
-                              ),
-                            ],
-
-                            const SliverToBoxAdapter(child: SizedBox(height: 100)),
                           ],
+                          if (finished.isNotEmpty) ...[
+                            _sectionHeader('Completed', null),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) => _ProgressCard(
+                                  progress: finished[index],
+                                  index: index,
+                                ),
+                                childCount: finished.length,
+                              ),
+                            ),
+                          ],
+                          const SliverToBoxAdapter(
+                              child: SizedBox(height: 100)),
                         ],
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -209,7 +133,7 @@ class _TrainingDashboardScreenState extends State<TrainingDashboardScreen> {
   }
 }
 
-// ── Dashboard Header (mirrors _Header in HomeScreen) ─────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
 class _DashboardHeader extends StatelessWidget {
   const _DashboardHeader();
@@ -218,28 +142,23 @@ class _DashboardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Training Dashboard',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: EnolaTheme.textPrimary,
-                    ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Tap a riddle to keep the momentum going',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: EnolaTheme.textSecond,
-                    ),
-              ),
-            ],
+          Text(
+            'Training Progress',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: EnolaTheme.textPrimary,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Keep the momentum going!',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: EnolaTheme.textSecond,
+                ),
           ),
         ],
       ),
@@ -247,304 +166,174 @@ class _DashboardHeader extends StatelessWidget {
   }
 }
 
-// ── Summary header ────────────────────────────────────────────────────────────
+// ── Progress card ─────────────────────────────────────────────────────────────
 
-class _SummaryHeader extends StatelessWidget {
-  final int streak;
-  final Map<String, MasteryProgress> mastery;
-
-  const _SummaryHeader({required this.streak, required this.mastery});
-
-  @override
-  Widget build(BuildContext context) {
-    final totalMastered =
-        mastery.values.fold(0, (sum, m) => sum + m.mastered);
-    final totalRiddles = mastery.values.fold(0, (sum, m) => sum + m.total);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [EnolaTheme.secondary, EnolaTheme.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: EnolaTheme.accent.withAlpha(60),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _StatCell(
-              icon: Icons.local_fire_department_rounded,
-              value: '$streak',
-              label: 'Streak',
-            ),
-          ),
-          Container(width: 1, height: 40, color: Colors.white.withAlpha(60)),
-          Expanded(
-            child: _StatCell(
-              icon: Icons.check_circle_outline_rounded,
-              value: totalRiddles > 0 ? '$totalMastered / $totalRiddles' : '—',
-              label: 'Mastered',
-            ),
-          ),
-          Container(width: 1, height: 40, color: Colors.white.withAlpha(60)),
-          Expanded(
-            child: _StatCell(
-              icon: Icons.map_outlined,
-              value: '${mastery.length}',
-              label: 'Active maps',
-            ),
-          ),
-        ],
-      ),
-    ).animate().fadeIn().scale(begin: const Offset(0.97, 0.97));
-  }
-}
-
-class _StatCell extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-
-  const _StatCell({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: Colors.white, size: 20),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withAlpha(180),
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Unified riddle card ───────────────────────────────────────────────────────
-
-class _RiddleCard extends StatelessWidget {
-  final TrainingRiddleItem item;
+class _ProgressCard extends StatelessWidget {
+  final TrainingProgress progress;
   final int index;
-  final VoidCallback? onTap;
 
-  const _RiddleCard({
-    required this.item,
-    required this.index,
-    required this.onTap,
-  });
+  const _ProgressCard({required this.progress, required this.index});
 
-  @override
-  Widget build(BuildContext context) {
-    final isDisabled = item.status == TrainingRiddleStatus.notYetNotified;
-    final isFailed = item.status == TrainingRiddleStatus.failedNotified;
+  Color get _barColor {
+    if (progress.percentage >= 1.0) return EnolaTheme.correct;
+    return Color.lerp(
+      EnolaTheme.wrong,
+      EnolaTheme.correct,
+      progress.percentage.clamp(0.0, 1.0),
+    )!;
+  }
 
-    final Color iconBg;
-    final Color iconColor;
-    final Color? borderAccent;
-    final Widget? badge;
-    final String subtitle;
+  String get _message {
+    final pct = (progress.percentage * 100).round();
 
-    if (isFailed) {
-      iconBg = EnolaTheme.wrong.withAlpha(20);
-      iconColor = EnolaTheme.wrong;
-      borderAccent = EnolaTheme.wrong.withAlpha(80);
-      badge = _StatusBadge(label: 'Try again', color: EnolaTheme.wrong);
-      final elapsed = DateTime.now().difference(item.notifiedAt!);
-      final elapsedLabel = elapsed.inMinutes < 60
-          ? '${elapsed.inMinutes}m ago'
-          : '${elapsed.inHours}h ago';
-      subtitle = 'Notified $elapsedLabel';
-    } else if (item.status == TrainingRiddleStatus.pendingNotified) {
-      iconBg = EnolaTheme.accent.withAlpha(20);
-      iconColor = EnolaTheme.accent;
-      borderAccent = null;
-      badge = null;
-      final elapsed = DateTime.now().difference(item.notifiedAt!);
-      final elapsedLabel = elapsed.inMinutes < 60
-          ? '${elapsed.inMinutes}m ago'
-          : '${elapsed.inHours}h ago';
-      subtitle = 'Notified $elapsedLabel';
-    } else {
-      iconBg = EnolaTheme.border;
-      iconColor = EnolaTheme.textSecond;
-      borderAccent = null;
-      badge = null;
-      subtitle = 'Coming up next';
+    if (progress.isFinished) {
+      if (progress.percentage >= 1.0) {
+        return '🎉 Training complete! Every riddle mastered.';
+      }
+      return 'Training ended at $pct% — start a new one anytime.';
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: borderAccent ?? EnolaTheme.border,
-            width: borderAccent != null ? 1.5 : 1.0,
+    if (pct >= 90) return "You're at $pct%! One last push to the finish 🔥";
+    if (pct >= 60) {
+      return "You're at $pct% of your training! Keep the momentum going!";
+    }
+    if (pct >= 30) return "You're at $pct% — solid progress, keep it up!";
+    return "You're at $pct%. Just getting started, you've got this!";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = progress.percentage;
+    final isFinished = progress.isFinished;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EnolaTheme.border),
+        boxShadow: isFinished
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(8),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _barColor.withAlpha(24),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isFinished
+                      ? (pct >= 1.0
+                          ? Icons.emoji_events_rounded
+                          : Icons.flag_rounded)
+                      : Icons.psychology_rounded,
+                  color: _barColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  progress.mapTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: EnolaTheme.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${(pct * 100).round()}%',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: _barColor,
+                ),
+              ),
+            ],
           ),
-          boxShadow: isDisabled
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(8),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                isFailed
-                    ? Icons.refresh_rounded
-                    : isDisabled
-                        ? Icons.lock_outline_rounded
-                        : Icons.psychology_rounded,
-                color: iconColor,
-                size: 22,
-              ),
+          const SizedBox(height: 14),
+          _AnimatedBar(percentage: pct, color: _barColor),
+          const SizedBox(height: 10),
+          Text(
+            _message,
+            style: const TextStyle(
+              fontSize: 13,
+              color: EnolaTheme.textSecond,
+              height: 1.4,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: isDisabled
-                            ? ImageFiltered(
-                                imageFilter: ImageFilter.blur(
-                                  sigmaX: 4,
-                                  sigmaY: 4,
-                                ),
-                                child: Text(
-                                  item.riddle.question,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: EnolaTheme.textSecond,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              )
-                            : Text(
-                                item.riddle.question,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: EnolaTheme.textPrimary,
-                                  height: 1.35,
-                                ),
-                              ),
-                      ),
-                      if (badge != null) ...[
-                        const SizedBox(width: 8),
-                        badge,
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: EnolaTheme.textSecond,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (!isDisabled)
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: EnolaTheme.textSecond,
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     )
         .animate()
         .fadeIn(delay: Duration(milliseconds: index * 60))
-        .slideX(begin: 0.05, end: 0);
+        .slideY(begin: 0.05, end: 0);
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  final String label;
+class _AnimatedBar extends StatelessWidget {
+  final double percentage;
   final Color color;
 
-  const _StatusBadge({required this.label, required this.color});
+  const _AnimatedBar({required this.percentage, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(80)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          height: 14,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: EnolaTheme.surfaceHigh,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: percentage.clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) {
+                return Container(
+                  width: constraints.maxWidth * value,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-class _EmptyPendingState extends StatelessWidget {
-  const _EmptyPendingState();
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -555,13 +344,13 @@ class _EmptyPendingState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.check_circle_outline_rounded,
+              Icons.bar_chart_rounded,
               size: 64,
-              color: EnolaTheme.correct.withAlpha(180),
+              color: EnolaTheme.accent.withAlpha(180),
             ),
             const SizedBox(height: 16),
             const Text(
-              'All caught up!',
+              'No trainings yet',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -570,7 +359,7 @@ class _EmptyPendingState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'No riddles waiting. Check back when the next notification arrives.',
+              'Start a training from one of your maps to see your progress here.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
