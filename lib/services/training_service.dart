@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:drift/drift.dart' as drift;
-import 'package:flutter/material.dart';
 
 import 'package:enola/database/database.dart';
 import 'package:enola/services/drift_service.dart';
@@ -40,6 +39,10 @@ class TrainingSlot {
 
 // ── Training service ──────────────────────────────────────────────────────────
 
+/// NOTE ON API CHANGE: `startTraining` and `onRiddleAnswered` used to take a
+/// `required List<Riddle> riddles` parameter — callers no longer need to
+/// pass that in; the service fetches whatever it needs from DriftService
+/// itself. Update call sites to drop the `riddles:` argument.
 class TrainingService {
   static final TrainingService instance = TrainingService._internal();
   TrainingService._internal();
@@ -88,14 +91,16 @@ class TrainingService {
 
   // ── Start ─────────────────────────────────────────────────────────────────
 
+  /// Starts a training session for [mapId]. Fetches the map's riddles
+  /// itself — no need to pass them in.
   Future<void> startTraining({
     required String mapId,
-    required List<Riddle> riddles,
     required int durationMinutes,
   }) async {
     await stopTraining(mapId);
 
     final db = DriftService.instance.db;
+    final riddles = await db.getRiddlesForMap(mapId);
     final now = DateTime.now();
     final endsAt = now.add(Duration(minutes: durationMinutes));
 
@@ -140,11 +145,13 @@ class TrainingService {
 
   // ── On riddle answered ────────────────────────────────────────────────────
 
+  /// Records an attempt for [riddleId] in the active session for [mapId].
+  /// Looks up the riddle itself (for the notification body) — no need to
+  /// pass the full riddle list in.
   Future<void> onRiddleAnswered({
     required String mapId,
     required int riddleId,
     required bool correct,
-    required List<Riddle> riddles,
   }) async {
     final session = await getActiveSession(mapId);
     if (session == null) return;
@@ -233,16 +240,22 @@ class TrainingService {
             .cancelNotification(slot.notificationId);
       }
     } else if (newSlot != null) {
-      final riddle = riddles.firstWhere((r) => r.id == riddleId);
-      await NotificationService.instance.scheduleRiddleNotification(
-        id: newSlot.notificationId,
-        title: '🧠 Training time!',
-        body: riddle.question.length > 80
-            ? '${riddle.question.substring(0, 80)}…'
-            : riddle.question,
-        scheduledAt: newSlot.scheduledAt,
-        payload: '$mapId:$riddleId',
-      );
+      final riddle = await (db.select(db.riddles)
+            ..where((t) => t.id.equals(riddleId)))
+          .getSingleOrNull();
+
+      if (riddle != null) {
+        await NotificationService.instance.scheduleRiddleNotification(
+          id: newSlot.notificationId,
+          title: '🧠 Training time!',
+          body: riddle.question.length > 80
+              ? '${riddle.question.substring(0, 80)}…'
+              : riddle.question,
+          scheduledAt: newSlot.scheduledAt,
+          payload: '$mapId:$riddleId',
+        );
+      }
+
       // ── Mark as notified for the new failure slot ─────────────────────
       await DriftService.instance.insertNotifiedRiddle(
         sessionId: session.id,
