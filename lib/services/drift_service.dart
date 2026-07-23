@@ -105,9 +105,6 @@ class DriftService {
     Uint8List? imageBytes,
     int? folderId,
   }) async {
-    // Preserve sortOrder if this map already exists (saveMap is an upsert
-    // via insertOnConflictUpdate, used both for creating new maps and for
-    // overwriting an existing one, e.g. when syncing a shared-pack update).
     final existingRow = await (db.select(db.riddleMaps)
           ..where((t) => t.id.equals(id)))
         .getSingleOrNull();
@@ -143,9 +140,6 @@ class DriftService {
 
   Stream<List<RiddleMap>> watchAllMaps() => db.select(db.riddleMaps).watch();
 
-  /// Persists a new user-defined order for a set of maps that share the
-  /// same folder bucket (a pack, or the unfiled list). Mirrors
-  /// [reorderRiddles] — rewrites sortOrder 0..n-1 to match [ordered].
   Future<void> reorderMaps(List<RiddleMap> ordered) async {
     await db.transaction(() async {
       for (var i = 0; i < ordered.length; i++) {
@@ -536,180 +530,95 @@ class DriftService {
     return result;
   }
 
-  // ── ALL TRAINING RIDDLES STREAM ───────────────────────────────────────────
+  // ── TRAINING PROGRESS (for dashboard) ─────────────────────────────────────
 
-  Stream<List<TrainingRiddleItem>> watchAllTrainingRiddles() {
-    final notifiedStream = watchPendingNotifiedRiddles();
-    final sessionsStream = (db.select(db.trainingSessions)
-          ..where((t) => t.completedAt.isNull()))
-        .watch();
+  /// One row per training session (both active and completed), joined with
+  /// its map's title. `masteredCount` is the number of distinct riddles that
+  /// have at least one correct attempt in that session; `totalCount` is
+  /// that plus whatever's still left in the session's pool. A riddle that
+  /// was answered wrong and later answered correctly moves from "remaining"
+  /// to "mastered" and is never counted as wrong again — it simply leaves
+  /// the pool. Reactive: every answer (right or wrong) writes to
+  /// `trainingSessions` (pool/schedule update), which is what this stream
+  /// watches, so it recomputes on every attempt automatically.
+  Stream<List<TrainingProgress>> watchTrainingProgress() {
+    final query = db.select(db.trainingSessions).join([
+      innerJoin(
+        db.riddleMaps,
+        db.riddleMaps.id.equalsExp(db.trainingSessions.mapId),
+      ),
+    ])
+      ..orderBy([OrderingTerm.desc(db.trainingSessions.startedAt)]);
 
-    late StreamController<List<TrainingRiddleItem>> controller;
-    List<PendingTrainingRiddle> latestNotified = [];
-    List<TrainingSession> latestSessions = [];
-    bool notifiedReady = false;
-    bool sessionsReady = false;
-    StreamSubscription<List<PendingTrainingRiddle>>? notifiedSub;
-    StreamSubscription<List<TrainingSession>>? sessionsSub;
+    return query.watch().asyncMap((rows) async {
+      final result = <TrainingProgress>[];
 
-    Future<List<TrainingRiddleItem>> compute() async {
-      final now = DateTime.now();
-      final activeSessions =
-          latestSessions.where((s) => now.isBefore(s.endsAt)).toList();
+      for (final row in rows) {
+        final session = row.readTable(db.trainingSessions);
+        final map = row.readTable(db.riddleMaps);
 
-      if (activeSessions.isEmpty) return [];
+        final remainingPool = _parsePoolJson(session.poolJson);
 
-      final alreadyNotifiedIds =
-          latestNotified.map((p) => p.riddle.id).toSet();
-
-      for (final session in activeSessions) {
-        final slots = _parseSlotsJson(session.scheduledJson);
-        for (final slot in slots) {
-          if (slot.scheduledAt.isBefore(now) &&
-              !alreadyNotifiedIds.contains(slot.riddleId)) {
-            await insertNotifiedRiddle(
-              sessionId: session.id,
-              mapId: session.mapId,
-              riddleId: slot.riddleId,
-            );
-            alreadyNotifiedIds.add(slot.riddleId);
-            latestNotified =
-                await watchPendingNotifiedRiddles().first;
-          }
-        }
-      }
-
-      final items = <TrainingRiddleItem>[];
-      final notifiedMap = {
-        for (final p in latestNotified) p.riddle.id: p,
-      };
-
-      final wrongAttemptRiddleIds = <int>{};
-      for (final session in activeSessions) {
-        final attempts = await (db.select(db.trainingAttempts)
+        final correctAttempts = await (db.select(db.trainingAttempts)
               ..where((t) =>
-                  t.sessionId.equals(session.id) &
-                  t.correct.equals(false)))
+                  t.sessionId.equals(session.id) & t.correct.equals(true)))
             .get();
-        for (final a in attempts) {
-          wrongAttemptRiddleIds.add(a.riddleId);
-        }
+        final masteredIds =
+            correctAttempts.map((a) => a.riddleId).toSet();
+
+        final total = masteredIds.length + remainingPool.length;
+
+        result.add(TrainingProgress(
+          sessionId: session.id,
+          mapId: session.mapId,
+          mapTitle: map.title,
+          startedAt: session.startedAt,
+          completedAt: session.completedAt,
+          masteredCount: masteredIds.length,
+          totalCount: total,
+        ));
       }
 
-      for (final session in activeSessions) {
-        final pool = _parsePoolJson(session.poolJson);
-        if (pool.isEmpty) continue;
-
-        final riddles = await (db.select(db.riddles)
-              ..where((t) => t.id.isIn(pool)))
-            .get();
-
-        for (final riddle in riddles) {
-          final notifiedEntry = notifiedMap[riddle.id];
-          final TrainingRiddleStatus status;
-
-          if (notifiedEntry != null) {
-            status = wrongAttemptRiddleIds.contains(riddle.id)
-                ? TrainingRiddleStatus.failedNotified
-                : TrainingRiddleStatus.pendingNotified;
-          } else {
-            status = TrainingRiddleStatus.notYetNotified;
-          }
-
-          items.add(TrainingRiddleItem(
-            riddle: riddle,
-            mapId: session.mapId,
-            sessionId: session.id,
-            status: status,
-            notifiedAt: notifiedEntry?.notified.notifiedAt,
-          ));
-        }
-      }
-
-      const order = {
-        TrainingRiddleStatus.failedNotified: 0,
-        TrainingRiddleStatus.pendingNotified: 1,
-        TrainingRiddleStatus.notYetNotified: 2,
-      };
-      items.sort((a, b) {
-        final statusCmp =
-            order[a.status]!.compareTo(order[b.status]!);
-        if (statusCmp != 0) return statusCmp;
-        if (a.notifiedAt != null && b.notifiedAt != null) {
-          return a.notifiedAt!.compareTo(b.notifiedAt!);
-        }
-        return a.riddle.orderInMap.compareTo(b.riddle.orderInMap);
-      });
-
-      return items;
-    }
-
-    void emit() {
-      if (!notifiedReady || !sessionsReady) return;
-      compute().then((result) {
-        if (!controller.isClosed) controller.add(result);
-      });
-    }
-
-    controller = StreamController<List<TrainingRiddleItem>>(
-      onListen: () {
-        notifiedSub = notifiedStream.listen((data) {
-          latestNotified = data;
-          notifiedReady = true;
-          emit();
-        });
-        sessionsSub = sessionsStream.listen((data) {
-          latestSessions = data;
-          sessionsReady = true;
-          emit();
-        });
-      },
-      onCancel: () {
-        notifiedSub?.cancel();
-        sessionsSub?.cancel();
-      },
-    );
-
-    return controller.stream;
+      return result;
+    });
   }
 
-/// Deletes [folderId] and everything inside it: maps, their riddles,
-/// their play sessions, and any DownloadedPack/DownloadedPackMaps
-/// tracking rows tied to those maps. Used for both the owner-delete and
-/// generic-user-delete flows — Supabase is handled separately by the
-/// caller (only relevant for owners).
-Future<void> deleteFolderAndContents(int folderId) async {
-  await db.transaction(() async {
-    final maps = await (db.select(db.riddleMaps)
-          ..where((t) => t.folderId.equals(folderId)))
-        .get();
+  /// Deletes [folderId] and everything inside it: maps, their riddles,
+  /// their play sessions, and any DownloadedPack/DownloadedPackMaps
+  /// tracking rows tied to those maps. Used for both the owner-delete and
+  /// generic-user-delete flows — Supabase is handled separately by the
+  /// caller (only relevant for owners).
+  Future<void> deleteFolderAndContents(int folderId) async {
+    await db.transaction(() async {
+      final maps = await (db.select(db.riddleMaps)
+            ..where((t) => t.folderId.equals(folderId)))
+          .get();
 
-    for (final map in maps) {
-      await (db.delete(db.riddles)..where((t) => t.mapId.equals(map.id)))
-          .go();
-      await (db.delete(db.playSessions)
-            ..where((t) => t.mapId.equals(map.id)))
-          .go();
-      await (db.delete(db.downloadedPackMaps)
-            ..where((t) => t.localMapId.equals(map.id)))
-          .go();
-    }
+      for (final map in maps) {
+        await (db.delete(db.riddles)..where((t) => t.mapId.equals(map.id)))
+            .go();
+        await (db.delete(db.playSessions)
+              ..where((t) => t.mapId.equals(map.id)))
+            .go();
+        await (db.delete(db.downloadedPackMaps)
+              ..where((t) => t.localMapId.equals(map.id)))
+            .go();
+      }
 
-    await (db.delete(db.riddleMaps)..where((t) => t.folderId.equals(folderId)))
+      await (db.delete(db.riddleMaps)..where((t) => t.folderId.equals(folderId)))
+          .go();
+      await (db.delete(db.folders)..where((t) => t.id.equals(folderId))).go();
+    });
+  }
+
+  /// Removes the DownloadedPacks tracking row for [packId], if any.
+  /// Called when a non-owner deletes their local copy of a downloaded pack,
+  /// so a future "Get a Pack" with the same code re-downloads cleanly
+  /// instead of silently no-op'ing against a stale tracking row.
+  Future<void> removePackTracking(String packId) async {
+    await (db.delete(db.downloadedPacks)..where((t) => t.id.equals(packId)))
         .go();
-    await (db.delete(db.folders)..where((t) => t.id.equals(folderId))).go();
-  });
-}
-
-/// Removes the DownloadedPacks tracking row for [packId], if any.
-/// Called when a non-owner deletes their local copy of a downloaded pack,
-/// so a future "Get a Pack" with the same code re-downloads cleanly
-/// instead of silently no-op'ing against a stale tracking row.
-Future<void> removePackTracking(String packId) async {
-  await (db.delete(db.downloadedPacks)..where((t) => t.id.equals(packId)))
-      .go();
-}
-
+  }
 
   // ── DOWNLOADED PACKS ──────────────────────────────────────────────────────
 
@@ -740,7 +649,7 @@ Future<void> removePackTracking(String packId) async {
         .getSingleOrNull();
   }
 
-	  /// Finds the DownloadedPacks row associated with [folderId], if this
+  /// Finds the DownloadedPacks row associated with [folderId], if this
   /// folder has ever been involved in pack sharing — either because this
   /// device uploaded it (creatorId is null in that case, see uploadFolder)
   /// or because this device downloaded it from someone else (creatorId is
@@ -767,39 +676,27 @@ Future<void> removePackTracking(String packId) async {
         .getSingleOrNull();
   }
 
-/// Given a remote pack id, finds the local folder that pack's existing
-/// maps live in — used when a new map is added to an already-downloaded
-/// pack, so the new map lands in the right pack instead of unfiled.
-Future<int?> getFolderIdForPack(String packId) async {
-  final link = await (db.select(db.downloadedPackMaps)
-        ..where((t) => t.packId.equals(packId))
-        ..limit(1))
-      .getSingleOrNull();
-  if (link == null) return null;
+  /// Given a remote pack id, finds the local folder that pack's existing
+  /// maps live in — used when a new map is added to an already-downloaded
+  /// pack, so the new map lands in the right pack instead of unfiled.
+  Future<int?> getFolderIdForPack(String packId) async {
+    final link = await (db.select(db.downloadedPackMaps)
+          ..where((t) => t.packId.equals(packId))
+          ..limit(1))
+        .getSingleOrNull();
+    if (link == null) return null;
 
-  final map = await (db.select(db.riddleMaps)
-        ..where((t) => t.id.equals(link.localMapId)))
-      .getSingleOrNull();
-  return map?.folderId;
-}
-
-
+    final map = await (db.select(db.riddleMaps)
+          ..where((t) => t.id.equals(link.localMapId)))
+        .getSingleOrNull();
+    return map?.folderId;
+  }
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
   List<int> _parsePoolJson(String json) {
     try {
       return (jsonDecode(json) as List).cast<int>();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  List<TrainingSlot> _parseSlotsJson(String json) {
-    try {
-      return (jsonDecode(json) as List)
-          .map((e) => TrainingSlot.fromJson(e as Map<String, dynamic>))
-          .toList();
     } catch (_) {
       return [];
     }
@@ -844,42 +741,30 @@ class MasteryProgress {
   const MasteryProgress({required this.mastered, required this.total});
 }
 
-enum TrainingRiddleStatus {
-  failedNotified,
-  pendingNotified,
-  notYetNotified,
-}
-
-class TrainingRiddleItem {
-  final Riddle riddle;
-  final String mapId;
+/// Progress snapshot for a single training session, used by the
+/// simplified training dashboard.
+class TrainingProgress {
   final int sessionId;
-  final TrainingRiddleStatus status;
-  final DateTime? notifiedAt;
+  final String mapId;
+  final String mapTitle;
+  final DateTime startedAt;
+  final DateTime? completedAt;
+  final int masteredCount;
+  final int totalCount;
 
-  const TrainingRiddleItem({
-    required this.riddle,
-    required this.mapId,
+  const TrainingProgress({
     required this.sessionId,
-    required this.status,
-    this.notifiedAt,
-  });
-}
-
-class TrainingSlot {
-  final int riddleId;
-  final DateTime scheduledAt;
-  final int notificationId;
-
-  const TrainingSlot({
-    required this.riddleId,
-    required this.scheduledAt,
-    required this.notificationId,
+    required this.mapId,
+    required this.mapTitle,
+    required this.startedAt,
+    required this.completedAt,
+    required this.masteredCount,
+    required this.totalCount,
   });
 
-  factory TrainingSlot.fromJson(Map<String, dynamic> json) => TrainingSlot(
-        riddleId: json['riddleId'] as int,
-        scheduledAt: DateTime.parse(json['scheduledAt'] as String),
-        notificationId: json['notificationId'] as int,
-      );
+  bool get isFinished => completedAt != null;
+
+  /// 0.0–1.0. Defaults to 0 for an (edge-case) empty map.
+  double get percentage =>
+      totalCount == 0 ? 0.0 : masteredCount / totalCount;
 }
