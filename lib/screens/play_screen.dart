@@ -97,7 +97,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
 
       await TrainingService.instance.startTraining(
         mapId: widget.mapId,
-        riddles: riddles,
         durationMinutes: minutes,
       );
       if (mounted) setState(() => _trainingActive = true);
@@ -369,7 +368,6 @@ class _PlayScreenState extends ConsumerState<PlayScreen> {
         mapId: widget.mapId,
         riddleId: _activeRiddleId!,
         correct: correct,
-        riddles: riddles,
       );
       _dismissRiddle();
       return;
