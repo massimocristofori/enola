@@ -778,7 +778,6 @@ class _MapCard extends ConsumerWidget {
     }
     await TrainingService.instance.startTraining(
       mapId: map.id,
-      riddles: riddles,
       durationMinutes: 60,
     );
   }
@@ -1342,4 +1341,3 @@ class FabBarItem extends StatelessWidget {
     );
   }
 }
-
