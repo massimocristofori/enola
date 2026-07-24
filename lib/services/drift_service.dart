@@ -573,6 +573,7 @@ class DriftService {
           mapId: session.mapId,
           mapTitle: map.title,
           startedAt: session.startedAt,
+					endsAt: session.endsAt,
           completedAt: session.completedAt,
           masteredCount: masteredIds.length,
           totalCount: total,
@@ -748,6 +749,7 @@ class TrainingProgress {
   final String mapId;
   final String mapTitle;
   final DateTime startedAt;
+  final DateTime endsAt;
   final DateTime? completedAt;
   final int masteredCount;
   final int totalCount;
@@ -757,14 +759,20 @@ class TrainingProgress {
     required this.mapId,
     required this.mapTitle,
     required this.startedAt,
+    required this.endsAt,
     required this.completedAt,
     required this.masteredCount,
     required this.totalCount,
   });
 
-  bool get isFinished => completedAt != null;
+  /// True once explicitly completed/stopped OR once the training's time
+  /// window has simply run out (even if nothing has lazily marked
+  /// `completedAt` yet).
+  bool get isFinished =>
+      completedAt != null || DateTime.now().isAfter(endsAt);
 
   /// 0.0–1.0. Defaults to 0 for an (edge-case) empty map.
   double get percentage =>
       totalCount == 0 ? 0.0 : masteredCount / totalCount;
 }
+
