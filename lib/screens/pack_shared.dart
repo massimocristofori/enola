@@ -302,6 +302,11 @@ class PackInfoBar extends StatelessWidget {
 
 
 // ── Training FAB ──────────────────────────────────────────────────────────
+//
+// Badge shows the total number of not-yet-mastered riddles across every
+// active training session (i.e. sum of each session's remaining pool).
+// Driven entirely by DriftService.watchTrainingProgress() now — no more
+// dependency on the old per-riddle TrainingRiddleItem stream.
 
 class TrainingFab extends StatefulWidget {
   const TrainingFab({super.key});
@@ -311,111 +316,110 @@ class TrainingFab extends StatefulWidget {
 }
 
 class _TrainingFabState extends State<TrainingFab> {
-  late Stream<List<TrainingRiddleItem>> _riddlesStream;
+  late Stream<List<TrainingProgress>> _progressStream;
 
   @override
   void initState() {
     super.initState();
-    _riddlesStream = DriftService.instance.watchAllTrainingRiddles();
+    _progressStream = DriftService.instance.watchTrainingProgress();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<TrainingRiddleItem>>(
-      stream: _riddlesStream,
+    return StreamBuilder<List<TrainingProgress>>(
+      stream: _progressStream,
       builder: (context, snapshot) {
-        return StreamBuilder<List<TrainingSession>>(
-          stream: DriftService.instance.watchActiveTrainingSessions(),
-          builder: (context, sessionSnap) {
-            final hasActiveSessions = (sessionSnap.data ?? []).isNotEmpty;
-            final totalCount = snapshot.data?.length ?? 0;
+        final active =
+            (snapshot.data ?? []).where((p) => !p.isFinished).toList();
+        final hasActiveSessions = active.isNotEmpty;
+        final totalCount = active.fold<int>(
+          0,
+          (sum, p) => sum + (p.totalCount - p.masteredCount),
+        );
 
-            if (!hasActiveSessions) return const SizedBox.shrink();
+        if (!hasActiveSessions) return const SizedBox.shrink();
 
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  height: 64,
-                  //padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              height: 64,
+              //padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
                   ),
-                  child: SizedBox(
-                    width: 62,
-                    child: Material(
-                      color: EnolaTheme.secondary,
-                      borderRadius: BorderRadius.circular(22),
-                      child: InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TrainingDashboardScreen(),
+                ],
+              ),
+              child: SizedBox(
+                width: 62,
+                child: Material(
+                  color: EnolaTheme.secondary,
+                  borderRadius: BorderRadius.circular(22),
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TrainingDashboardScreen(),
+                      ),
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 2),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.school_rounded,
+                              size: 20, color: Colors.white),
+                          SizedBox(height: 2),
+                          Text(
+                            'Training',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        borderRadius: BorderRadius.circular(22),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 4, horizontal: 2),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.school_rounded,
-                                  size: 20, color: Colors.white),
-                              SizedBox(height: 2),
-                              Text(
-                                'Training',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                if (totalCount > 0)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: EnolaTheme.secondary, width: 1.5),
-                      ),
-                      child: Text(
-                        '$totalCount',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: EnolaTheme.secondary,
-                        ),
-                      ),
+              ),
+            ),
+            if (totalCount > 0)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: EnolaTheme.secondary, width: 1.5),
+                  ),
+                  child: Text(
+                    '$totalCount',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: EnolaTheme.secondary,
                     ),
                   ),
-              ],
-            ).animate().fadeIn().slideY(begin: 0.3, end: 0);
-          },
-        );
+                ),
+              ),
+          ],
+        ).animate().fadeIn().slideY(begin: 0.3, end: 0);
       },
     );
   }
 }
-
