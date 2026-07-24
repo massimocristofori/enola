@@ -65,7 +65,6 @@ Future<void> _pushTrainingRiddle(
         mapId: mapId,
         riddleId: riddleId,
         correct: errorCount == 0,
-        riddles: allRiddles,
       );
       if (fromNotification) {
         Navigator.pushReplacement(
